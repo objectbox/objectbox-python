@@ -31,6 +31,7 @@ class Model:
             raise ValueError("Given type is not an Entity. Are you passing an instance instead of a type or did you "
                              "forget the '@Entity' annotation?")
 
-        obx_model_entity(self.__model, entity.name.encode('utf-8'), entity.id, entity.uid)
+        obx_model_entity(self.__model, c_str(entity.name), entity.id, entity.uid)
 
-        self.__entities.append(entity)
+        for v in entity.properties:
+            obx_model_property(self.__model, c_str(v._Property__name), v._Property__ob_type, v._Property__id, v._Property__uid)
