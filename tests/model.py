@@ -1,5 +1,6 @@
 from objectbox.model import *
 
 
-class TestEntity(Entity):
+@Entity(id=1, uid=1)
+class TestEntity:
     id = Id()

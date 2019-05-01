@@ -1,9 +1,10 @@
 class Property:
-    __slots__ = ['is_id', 'py_type']
+    __is_id: bool
+    __py_type: type
 
     def __init__(self, py_type: type):
-        self.is_id = isinstance(self, Id)
-        self.py_type = py_type
+        self.__is_id = isinstance(self, Id)
+        self.__py_type = py_type
 
 
 class Id(Property):

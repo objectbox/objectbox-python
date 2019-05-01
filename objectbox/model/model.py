@@ -1,4 +1,6 @@
-from objectbox.model import Entity
+from objectbox.model.entity import _Entity
+from objectbox.c import *
+
 from typing import List
 
 
@@ -20,13 +22,15 @@ class Model:
     retired_index_uids: List[int]
     retired_relation_uids: List[int]
 
-    __entities: List[type]
-
     def __init__(self):
-        self.__entities = list()
+        self.__entities: List[type] = list()
+        self.__model = obx_model_create()
 
-    def add_entity(self, entity_type: type):
-        if not issubclass(entity_type, Entity):
-            raise ValueError("given type is not a subclass of 'Entity'")
+    def entity(self, entity: _Entity):
+        if not isinstance(entity, _Entity):
+            raise ValueError("Given type is not an Entity. Are you passing an instance instead of a type or did you "
+                             "forget the '@Entity' annotation?")
 
-        self.__entities.append(entity_type)
+        obx_model_entity(self.__model, entity.name.encode('utf-8'), entity.id, entity.uid)
+
+        self.__entities.append(entity)

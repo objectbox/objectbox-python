@@ -8,4 +8,7 @@ class Builder:
 
     def model(self, model: Model) -> 'Builder':
         self.__model = model
-        pass
+        return self
+
+    def build(self) -> 'ObjectBox':
+        return self
