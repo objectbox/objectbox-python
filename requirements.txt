@@ -1,2 +1,3 @@
 pip
 flatbuffers==1.11
+pytest>=4.4.1

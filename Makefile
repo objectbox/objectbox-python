@@ -17,4 +17,7 @@ ${VENV}/bin/activate: requirements.txt
 
 init: ${VENV}
 
+test: ${VENV}
+	python -m pytest -s
+
 .PHONY: init
