@@ -43,7 +43,7 @@ class OBX_store_options(ctypes.Structure):
     ]
 
     def p(self) -> 'ctypes.POINTER(OBX_store_options)':
-        return ctypes.pointer(self)
+        return ctypes.byref(self)
 
 
 OBX_store_options_p = ctypes.POINTER(OBX_store_options)
@@ -118,7 +118,7 @@ C.obx_last_error_message.restype = ctypes.c_char_p
 C.obx_last_error_code.restype = obx_err
 
 
-class CError(Exception):
+class CoreException(Exception):
     codes = {
         0: "SUCCESS",
         404: "NOT_FOUND",
@@ -150,19 +150,25 @@ class CError(Exception):
     def __init__(self, code):
         self.code = code
         self.message = py_str(C.obx_last_error_message())
-        super(CError, self).__init__("%d (%s) - %s" % (code, self.codes[code], self.message))
+        super(CoreException, self).__init__("%d (%s) - %s" % (code, self.codes[code], self.message))
 
 
-# check obx_err and raise an error
+class NotFoundException(CoreException):
+    pass
+
+
+# assert the the returned obx_err is empty
 def check_obx_err(code: obx_err, func, args):
-    if code != 0:
-        raise CError(code)
+    if code == 404:
+        raise NotFoundException(code)
+    elif code != 0:
+        raise CoreException(code)
 
 
-# check if the returned pointer is null and raise an error
-def check_ptr_result(result, func, args):
+# assert that the returned pointer/int is non-empty
+def check_result(result, func, args):
     if not result:
-        raise CError(C.obx_last_error_code())
+        raise CoreException(C.obx_last_error_code())
     return result
 
 
@@ -173,7 +179,7 @@ def fn(name: str, restype: type, argtypes):
     if restype is obx_err:
         func.errcheck = check_obx_err
     elif restype is not None:
-        func.errcheck = check_ptr_result
+        func.errcheck = check_result
         func.restype = restype
 
     func.argtypes = argtypes
@@ -220,6 +226,28 @@ obx_store_open = fn('obx_store_open', OBX_store_p, [OBX_model_p, OBX_store_optio
 # obx_err (OBX_store* store);
 obx_store_close = fn('obx_store_close', obx_err, [OBX_store_p])
 
+# OBX_box* (OBX_store* store, obx_schema_id entity_id);
+obx_box = fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
+
+# obx_err (OBX_box* box, obx_id id, void** data, size_t* size);
+obx_box_get = fn('obx_box_get', obx_err,
+                 [OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+
+# obx_id (OBX_box* box, obx_id id_or_zero);
+obx_box_id_for_put = fn('obx_box_id_for_put', obx_id, [OBX_box_p, obx_id])
+
+# obx_err (OBX_box* box, obx_id id, const void* data, size_t size, OBXPutMode mode);
+obx_box_put = fn('obx_box_put', obx_err, [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t, OBXPutMode])
+
+# obx_err (OBX_box* box, obx_id id);
+obx_box_remove = fn('obx_box_remove', obx_err, [OBX_box_p, obx_id])
+
+# obx_err (OBX_box* box, bool* out_is_empty);
+obx_box_is_empty = fn('obx_box_is_empty', obx_err, [OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
+
+# obx_err obx_box_count(OBX_box* box, uint64_t limit, uint64_t* out_count);
+obx_box_count = fn('obx_box_count', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+
 OBXPropertyType_Bool = 1
 OBXPropertyType_Byte = 2
 OBXPropertyType_Short = 3
@@ -249,38 +277,38 @@ OBXPropertyFlags_INDEX_HASH = 2048
 OBXPropertyFlags_INDEX_HASH64 = 4096
 OBXPropertyFlags_UNSIGNED = 8192
 
-OBXDebugFlags_LOG_TRANSACTIONS_READ = 1,
-OBXDebugFlags_LOG_TRANSACTIONS_WRITE = 2,
-OBXDebugFlags_LOG_QUERIES = 4,
-OBXDebugFlags_LOG_QUERY_PARAMETERS = 8,
-OBXDebugFlags_LOG_ASYNC_QUEUE = 16,
+OBXDebugFlags_LOG_TRANSACTIONS_READ = 1
+OBXDebugFlags_LOG_TRANSACTIONS_WRITE = 2
+OBXDebugFlags_LOG_QUERIES = 4
+OBXDebugFlags_LOG_QUERY_PARAMETERS = 8
+OBXDebugFlags_LOG_ASYNC_QUEUE = 16
 
 # Standard put ("insert or update")
-OBXPutMode_PUT = 1,
+OBXPutMode_PUT = 1
 
 # Put succeeds only if the entity does not exist yet.
-OBXPutMode_INSERT = 2,
+OBXPutMode_INSERT = 2
 
 # Put succeeds only if the entity already exist.
-OBXPutMode_UPDATE = 3,
+OBXPutMode_UPDATE = 3
 
 # The given ID (non-zero) is guaranteed to be new; don't use unless you know exactly what you are doing!
 # This is primarily used internally. Wrong usage leads to inconsistent data (e.g. index data not updated)!
 OBXPutMode_PUT_ID_GUARANTEED_TO_BE_NEW = 4
 
 # Reverts the order from ascending (default) to descending.
-OBXOrderFlags_DESCENDING = 1,
+OBXOrderFlags_DESCENDING = 1
 
 # Makes upper case letters (e.g. "Z") be sorted before lower case letters (e.g. "a").
 # If not specified, the default is case insensitive for ASCII characters.
-OBXOrderFlags_CASE_SENSITIVE = 2,
+OBXOrderFlags_CASE_SENSITIVE = 2
 
 # For scalars only: changes the comparison to unsigned (default is signed).
-OBXOrderFlags_UNSIGNED = 4,
+OBXOrderFlags_UNSIGNED = 4
 
 # null values will be put last.
 # If not specified, by default null values will be put first.
-OBXOrderFlags_NULLS_LAST = 8,
+OBXOrderFlags_NULLS_LAST = 8
 
 # null values should be treated equal to zero (scalars only).
-OBXOrderFlags_NULLS_ZERO = 16,
+OBXOrderFlags_NULLS_ZERO = 16

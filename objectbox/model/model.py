@@ -25,8 +25,10 @@ class Model:
 
     def entity(self, entity: _Entity, last_property_id: IdUid):
         if not isinstance(entity, _Entity):
-            raise ValueError("Given type is not an Entity. Are you passing an instance instead of a type or did you "
+            raise Exception("Given type is not an Entity. Are you passing an instance instead of a type or did you "
                              "forget the '@Entity' annotation?")
+
+        entity.last_property_id = last_property_id
 
         obx_model_entity(self._c_model, c_str(entity.name), entity.id, entity.uid)
 

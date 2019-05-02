@@ -6,5 +6,6 @@ __all__ = [
     'Model',
     'Entity',
     'Id',
-    'IdUid'
+    'IdUid',
+    'Property'
 ]
