@@ -5,5 +5,6 @@ from objectbox.model.properties import *
 __all__ = [
     'Model',
     'Entity',
-    'Id'
+    'Id',
+    'IdUid'
 ]

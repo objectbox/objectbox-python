@@ -5,3 +5,6 @@
 .venv/
 
 .pytest_cache/
+
+# Test temporary files
+testdata/

@@ -11,27 +11,40 @@ class IdUid:
         self.id = id
         self.uid = uid
 
+    def __bool__(self):
+        return self.id != 0 or self.uid != 0
+
 
 class Model:
-    last_entity: IdUid
-    last_index: IdUid
-    last_relation: IdUid
-
-    retired_entity_uids: List[int]
-    retired_property_uids: List[int]
-    retired_index_uids: List[int]
-    retired_relation_uids: List[int]
-
     def __init__(self):
-        self.__entities: List[type] = list()
-        self.__model = obx_model_create()
+        self._entities: List[type] = list()
+        self._c_model = obx_model_create()
+        self.last_entity_id = IdUid(0, 0)
+        self.last_index_id = IdUid(0, 0)
+        self.last_relation_id = IdUid(0, 0)
 
-    def entity(self, entity: _Entity):
+    def entity(self, entity: _Entity, last_property_id: IdUid):
         if not isinstance(entity, _Entity):
             raise ValueError("Given type is not an Entity. Are you passing an instance instead of a type or did you "
                              "forget the '@Entity' annotation?")
 
-        obx_model_entity(self.__model, c_str(entity.name), entity.id, entity.uid)
+        obx_model_entity(self._c_model, c_str(entity.name), entity.id, entity.uid)
 
         for v in entity.properties:
-            obx_model_property(self.__model, c_str(v._Property__name), v._Property__ob_type, v._Property__id, v._Property__uid)
+            obx_model_property(self._c_model, c_str(v._name), v._ob_type, v._id, v._uid)
+            if v._flags != 0:
+                obx_model_property_flags(self._c_model, v._flags)
+
+
+        obx_model_entity_last_property_id(self._c_model, last_property_id.id, last_property_id.uid)
+
+    # called by Builder
+    def _finish(self):
+        if self.last_relation_id:
+            obx_model_last_relation_id(self._c_model, self.last_relation_id.id, self.last_relation_id.uid)
+
+        if self.last_index_id:
+            obx_model_last_index_id(self._c_model, self.last_index_id.id, self.last_index_id.uid)
+
+        if self.last_entity_id:
+            obx_model_last_entity_id(self._c_model, self.last_entity_id.id, self.last_entity_id.uid)

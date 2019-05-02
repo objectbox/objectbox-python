@@ -32,7 +32,7 @@ class _Entity(object):
         variables = {k: v for k, v in variables.items() if issubclass(type(v), Property)}
 
         for k, v in variables.items():
-            v.__name = k
+            v._name = k
             self.properties.append(v)
 
 
