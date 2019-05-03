@@ -6,7 +6,7 @@ from objectbox.objectbox import ObjectBox
 class Builder:
     def __init__(self):
         self._model = Model()
-        self._directory: str = ''
+        self._directory = ''
 
     def directory(self, path: str) -> 'Builder':
         self._directory = path

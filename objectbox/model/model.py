@@ -17,7 +17,7 @@ class IdUid:
 
 class Model:
     def __init__(self):
-        self._entities: List[type] = list()
+        self._entities = list()
         self._c_model = obx_model_create()
         self.last_entity_id = IdUid(0, 0)
         self.last_index_id = IdUid(0, 0)

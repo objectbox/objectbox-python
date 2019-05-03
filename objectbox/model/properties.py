@@ -7,18 +7,18 @@ class Property:
     def __init__(self, py_type: type, id: int, uid: int):
         self._id = id
         self._uid = uid
-        self._name: str = ""  # set in Entity.fillProperties()
+        self._name = ""  # set in Entity.fillProperties()
 
-        self._py_type: type = py_type
-        self._ob_type: OBXPropertyType
+        self._fb_type = None  # flatbuffers.number_types
+        self._py_type = py_type
+        self._ob_type = OBXPropertyType(0)
         self.__set_basic_type()
 
         self._is_id = isinstance(self, Id)
-        self._flags: OBXPropertyFlags = 0
+        self._flags = OBXPropertyFlags(0)
         self.__set_flags()
 
         # FlatBuffers marshalling information
-        self._fb_type: object  # flatbuffers.number_types
         self._fb_slot = self._id - 1
         self._fb_v_offset = 4 + 2*self._fb_slot
 

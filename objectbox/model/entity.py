@@ -15,15 +15,15 @@ class _Entity(object):
             raise Exception("invalid or no 'uid' given in the @Entity annotation")
 
         self.cls = cls
-        self.name: str = cls.__name__
+        self.name = cls.__name__
         self.id = id
         self.uid = uid
 
-        self.last_property_id: 'IdUid' = None  # set in model.entity()
+        self.last_property_id = None  # IdUid - set in model.entity()
 
-        self.properties: List[Property] = list()
-        self.offset_properties: List[Property] = list()
-        self.id_property: Property = None
+        self.properties = list()  # List[Property]
+        self.offset_properties = list()  # List[Property]
+        self.id_property = None
         self.fill_properties()
 
     def __call__(self, *args):
