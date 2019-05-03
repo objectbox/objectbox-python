@@ -5,6 +5,20 @@ import objectbox
 import objectbox.version
 from tests.model import TestEntity
 
+db_name = 'testdata'
+
+
+def remove_test_db():
+    if os.path.exists(db_name):
+        shutil.rmtree(db_name)
+
+# cleanup before and after each testcase
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    remove_test_db()
+    yield  # run the test function
+    remove_test_db()
+
 
 def test_version():
     info = objectbox.version.version_info()
@@ -12,10 +26,7 @@ def test_version():
 
 
 def load_empty_test_objectbox() -> objectbox.ObjectBox:
-    db_name = 'testdata'
-
-    if os.path.exists(db_name):
-        shutil.rmtree(db_name)
+    remove_test_db()
 
     model = objectbox.Model()
     from objectbox.model import IdUid
