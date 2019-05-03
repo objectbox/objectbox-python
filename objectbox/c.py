@@ -5,6 +5,10 @@ import ctypes.util
 # initialize the C library
 C = ctypes.CDLL(ctypes.util.find_library("objectbox"))
 
+assert C.obx_version_is_at_least(0, 5, 103) == 1, \
+    "ObjectBox v0.5.103+ is not installed. " \
+    "Please upgrade/install by following the instructions at https://github.com/objectbox/objectbox-c"
+
 # define some basic types
 obx_err = ctypes.c_int
 obx_schema_id = ctypes.c_uint32
