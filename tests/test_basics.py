@@ -29,7 +29,17 @@ def test_open():
     load_empty_test_objectbox()
 
 
-def test_box():
+def assert_equal(actual, expected):
+    """Check that two TestEntity objects have the same property data"""
+    assert actual.id == expected.id
+    assert isinstance(expected.bool, objectbox.model.Property) or actual.bool == expected.bool
+    assert isinstance(expected.int, objectbox.model.Property) or actual.int == expected.int
+    assert isinstance(expected.str, objectbox.model.Property) or actual.str == expected.str
+    assert isinstance(expected.float, objectbox.model.Property) or actual.float == expected.float
+    assert isinstance(expected.bytes, objectbox.model.Property) or actual.bytes == expected.bytes
+
+
+def test_box_basics():
     ob = load_empty_test_objectbox()
     box = objectbox.Box(ob, TestEntity)
 
@@ -60,18 +70,10 @@ def test_box():
     assert not box.is_empty()
     assert box.count() == 2
 
-    def verifyObject(read, object):
-        assert read.id == object.id
-        assert read.bool == object.bool
-        assert read.int == object.int
-        assert read.str == object.str
-        assert read.float == object.float
-        assert read.bytes == object.bytes
-        assert read.transient != object.transient  # !=
-
     # read
     read = box.get(object.id)
-    verifyObject(read, object)
+    assert_equal(read, object)
+    assert read.transient != object.transient  # !=
 
     # update
     object.str = "bar"
@@ -80,7 +82,7 @@ def test_box():
 
     # read again
     read = box.get(object.id)
-    verifyObject(read, object)
+    assert_equal(read, object)
 
     # remove
     box.remove(object.id)
@@ -91,3 +93,33 @@ def test_box():
         box.get(object.id)
 
 
+def test_box_bulk():
+    ob = load_empty_test_objectbox()
+    box = objectbox.Box(ob, TestEntity)
+
+    box.put(TestEntity("first"))
+
+    objects = [TestEntity("second"), TestEntity("third"), TestEntity("fourth"), box.get(1)]
+    box.put(objects)
+    assert box.count() == 4
+    assert objects[0].id == 2
+    assert objects[1].id == 3
+    assert objects[2].id == 4
+    assert objects[3].id == 1
+
+    assert_equal(box.get(objects[0].id), objects[0])
+    assert_equal(box.get(objects[1].id), objects[1])
+    assert_equal(box.get(objects[2].id), objects[2])
+    assert_equal(box.get(objects[3].id), objects[3])
+
+    objects_read = box.get_all()
+    assert len(objects_read) == 4
+    assert_equal(objects_read[0], objects[3])
+    assert_equal(objects_read[1], objects[0])
+    assert_equal(objects_read[2], objects[1])
+    assert_equal(objects_read[3], objects[2])
+
+    # remove all
+    removed = box.remove_all()
+    assert removed == 4
+    assert box.count() == 0

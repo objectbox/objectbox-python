@@ -10,3 +10,6 @@ class TestEntity:
     float = Property(float, id=5, uid=1005)
     bytes = Property(bytes, id=6, uid=1006)
     transient: str = ""  # not "Property" so it's not stored
+
+    def __init__(self, string: str = ""):
+        self.str = string

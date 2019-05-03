@@ -26,8 +26,8 @@ class _Entity(object):
         self.id_property: Property = None
         self.fill_properties()
 
-    def __call__(self):
-        return self.cls()
+    def __call__(self, *args):
+        return self.cls(*args)
 
     def fill_properties(self):
         # TODO allow subclassing and support entities with __slots__ defined

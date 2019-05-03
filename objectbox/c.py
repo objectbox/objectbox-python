@@ -61,7 +61,7 @@ OBX_bytes_p = ctypes.POINTER(OBX_bytes)
 
 class OBX_bytes_array(ctypes.Structure):
     _fields_ = [
-        ('data', ctypes.POINTER(OBX_bytes)),
+        ('data', OBX_bytes_p),
         ('count', ctypes.c_size_t),
     ]
 
@@ -194,6 +194,18 @@ def c_str(string: str) -> ctypes.c_char_p:
     return string.encode('utf-8')
 
 
+def c_voidp_as_bytes(voidp, size):
+    # TODO verify which of the following two approaches is better. Performance-wise, it seems the same.
+
+    # slice the data from the pointer
+    # return ctypes.cast(voidp, ctypes.POINTER(ctypes.c_char))[:size]
+
+    # create a memory view
+    return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
+
+
+
+
 # OBX_model* (void);
 obx_model_create = fn('obx_model_create', OBX_model_p, [])
 
@@ -233,20 +245,42 @@ obx_box = fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 obx_box_get = fn('obx_box_get', obx_err,
                  [OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
+# OBX_bytes_array* (OBX_box* box);
+obx_box_get_all = fn('obx_box_get_all', OBX_bytes_array_p, [OBX_box_p])
+
 # obx_id (OBX_box* box, obx_id id_or_zero);
 obx_box_id_for_put = fn('obx_box_id_for_put', obx_id, [OBX_box_p, obx_id])
+
+# obx_err (OBX_box* box, uint64_t count, obx_id* out_first_id);
+obx_box_ids_for_put = fn('obx_box_ids_for_put', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
 
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size, OBXPutMode mode);
 obx_box_put = fn('obx_box_put', obx_err, [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t, OBXPutMode])
 
+# obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);
+obx_box_put_many = fn('obx_box_put_many', obx_err, [OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
+
 # obx_err (OBX_box* box, obx_id id);
 obx_box_remove = fn('obx_box_remove', obx_err, [OBX_box_p, obx_id])
+
+# obx_err (OBX_box* box, uint64_t* out_count);
+obx_box_remove_all = fn('obx_box_remove_all', obx_err, [OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
 
 # obx_err (OBX_box* box, bool* out_is_empty);
 obx_box_is_empty = fn('obx_box_is_empty', obx_err, [OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
 
 # obx_err obx_box_count(OBX_box* box, uint64_t limit, uint64_t* out_count);
 obx_box_count = fn('obx_box_count', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+
+# OBX_bytes_array* (size_t count);
+obx_bytes_array_create = fn('obx_bytes_array_create', OBX_bytes_array_p, [ctypes.c_size_t])
+
+# obx_err (OBX_bytes_array* array, size_t index, const void* data, size_t size);
+obx_bytes_array_set = fn('obx_bytes_array_set', obx_err,
+                         [OBX_bytes_array_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_size_t])
+
+# void (OBX_bytes_array * array);
+obx_bytes_array_free = fn('obx_bytes_array_free', None, [OBX_bytes_array_p])
 
 OBXPropertyType_Bool = 1
 OBXPropertyType_Byte = 2
