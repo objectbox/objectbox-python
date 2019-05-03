@@ -85,12 +85,15 @@ def test_box_basics():
     assert_equal(read, object)
 
     # remove
-    box.remove(object.id)
+    box.remove(object)
+    box.remove(1)
 
-    # check it's missing
-    assert box.count() == 1
+    # check they're gone
+    assert box.count() == 0
     with pytest.raises(objectbox.NotFoundException):
         box.get(object.id)
+    with pytest.raises(objectbox.NotFoundException):
+        box.get(1)
 
 
 def test_box_bulk():
