@@ -204,8 +204,6 @@ def c_voidp_as_bytes(voidp, size):
     return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
 
 
-
-
 # OBX_model* (void);
 obx_model_create = fn('obx_model_create', OBX_model_p, [])
 

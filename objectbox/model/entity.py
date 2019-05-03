@@ -1,5 +1,4 @@
 import flatbuffers
-from typing import List
 from objectbox.c import *
 from objectbox.model.properties import Property
 

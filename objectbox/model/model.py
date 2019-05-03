@@ -1,8 +1,6 @@
 from objectbox.model.entity import _Entity
 from objectbox.c import *
 
-from typing import List
-
 
 class IdUid:
     __slots__ = 'id', 'uid'
@@ -26,7 +24,7 @@ class Model:
     def entity(self, entity: _Entity, last_property_id: IdUid):
         if not isinstance(entity, _Entity):
             raise Exception("Given type is not an Entity. Are you passing an instance instead of a type or did you "
-                             "forget the '@Entity' annotation?")
+                            "forget the '@Entity' annotation?")
 
         entity.last_property_id = last_property_id
 
@@ -36,7 +34,6 @@ class Model:
             obx_model_property(self._c_model, c_str(v._name), v._ob_type, v._id, v._uid)
             if v._flags != 0:
                 obx_model_property_flags(self._c_model, v._flags)
-
 
         obx_model_entity_last_property_id(self._c_model, last_property_id.id, last_property_id.uid)
 
