@@ -20,4 +20,13 @@ init: ${VENV}
 test: ${VENV}
 	python -m pytest -s
 
-.PHONY: init
+build: ${VENV} clean
+	python setup.py bdist_wheel
+	ls -lh dist
+
+clean:
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info
+
+.PHONY: init test build
