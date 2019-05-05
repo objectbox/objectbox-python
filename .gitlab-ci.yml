@@ -1,0 +1,15 @@
+build:
+  image: python:latest
+  script:
+    # a function to download a library from another Gitlab repo's CI artifacts
+    - 'download_library(){ curl --create-dirs -o objectbox/lib/$1 -H "PRIVATE-TOKEN: $CI_API_TOKEN" $2; }'
+    - 'download_library x86_64/libobjectbox.so "${OBXLIB_URL_Linux64}"'
+    - 'download_library x86_64/libobjectbox.dylib "${OBXLIB_URL_Mac64}"'
+    - 'download_library armv7l/libobjectbox.so "${OBXLIB_URL_LinuxARMv7hf}"'
+    - pip install virtualenv
+    - make test
+    - make build
+  artifacts:
+    expire_in: 1 days
+    paths:
+      - dist/*.whl
