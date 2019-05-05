@@ -1,6 +1,8 @@
 import ctypes.util
 import os
 import platform
+from objectbox.version import Version
+
 
 # This file contains C-API bindings based on the objectbox.h, linking to the 'objectbox' shared library
 
@@ -22,9 +24,18 @@ lib_path = os.path.dirname(os.path.realpath(__file__))
 lib_path = os.path.join(lib_path, 'lib', platform.machine(), shlib_name('objectbox'))
 C = ctypes.CDLL(lib_path)
 
-assert C.obx_version_is_at_least(0, 5, 103) == 1, \
-    "ObjectBox v0.5.103+ is not installed. " \
-    "Please upgrade/install by following the instructions at https://github.com/objectbox/objectbox-c"
+# load the core library version
+__major = ctypes.c_int(0)
+__minor = ctypes.c_int(0)
+__patch = ctypes.c_int(0)
+C.obx_version(ctypes.byref(__major), ctypes.byref(__minor), ctypes.byref(__patch))
+
+# C-api (core library) version
+version_core = Version(__major.value, __minor.value, __patch.value)
+
+required_version = "0.5.103"
+assert str(version_core) == required_version, \
+    "Incorrect ObjectBox version loaded: %s instead of expected %s " % (str(version_core), required_version)
 
 # define some basic types
 obx_err = ctypes.c_int

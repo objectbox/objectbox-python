@@ -2,7 +2,6 @@ import os
 import shutil
 import pytest
 import objectbox
-import objectbox.version
 from tests.model import TestEntity
 
 db_name = 'testdata'
@@ -21,7 +20,7 @@ def run_around_tests():
 
 
 def test_version():
-    info = objectbox.version.version_info()
+    info = objectbox.version_info()
     assert len(info) > 10
 
 

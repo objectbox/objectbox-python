@@ -1,11 +1,12 @@
 import setuptools
+import objectbox
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="objectbox",
-    version="0.1.0",
+    version=str(objectbox.version),
     author="ObjectBox",
     description="ObjectBox is a superfast database for objects",
     long_description=long_description,
