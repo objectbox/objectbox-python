@@ -1,9 +1,26 @@
 import ctypes.util
+import os
+import platform
 
 # This file contains C-API bindings based on the objectbox.h, linking to the 'objectbox' shared library
 
+
+def shlib_name(library: str) -> str:
+    """Returns the platform-specific name of the shared library"""
+    if platform.system() == 'Linux':
+        return 'lib' + library + '.so'
+    elif platform.system() == 'Windows':
+        return library + '.dll'
+    elif platform.system() == 'Darwin':
+        return 'lib' + library + '.dylib'
+    else:
+        assert False, 'Unsupported platform: ' + platform.system()
+
+
 # initialize the C library
-C = ctypes.CDLL(ctypes.util.find_library("objectbox"))
+lib_path = os.path.dirname(os.path.realpath(__file__))
+lib_path = os.path.join(lib_path, 'lib', platform.machine(), shlib_name('objectbox'))
+C = ctypes.CDLL(lib_path)
 
 assert C.obx_version_is_at_least(0, 5, 103) == 1, \
     "ObjectBox v0.5.103+ is not installed. " \
