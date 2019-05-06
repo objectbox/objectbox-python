@@ -182,7 +182,11 @@ class CoreException(Exception):
     def __init__(self, code):
         self.code = code
         self.message = py_str(C.obx_last_error_message())
-        super(CoreException, self).__init__("%d (%s) - %s" % (code, self.codes[code], self.message))
+        if code in self.codes:
+            text = "%d (%s) - %s" % (code, self.codes[code], self.message)
+        else:
+            text = "%d - %s" % (code, self.message)
+        super(CoreException, self).__init__(text)
 
 
 class NotFoundException(CoreException):
