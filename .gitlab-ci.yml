@@ -14,6 +14,7 @@ build:
     - 'download_library x86_64/libobjectbox.so "${OBXLIB_URL_Linux64}"'
     - 'download_library x86_64/libobjectbox.dylib "${OBXLIB_URL_Mac64}"'
     - 'download_library armv7l/libobjectbox.so "${OBXLIB_URL_LinuxARMv7hf}"'
+    - 'download_library armv6l/libobjectbox.so "${OBXLIB_URL_LinuxARMv6hf}"'
     - make test
     - make build
   artifacts:
@@ -51,6 +52,11 @@ test:linux:x64:3.7:
 test:linux:x64:3.8:
   extends: .test:linux:x64
   image: python:3.8-rc
+
+test:linux:armv6hf:
+  extends: .test
+  tags: [armv6hf, docker, linux]
+  image: balenalib/raspberry-pi-python:3.7-stretch
 
 test:linux:armv7hf:
   extends: .test

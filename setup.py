@@ -49,6 +49,7 @@ setuptools.setup(
         'objectbox': [
             'lib/x86_64/*',
             'lib/armv7l/*',
+            'lib/armv6l/*',
         ],
     }
 )
