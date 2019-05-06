@@ -182,19 +182,22 @@ class CoreException(Exception):
     def __init__(self, code):
         self.code = code
         self.message = py_str(C.obx_last_error_message())
-        super(CoreException, self).__init__("%d (%s) - %s" % (code, self.codes[code], self.message))
+        name = self.codes[code] if code in self.codes else "n/a"
+        super(CoreException, self).__init__("%d (%s) - %s" % (code, name, self.message))
 
 
-class NotFoundException(CoreException):
+class NotFoundException(Exception):
     pass
 
 
 # assert the the returned obx_err is empty
-def check_obx_err(code: obx_err, func, args):
+def check_obx_err(code: obx_err, func, args) -> obx_err:
     if code == 404:
-        raise NotFoundException(code)
+        raise NotFoundException()
     elif code != 0:
         raise CoreException(code)
+
+    return code
 
 
 # assert that the returned pointer/int is non-empty
@@ -208,13 +211,15 @@ def check_result(result, func, args):
 def fn(name: str, restype: type, argtypes):
     func = C.__getattr__(name)
 
+    func.argtypes = argtypes
+    func.restype = restype
+
     if restype is obx_err:
         func.errcheck = check_obx_err
+        pass
     elif restype is not None:
         func.errcheck = check_result
-        func.restype = restype
 
-    func.argtypes = argtypes
     return func
 
 
@@ -250,13 +255,13 @@ obx_model_property = fn('obx_model_property', obx_err,
 obx_model_property_flags = fn('obx_model_property_flags', obx_err, [OBX_model_p, OBXPropertyFlags])
 
 # obx_err (OBX_model*, obx_schema_id entity_id, obx_uid entity_uid);
-obx_model_last_entity_id = fn('obx_model_last_entity_id', obx_err, [OBX_model_p, obx_schema_id, obx_uid])
+obx_model_last_entity_id = fn('obx_model_last_entity_id', None, [OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id index_id, obx_uid index_uid);
-obx_model_last_index_id = fn('obx_model_last_index_id', obx_err, [OBX_model_p, obx_schema_id, obx_uid])
+obx_model_last_index_id = fn('obx_model_last_index_id', None, [OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id relation_id, obx_uid relation_uid);
-obx_model_last_relation_id = fn('obx_model_last_relation_id', obx_err, [OBX_model_p, obx_schema_id, obx_uid])
+obx_model_last_relation_id = fn('obx_model_last_relation_id', None, [OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id property_id, obx_uid property_uid);
 obx_model_entity_last_property_id = fn('obx_model_entity_last_property_id', obx_err,

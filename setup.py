@@ -46,6 +46,10 @@ setuptools.setup(
 
     packages=setuptools.find_packages(),
     package_data={
-        'objectbox': ['lib/x86_64/*'],
+        'objectbox': [
+            'lib/x86_64/*',
+            'lib/armv7l/*',
+            'lib/armv6l/*',
+        ],
     }
 )

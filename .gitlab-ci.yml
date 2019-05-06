@@ -1,0 +1,68 @@
+stages:
+  - build
+  - test
+
+before_script:
+  - pip3 install virtualenv pytest
+
+build:
+  image: python:latest
+  stage: build
+  script:
+    # a function to download a library from another Gitlab repos CI artifacts
+    - 'download_library(){ curl --create-dirs -o objectbox/lib/$1 -H "PRIVATE-TOKEN: $CI_API_TOKEN" $2; }'
+    - 'download_library x86_64/libobjectbox.so "${OBXLIB_URL_Linux64}"'
+    - 'download_library x86_64/libobjectbox.dylib "${OBXLIB_URL_Mac64}"'
+    - 'download_library armv7l/libobjectbox.so "${OBXLIB_URL_LinuxARMv7hf}"'
+    - 'download_library armv6l/libobjectbox.so "${OBXLIB_URL_LinuxARMv6hf}"'
+    - make test
+    - make build
+  artifacts:
+    expire_in: 1 days
+    paths:
+      - dist/*.whl
+
+.test:
+  stage: test
+  script:
+    - rm -r objectbox
+    - pip3 install --force-reinstall dist/*.whl
+    - python3 -m pytest
+
+.test:linux:x64:
+  extends: .test
+  tags: [x64, docker, linux]
+
+test:linux:x64:3.4:
+  extends: .test:linux:x64
+  image: python:3.4
+
+test:linux:x64:3.5:
+  extends: .test:linux:x64
+  image: python:3.5
+
+test:linux:x64:3.6:
+  extends: .test:linux:x64
+  image: python:3.6
+
+test:linux:x64:3.7:
+  extends: .test:linux:x64
+  image: python:3.7
+
+test:linux:x64:3.8:
+  extends: .test:linux:x64
+  image: python:3.8-rc
+
+test:linux:armv6hf:
+  extends: .test
+  tags: [armv6hf, docker, linux]
+  image: balenalib/raspberry-pi-python:3.7-stretch
+
+test:linux:armv7hf:
+  extends: .test
+  tags: [armv7hf, docker, linux]
+  image: python:3.7
+
+test:mac:x64:
+  extends: .test
+  tags: [mac, x64, shell, python3]
