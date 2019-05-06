@@ -212,13 +212,14 @@ def check_result(result, func, args):
 def fn(name: str, restype: type, argtypes):
     func = C.__getattr__(name)
 
+    func.argtypes = argtypes
+    func.restype = restype
+
     if restype is obx_err:
         func.errcheck = check_obx_err
     elif restype is not None:
         func.errcheck = check_result
-        func.restype = restype
 
-    func.argtypes = argtypes
     return func
 
 
