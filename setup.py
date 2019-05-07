@@ -27,7 +27,7 @@ setuptools.setup(
         "Programming Language :: C++",
 
         'Operating System :: POSIX :: Linux',
-        # 'Operating System :: MacOS',
+        'Operating System :: MacOS',
         'Operating System :: Microsoft :: Windows',
 
         "Topic :: Database",

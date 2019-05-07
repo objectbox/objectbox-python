@@ -9,6 +9,7 @@ ObjectBox is a superfast database for objects, now also available for Python wit
     * Linux ARMv6hf (e.g. Raspberry PI Zero)
     * Linux ARMv7hf (e.g. Raspberry PI 3)
     * MacOS 64-bit
+    * Windows 64-bit
 
 Getting started
 ---------------
