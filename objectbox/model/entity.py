@@ -120,7 +120,6 @@ class _Entity(object):
                 size = table.VectorLen(o)
 
                 # slice the vector as a requested type
-                # TODO test this (immutability, memory safe, etc)
                 val = prop._py_type(table.Bytes[start:start+size])
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
