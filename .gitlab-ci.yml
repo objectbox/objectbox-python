@@ -24,9 +24,9 @@ build:
 .test:
   stage: test
   script:
-    - pip3 install pytest
+    - pip3 install --user pytest
     - rm -r objectbox
-    - pip3 install --force-reinstall dist/*.whl
+    - pip3 install --user --force-reinstall dist/*.whl
     - python3 -m pytest
 
 .test:linux:x64:
