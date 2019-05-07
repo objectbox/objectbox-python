@@ -145,7 +145,7 @@ class OBX_query(ctypes.Structure):
 
 OBX_query_p = ctypes.POINTER(OBX_query)
 
-# manually configure error methods, we can't use `fn()` defined bellow yet due to circular dependencies
+# manually configure error methods, we can't use `fn()` defined below yet due to circular dependencies
 C.obx_last_error_message.restype = ctypes.c_char_p
 C.obx_last_error_code.restype = obx_err
 

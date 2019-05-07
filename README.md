@@ -23,9 +23,9 @@ The model consists of Python classes annotated with `@Entity` decorator.
 ### Model IDs and UIDs
 Each Entity has to have an ID (unique among entities). 
 Properties need an ID as well (unique inside one Entity). 
-Both Entities and Properties must also have an UID which is a globally unique identifier.
+Both Entities and Properties must also have an UID, which is a globally unique identifier.
 
-For other ObjectBox supported languages the binding takes care of assigning these IDs/UIDs but this feature is not yet implemented for Python.
+For other ObjectBox supported languages, the binding takes care of assigning these IDs/UIDs but this feature is not yet implemented for Python.
 To learn more, see ObjectBox Java documentation: https://docs.objectbox.io/advanced/meta-model-ids-and-uids
 
 #### model.py
@@ -41,14 +41,14 @@ class Person:
 
 ### Using ObjectBox
 To actually use the database, you launch (or "build") it with the model you've just defined.
-Afterwards, you can reuse the instance (`ob` in the example bellow) and use it to access "Entity Boxes" which hold your objects.
+Afterwards, you can reuse the instance (`ob` in the example below) and use it to access "Entity Boxes" which hold your objects.
   
 #### program.py
 ```python
 import objectbox
 # from mypackage.model import Person
 
-# Configure ObjectBox - should be done only once in the whole program and the "ob" variable should be kept around
+# Configure ObjectBox: should be done only once in the whole program and the "ob" variable should be kept around
 model = objectbox.Model()
 model.entity(Person, last_property_id=objectbox.model.IdUid(3, 1003))
 model.last_entity_id = objectbox.model.IdUid(1, 1)
@@ -64,7 +64,7 @@ box.put(person)       # Update
 box.remove(person)    # Delete
 ```
 
-For more information and code examples see the tests folder as well as docs for other languages which may help you understand the basics.
+For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
 * ObjectBox Java = https://docs.objectbox.io
 * ObjectBox Go - https://golang.objectbox.io
 * ObjectBox Swift - https://swift.objectbox.io
@@ -76,7 +76,7 @@ Some features
 
 Coming in the future
 -------------
-The goodness you know from other language-bindings ObjectBox has, e.g.:
+The goodness you know from the other ObjectBox language-bindings, e.g.,
 * model management (no need to manually set id/uid)
 * automatic model migration (no schema upgrade scripts etc.)
 * powerful queries
@@ -86,8 +86,8 @@ The goodness you know from other language-bindings ObjectBox has, e.g.:
 
 Contributing
 ------------
-Currently, the Python binding is in it's very early stages and lots of features available in other languages is missing here.
-If you have requests for specific feature, please open an issue. If you want to contribute, please feel free to open a PR. 
+Currently, the Python binding is in its very early stages and lots of features available in other languages are missing.
+If you have a request for a specific feature, please open an issue. If you want to contribute, please feel free to open a PR.
 In case it's a non-obvious contribution it might be better to discuss and align first in an issue. 
 
 This repo uses `virtualenv` when installing packages so in case you don't have it yet: `pip install virtualenv`.
