@@ -2,19 +2,18 @@ stages:
   - build
   - test
 
-before_script:
-  - pip3 install virtualenv pytest
-
 build:
   image: python:latest
   stage: build
   script:
+    - pip3 install virtualenv
     # a function to download a library from another Gitlab repos CI artifacts
     - 'download_library(){ curl --create-dirs -o objectbox/lib/$1 -H "PRIVATE-TOKEN: $CI_API_TOKEN" $2; }'
     - 'download_library x86_64/libobjectbox.so "${OBXLIB_URL_Linux64}"'
     - 'download_library x86_64/libobjectbox.dylib "${OBXLIB_URL_Mac64}"'
     - 'download_library armv7l/libobjectbox.so "${OBXLIB_URL_LinuxARMv7hf}"'
     - 'download_library armv6l/libobjectbox.so "${OBXLIB_URL_LinuxARMv6hf}"'
+    - 'download_library AMD64/objectbox.dll "${OBXLIB_URL_Win64}"'
     - make test
     - make build
   artifacts:
@@ -25,8 +24,9 @@ build:
 .test:
   stage: test
   script:
+    - pip3 install --user pytest
     - rm -r objectbox
-    - pip3 install --force-reinstall dist/*.whl
+    - pip3 install --user --force-reinstall dist/*.whl
     - python3 -m pytest
 
 .test:linux:x64:
@@ -66,3 +66,7 @@ test:linux:armv7hf:
 test:mac:x64:
   extends: .test
   tags: [mac, x64, shell, python3]
+
+test:windows:x64:
+  extends: .test
+  tags: [windows, x64, shell, python3]

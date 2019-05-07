@@ -27,8 +27,8 @@ setuptools.setup(
         "Programming Language :: C++",
 
         'Operating System :: POSIX :: Linux',
-        # 'Operating System :: MacOS',
-        # 'Operating System :: Microsoft :: Windows',
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
 
         "Topic :: Database",
         "Topic :: Database :: Database Engines/Servers",
@@ -47,9 +47,12 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={
         'objectbox': [
+            # Linux, macOS
             'lib/x86_64/*',
             'lib/armv7l/*',
             'lib/armv6l/*',
+            # Windows
+            'lib/AMD64/*',
         ],
     }
 )
