@@ -14,7 +14,7 @@ Getting started
 ---------------
 First of all, install the latest version:
 ```bash
-pip install objectbox
+pip install --upgrade objectbox
 ```
 
 To start using ObjectBox as a storage for your data, you need to define your model first. 

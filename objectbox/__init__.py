@@ -16,7 +16,7 @@ __all__ = [
 ]
 
 # Python binding version
-version = Version(0, 1, 0, "dev")
+version = Version(0, 1, 0)
 
 
 def version_info():
