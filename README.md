@@ -66,6 +66,7 @@ box.remove(person)    # Delete
 ```
 
 For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
+
 * ObjectBox Java = https://docs.objectbox.io
 * ObjectBox Go - https://golang.objectbox.io
 * ObjectBox Swift - https://swift.objectbox.io
@@ -76,14 +77,17 @@ Some features
 * bulk operations
 
 Coming in the future
--------------
+--------------------
 The goodness you know from the other ObjectBox language-bindings, e.g.,
+
 * model management (no need to manually set id/uid)
 * automatic model migration (no schema upgrade scripts etc.)
 * powerful queries
 * relations (to-one, to-many)
 * asynchronous operations
-* secondary indexes 
+* secondary indexes
+
+PS.: contributions are very welcome! :)
 
 Contributing
 ------------
@@ -99,6 +103,7 @@ The library should be placed in the `objectbox/lib/[architecture]/` folder of th
 
 ### Getting ObjectBox C-API library from pip
 The easiest way is to get all the binaries from the latest release in PyPI.
+
 ```bash
 pip download objectbox
 unzip objectbox*.whl
