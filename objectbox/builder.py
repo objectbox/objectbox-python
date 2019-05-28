@@ -33,9 +33,16 @@ class Builder:
         return self
 
     def build(self) -> 'ObjectBox':
-        c_options = OBX_store_options()
-        if len(self._directory) > 0:
-            c_options.directory = c_str(self._directory)
+        c_options = obx_opt()
 
-        c_store = obx_store_open(self._model._c_model, c_options.p())
+        try:
+            if len(self._directory) > 0:
+                obx_opt_directory(c_options, c_str(self._directory))
+
+            obx_opt_model(c_options, self._model._c_model)
+        except CoreException:
+            obx_opt_free(c_options)
+            raise
+
+        c_store = obx_store_open(c_options)
         return ObjectBox(c_store)

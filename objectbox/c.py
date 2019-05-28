@@ -18,8 +18,8 @@ import os
 import platform
 from objectbox.version import Version
 
-
 # This file contains C-API bindings based on the objectbox.h, linking to the 'objectbox' shared library
+required_version = "0.5.104"
 
 
 def shlib_name(library: str) -> str:
@@ -48,7 +48,6 @@ C.obx_version(ctypes.byref(__major), ctypes.byref(__minor), ctypes.byref(__patch
 # C-api (core library) version
 version_core = Version(__major.value, __minor.value, __patch.value)
 
-required_version = "0.5.103"
 assert str(version_core) == required_version, \
     "Incorrect ObjectBox version loaded: %s instead of expected %s " % (str(version_core), required_version)
 
@@ -82,15 +81,7 @@ OBX_store_p = ctypes.POINTER(OBX_store)
 
 
 class OBX_store_options(ctypes.Structure):
-    _fields_ = [
-        ('directory', ctypes.c_char_p),
-        ('maxDbSizeInKByte', ctypes.c_uint64),
-        ('fileMode', ctypes.c_uint),
-        ('maxReaders', ctypes.c_uint)
-    ]
-
-    def p(self) -> 'ctypes.POINTER(OBX_store_options)':
-        return ctypes.byref(self)
+    pass
 
 
 OBX_store_options_p = ctypes.POINTER(OBX_store_options)
@@ -282,8 +273,29 @@ obx_model_last_relation_id = fn('obx_model_last_relation_id', None, [OBX_model_p
 obx_model_entity_last_property_id = fn('obx_model_entity_last_property_id', obx_err,
                                        [OBX_model_p, obx_schema_id, obx_uid])
 
-# OBX_store* (OBX_model* model, const OBX_store_options* options);
-obx_store_open = fn('obx_store_open', OBX_store_p, [OBX_model_p, OBX_store_options_p])
+# OBX_store_options* ();
+obx_opt = fn('obx_opt', OBX_store_options_p, [])
+
+# obx_err (OBX_store_options* opt, const char* dir);
+obx_opt_directory = fn('obx_opt_directory', obx_err, [OBX_store_options_p, ctypes.c_char_p])
+
+# void (OBX_store_options* opt, size_t size_in_kb);
+obx_opt_max_db_size_in_kb = fn('obx_opt_max_db_size_in_kb', None, [OBX_store_options_p, ctypes.c_size_t])
+
+# void (OBX_store_options* opt, int file_mode);
+obx_opt_file_mode = fn('obx_opt_file_mode', None, [OBX_store_options_p, ctypes.c_int])
+
+# void (OBX_store_options* opt, int max_readers);
+obx_opt_max_readers = fn('obx_opt_max_readers', None, [OBX_store_options_p, ctypes.c_int])
+
+# obx_err (OBX_store_options* opt, OBX_model* model);
+obx_opt_model = fn('obx_opt_model', obx_err, [OBX_store_options_p, OBX_model_p])
+
+# void (OBX_store_options* opt);
+obx_opt_free = fn('obx_opt_free', None, [OBX_store_options_p])
+
+# OBX_store* (const OBX_store_options* options);
+obx_store_open = fn('obx_store_open', OBX_store_p, [OBX_store_options_p])
 
 # obx_err (OBX_store* store);
 obx_store_close = fn('obx_store_close', obx_err, [OBX_store_p])
