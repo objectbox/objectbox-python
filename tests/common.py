@@ -14,7 +14,7 @@ def remove_test_dir():
 
 # cleanup before and after each testcase
 @pytest.fixture(autouse=True)
-def run_around_tests():
+def autocleanup():
     remove_test_dir()
     yield  # run the test function
     remove_test_dir()

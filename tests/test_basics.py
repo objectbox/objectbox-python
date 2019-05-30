@@ -1,8 +1,7 @@
 import pytest
 import objectbox
 from tests.model import TestEntity
-from tests.common import load_empty_test_objectbox, assert_equal
-
+from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
 
 def test_version():
     info = objectbox.version_info()
