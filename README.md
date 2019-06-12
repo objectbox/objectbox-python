@@ -120,6 +120,7 @@ cp lib/*objectbox* [/path/to/your/git/objectbox/checkout]/objectbox/lib/$(uname 
 ```
 
 You can run `make test` to make sure everything works as expected.
+You can also try `make benchmark` to measure the CRUD performance on your machine.
 
 License
 -------

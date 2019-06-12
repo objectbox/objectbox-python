@@ -24,9 +24,12 @@ init: ${VENV}
 test: ${VENV}
 	python3 -m pytest -s
 
+benchmark: ${VENV}
+	python3 -m benchmark
+
 clean:
 	rm -rf build/
 	rm -rf dist/
 	rm -rf *.egg-info
 
-.PHONY: init test build
+.PHONY: init test build benchmark
