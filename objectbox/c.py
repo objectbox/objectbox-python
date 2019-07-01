@@ -300,6 +300,21 @@ obx_store_open = fn('obx_store_open', OBX_store_p, [OBX_store_options_p])
 # obx_err (OBX_store* store);
 obx_store_close = fn('obx_store_close', obx_err, [OBX_store_p])
 
+# OBX_txn* (OBX_store* store);
+obx_txn_begin = fn('obx_txn_begin', OBX_txn_p, [OBX_store_p])
+
+# OBX_txn* (OBX_store* store);
+obx_txn_begin_read = fn('obx_txn_begin_read', OBX_txn_p, [OBX_store_p])
+
+# obx_err (OBX_txn* txn)
+obx_txn_close = fn('obx_txn_close', obx_err, [OBX_txn_p])
+
+# obx_err (OBX_txn* txn);
+obx_txn_abort = fn('obx_txn_abort', obx_err, [OBX_txn_p])
+
+# obx_err (OBX_txn* txn);
+obx_txn_commit = fn('obx_txn_commit', obx_err, [OBX_txn_p])
+
 # OBX_box* (OBX_store* store, obx_schema_id entity_id);
 obx_box = fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 

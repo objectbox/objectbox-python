@@ -105,31 +105,33 @@ class Box:
             self._entity.set_object_id(objects[k], ids[k])
 
     def get(self, id: int):
-        c_data = ctypes.c_void_p()
-        c_size = ctypes.c_size_t()
-        obx_box_get(self._c_box, id, ctypes.byref(c_data), ctypes.byref(c_size))
+        with self._ob.read_tx():
+            c_data = ctypes.c_void_p()
+            c_size = ctypes.c_size_t()
+            obx_box_get(self._c_box, id, ctypes.byref(c_data), ctypes.byref(c_size))
 
-        data = c_voidp_as_bytes(c_data, c_size.value)
-        return self._entity.unmarshal(data)
+            data = c_voidp_as_bytes(c_data, c_size.value)
+            return self._entity.unmarshal(data)
 
     def get_all(self) -> list:
-        # OBX_bytes_array*
-        c_bytes_array_p = obx_box_get_all(self._c_box)
+        with self._ob.read_tx():
+            # OBX_bytes_array*
+            c_bytes_array_p = obx_box_get_all(self._c_box)
 
-        try:
-            # OBX_bytes_array
-            c_bytes_array = c_bytes_array_p.contents
+            try:
+                # OBX_bytes_array
+                c_bytes_array = c_bytes_array_p.contents
 
-            result = list()
-            for i in range(c_bytes_array.count):
-                # OBX_bytes
-                c_bytes = c_bytes_array.data[i]
-                data = c_voidp_as_bytes(c_bytes.data, c_bytes.size)
-                result.append(self._entity.unmarshal(data))
+                result = list()
+                for i in range(c_bytes_array.count):
+                    # OBX_bytes
+                    c_bytes = c_bytes_array.data[i]
+                    data = c_voidp_as_bytes(c_bytes.data, c_bytes.size)
+                    result.append(self._entity.unmarshal(data))
 
-            return result
-        finally:
-            obx_bytes_array_free(c_bytes_array_p)
+                return result
+            finally:
+                obx_bytes_array_free(c_bytes_array_p)
 
     def remove(self, id_or_object):
         if isinstance(id_or_object, self._entity.cls):
