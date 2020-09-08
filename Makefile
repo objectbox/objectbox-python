@@ -1,41 +1,49 @@
 VENV = .venv
-export PATH := $(abspath ${VENV})/bin:${PATH}
+VENVBIN = ${VENV}/bin
+
+# Detect windows - works on both 32 & 64-bit windows
+ifeq ($(OS),Windows_NT)
+VENVBIN = ${VENV}/Scripts
+endif
+
+export PATH := $(abspath ${VENVBIN}):${PATH}
+
 
 .PHONY: init test build benchmark
 
 # Default target executed when no arguments are given to make.
-default_target: all
+default_target: build test
 
 help:				## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 ################################
 
-all: depend build test	## Prepare, build and test
+all: depend build test	## Get dependencies, build and test
 
 build: ${VENV} clean	## Build and clean
-	python3 setup.py bdist_wheel
+	python setup.py bdist_wheel
 	ls -lh dist
 
-${VENV}: ${VENV}/bin/activate
+${VENV}: ${VENVBIN}/activate
 
-${VENV}/bin/activate: requirements.txt
-	test -d ${VENV} || virtualenv ${VENV}
-	# remove packages not in the requirements.txt
+${VENVBIN}/activate: requirements.txt
+	virtualenv ${VENV}
+# 	remove packages not in the requirements.txt
 	pip3 freeze | grep -v -f requirements.txt - | grep -v '^#' | grep -v '^-e ' | xargs pip3 uninstall -y || echo "never mind"
-    # install and upgrade based on the requirements.txt
-	pip3 install --upgrade -r requirements.txt
-	# let make know this is the last time requirements changed
-	touch ${VENV}/bin/activate
+# 	install and upgrade based on the requirements.txt
+	python -m pip install --upgrade -r requirements.txt
+# 	let make know this is the last time requirements changed
+	touch ${VENVBIN}/activate
 
 depend:	${VENV}			## Prepare dependencies
-	python3 download-c-lib.py
+	python download-c-lib.py
 
 test: ${VENV}			## Test all targets
-	python3 -m pytest --capture=no --verbose
+	python -m pytest --capture=no --verbose
 
 benchmark: ${VENV}		## Run CRUD benchmarks
-	python3 -m benchmark
+	python -m benchmark
 
 clean:					## Clean build artifacts
 	rm -rf build/

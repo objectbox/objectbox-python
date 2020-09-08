@@ -1,3 +1,4 @@
 pip
+wheel
 flatbuffers==1.12
 pytest>=4.4.1
