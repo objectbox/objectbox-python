@@ -18,7 +18,7 @@ from contextlib import contextmanager
 
 @contextmanager
 def read(ob: 'ObjectBox'):
-    tx = obx_txn_begin_read(ob._c_store)
+    tx = obx_txn_read(ob._c_store)
     try:
         yield
     finally:
@@ -27,16 +27,9 @@ def read(ob: 'ObjectBox'):
 
 @contextmanager
 def write(ob: 'ObjectBox'):
-    tx = obx_txn_begin(ob._c_store)
-    successful = False
+    tx = obx_txn_write(ob._c_store)
     try:
         yield
-        successful = True
+        obx_txn_success(tx)
     finally:
-        # this is better than bare `except:` because it doesn't catch stuff like KeyboardInterrupt
-        if successful:
-            obx_txn_commit(tx)
-        else:
-            obx_txn_abort(tx)
-
         obx_txn_close(tx)
