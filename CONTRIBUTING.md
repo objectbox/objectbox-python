@@ -30,8 +30,10 @@ platform) which actually implements the database functionality. The library shou
 If you're just getting started, run the following simple steps to set up the repository on your machine
 * clone this repository
 * `pip install virtualenv` install [virtualenv](https://pypi.org/project/virtualenv/) if you don't have it yet
-* `make init` initialize the virtualenv
-* `make get-lib` get the objectbox-c shared library for your platform; also run this to update to a newer version
+* `make depend` to initialize `virtualenv` and get dependencies (objectbox-c shared library)
+* `make` to build and test
+
+You can also run `make help` to see all available options.
 
 #### Regular development workflow
 You'll probably use the following commands regularly when implementing a new feature in the library:

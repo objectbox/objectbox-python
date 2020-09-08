@@ -1,10 +1,19 @@
 VENV = .venv
-export VIRTUAL_ENV := $(abspath ${VENV})
-export PATH := ${VIRTUAL_ENV}/bin:${PATH}
+export PATH := $(abspath ${VENV})/bin:${PATH}
+
+.PHONY: init test build benchmark
+
+# Default target executed when no arguments are given to make.
+default_target: all
+
+help:				## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 ################################
 
-build: ${VENV} clean
+all: depend build test	## Prepare, build and test
+
+build: ${VENV} clean	## Build and clean
 	python3 setup.py bdist_wheel
 	ls -lh dist
 
@@ -19,20 +28,16 @@ ${VENV}/bin/activate: requirements.txt
 	# let make know this is the last time requirements changed
 	touch ${VENV}/bin/activate
 
-init: ${VENV}
+depend:	${VENV}			## Prepare dependencies
+	python3 download-c-lib.py
 
-test: ${VENV}
-	python3 -m pytest -s
+test: ${VENV}			## Test all targets
+	python3 -m pytest --capture=no --verbose
 
-benchmark: ${VENV}
+benchmark: ${VENV}		## Run CRUD benchmarks
 	python3 -m benchmark
 
-clean:
+clean:					## Clean build artifacts
 	rm -rf build/
 	rm -rf dist/
 	rm -rf *.egg-info
-
-get-lib:
-	python3 download-c-lib.py
-
-.PHONY: init test build benchmark
