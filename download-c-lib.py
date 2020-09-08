@@ -2,7 +2,10 @@ import urllib.request
 import tarfile
 import os
 
-version = "0.6.0"  # see objectbox/c.py required_version
+# Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
+# on first checkout of this repo and any time after changing the objectbox-c lib version.
+
+version = "0.10.0"  # see objectbox/c.py required_version
 
 conan_repo = "https://dl.bintray.com/objectbox/conan/objectbox/objectbox-c"
 conan_channel = "testing"
@@ -11,7 +14,7 @@ conan_channel = "testing"
 # see https://github.com/objectbox/objectbox-c/blob/main/download.sh for the hashes
 out_dir = "objectbox/lib"
 file_hashes = {
-    # objectbox.h is common for all types, get it from the linux x86_64 distributable
+    # header file is the same for all platforms, get it from the linux x86_64 distributable
     "objectbox.h": "4db1be536558d833e52e862fd84d64d75c2b3656",
 
     # linux
@@ -53,6 +56,8 @@ def download(rel_path: str):
     archived_file = archive.extractfile(archive_dir + "/" + basename)
     with open(out_path, 'wb') as file:
         file.writelines(archived_file.readlines())
+    archived_file.close()
+    archive.close()
 
 
 # execute the download for each item in the file hashes

@@ -18,8 +18,13 @@ import os
 import platform
 from objectbox.version import Version
 
-# This file contains C-API bindings based on the objectbox.h, linking to the 'objectbox' shared library
-required_version = "0.6.0"  # don't forget to update download-c-lib.py when upgrading to a newer version
+# This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
+# The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
+
+
+# Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
+# Don't forget to update download-c-lib.py when upgrading to a newer version.
+required_version = "0.10.0"
 
 
 def shlib_name(library: str) -> str:
@@ -248,7 +253,7 @@ def c_voidp_as_bytes(voidp, size):
 
 
 # OBX_model* (void);
-obx_model_create = fn('obx_model_create', OBX_model_p, [])
+obx_model = fn('obx_model', OBX_model_p, [])
 
 # obx_err (OBX_model* model, const char* name, obx_schema_id entity_id, obx_uid entity_uid);
 obx_model_entity = fn('obx_model_entity', obx_err, [OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
@@ -283,10 +288,10 @@ obx_opt_directory = fn('obx_opt_directory', obx_err, [OBX_store_options_p, ctype
 obx_opt_max_db_size_in_kb = fn('obx_opt_max_db_size_in_kb', None, [OBX_store_options_p, ctypes.c_size_t])
 
 # void (OBX_store_options* opt, int file_mode);
-obx_opt_file_mode = fn('obx_opt_file_mode', None, [OBX_store_options_p, ctypes.c_int])
+obx_opt_file_mode = fn('obx_opt_file_mode', None, [OBX_store_options_p, ctypes.c_uint])
 
 # void (OBX_store_options* opt, int max_readers);
-obx_opt_max_readers = fn('obx_opt_max_readers', None, [OBX_store_options_p, ctypes.c_int])
+obx_opt_max_readers = fn('obx_opt_max_readers', None, [OBX_store_options_p, ctypes.c_uint])
 
 # obx_err (OBX_store_options* opt, OBX_model* model);
 obx_opt_model = fn('obx_opt_model', obx_err, [OBX_store_options_p, OBX_model_p])
@@ -332,7 +337,7 @@ obx_box_id_for_put = fn('obx_box_id_for_put', obx_id, [OBX_box_p, obx_id])
 obx_box_ids_for_put = fn('obx_box_ids_for_put', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
 
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size, OBXPutMode mode);
-obx_box_put = fn('obx_box_put', obx_err, [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t, OBXPutMode])
+obx_box_put = fn('obx_box_put', obx_err, [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);
 obx_box_put_many = fn('obx_box_put_many', obx_err, [OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
@@ -350,7 +355,7 @@ obx_box_is_empty = fn('obx_box_is_empty', obx_err, [OBX_box_p, ctypes.POINTER(ct
 obx_box_count = fn('obx_box_count', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
 
 # OBX_bytes_array* (size_t count);
-obx_bytes_array_create = fn('obx_bytes_array_create', OBX_bytes_array_p, [ctypes.c_size_t])
+obx_bytes_array = fn('obx_bytes_array', OBX_bytes_array_p, [ctypes.c_size_t])
 
 # obx_err (OBX_bytes_array* array, size_t index, const void* data, size_t size);
 obx_bytes_array_set = fn('obx_bytes_array_set', obx_err,

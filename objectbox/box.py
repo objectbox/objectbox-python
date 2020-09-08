@@ -54,7 +54,7 @@ class Box:
             id = obx_box_id_for_put(self._c_box, 0)
 
         data = self._entity.marshal(obj, id)
-        obx_box_put(self._c_box, id, bytes(data), len(data), OBXPutMode_PUT)
+        obx_box_put(self._c_box, id, bytes(data), len(data))
 
         if id != object_id:
             self._entity.set_object_id(obj, id)
@@ -82,7 +82,7 @@ class Box:
 
         # allocate a C bytes array structure where we will push the object data
         # OBX_bytes_array with .count = len(objects)
-        c_bytes_array_p = obx_bytes_array_create(len(objects))
+        c_bytes_array_p = obx_bytes_array(len(objects))
 
         try:
             # we need to keep the data around until put_many is executed because obx_bytes_array_set doesn't do a copy

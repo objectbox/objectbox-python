@@ -31,7 +31,7 @@ class IdUid:
 class Model:
     def __init__(self):
         self._entities = list()
-        self._c_model = obx_model_create()
+        self._c_model = obx_model()
         self.last_entity_id = IdUid(0, 0)
         self.last_index_id = IdUid(0, 0)
         self.last_relation_id = IdUid(0, 0)
