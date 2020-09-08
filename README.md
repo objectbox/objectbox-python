@@ -2,7 +2,6 @@ ObjectBox Python API
 ====================
 ObjectBox is a superfast database for objects, now also available for Python with a simple CRUD API.
 
-* Latest release: v0.1.0
 * Python version: 3.4+
 * Platforms supported: 
     * Linux 64-bit
@@ -70,6 +69,7 @@ For more information and code examples, see the tests folder. The docs for other
 * ObjectBox Java = https://docs.objectbox.io
 * ObjectBox Go - https://golang.objectbox.io
 * ObjectBox Swift - https://swift.objectbox.io
+* ObjectBox Dart/Flutter - https://github.com
 
 Some features
 -------------
@@ -87,45 +87,16 @@ The goodness you know from the other ObjectBox language-bindings, e.g.,
 * asynchronous operations
 * secondary indexes
 
-PS.: contributions are very welcome! :)
+Help wanted
+-----------
+ObjectBox for Python is still in an early stage with limited feature set (compared to other languages). 
+To bring all these features to Python, we're asking the community to help out. PRs are more than welcome! 
+The ObjectBox team will try its best to guide you and answer questions. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started
 
-Contributing
-------------
-Currently, the Python binding is in its very early stages and lots of features available in other languages are missing.
-If you have a request for a specific feature, please open an issue. If you want to contribute, please feel free to open a PR.
-In case it's a non-obvious contribution it might be better to discuss and align first in an issue. 
-
-This repo uses `virtualenv` when installing packages so in case you don't have it yet: `pip install virtualenv`.
-
-The main prerequisite to using the Python APIs is the ObjectBox binary library (.so, .dylib, .dll depending on your  platform) which actually implements the database functionality.
-
-The library should be placed in the `objectbox/lib/[architecture]/` folder of the checked out repository.
-
-### Getting ObjectBox C-API library from pip
-The easiest way is to get all the binaries from the latest release in PyPI.
-
-```bash
-pip download objectbox
-unzip objectbox*.whl
-cp -r objectbox/lib [/path/to/your/git/objectbox/checkout]/objectbox/  
-```  
-
-### Downloading from the ObjectBox-C release
-Alternatively, you can get the appropriate release from the ObjectBox-C repository.
-However, you need to pay attention to the required version - see `required_version` in `objectbox/c.py`.
-In the [ObjectBox C repository](https://github.com/objectbox/objectbox-c), you should find a download.sh script you can run.
-
-
-```bash
-wget https://raw.githubusercontent.com/objectbox/objectbox-c/master/download.sh
-chmod +x download.sh
-# replace [required_version] with the appropriate string then type N when the script asks about installing the library
-./download.sh [required_version]
-cp lib/*objectbox* [/path/to/your/git/objectbox/checkout]/objectbox/lib/$(uname -m)/
-```
-
-You can run `make test` to make sure everything works as expected.
-You can also try `make benchmark` to measure the CRUD performance on your machine.
+Feedback
+--------
+Also, please let us know your feedback by opening an issue: for example, if you experience errors or if you have ideas 
+for how to improve the API. Thanks!
 
 License
 -------
