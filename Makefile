@@ -32,4 +32,7 @@ clean:
 	rm -rf dist/
 	rm -rf *.egg-info
 
+get-lib:
+	python3 download-c-lib.py
+
 .PHONY: init test build benchmark
