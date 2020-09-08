@@ -4,6 +4,10 @@ export PATH := ${VIRTUAL_ENV}/bin:${PATH}
 
 ################################
 
+build: ${VENV} clean
+	python3 setup.py bdist_wheel
+	ls -lh dist
+
 ${VENV}: ${VENV}/bin/activate
 
 ${VENV}/bin/activate: requirements.txt
@@ -20,13 +24,12 @@ init: ${VENV}
 test: ${VENV}
 	python3 -m pytest -s
 
-build: ${VENV} clean
-	python3 setup.py bdist_wheel
-	ls -lh dist
+benchmark: ${VENV}
+	python3 -m benchmark
 
 clean:
 	rm -rf build/
 	rm -rf dist/
 	rm -rf *.egg-info
 
-.PHONY: init test build
+.PHONY: init test build benchmark

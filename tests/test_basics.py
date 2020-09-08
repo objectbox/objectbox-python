@@ -1,52 +1,15 @@
-import os
-import shutil
 import pytest
 import objectbox
 from tests.model import TestEntity
-
-db_name = 'testdata'
-
-
-def remove_test_db():
-    if os.path.exists(db_name):
-        shutil.rmtree(db_name)
-
-# cleanup before and after each testcase
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    remove_test_db()
-    yield  # run the test function
-    remove_test_db()
-
+from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
 
 def test_version():
     info = objectbox.version_info()
     assert len(info) > 10
 
 
-def load_empty_test_objectbox() -> objectbox.ObjectBox:
-    remove_test_db()
-
-    model = objectbox.Model()
-    from objectbox.model import IdUid
-    model.entity(TestEntity, last_property_id=IdUid(6, 1006))
-    model.last_entity_id = IdUid(1, 1)
-
-    return objectbox.Builder().model(model).directory(db_name).build()
-
-
 def test_open():
     load_empty_test_objectbox()
-
-
-def assert_equal(actual, expected):
-    """Check that two TestEntity objects have the same property data"""
-    assert actual.id == expected.id
-    assert isinstance(expected.bool, objectbox.model.Property) or actual.bool == expected.bool
-    assert isinstance(expected.int, objectbox.model.Property) or actual.int == expected.int
-    assert isinstance(expected.str, objectbox.model.Property) or actual.str == expected.str
-    assert isinstance(expected.float, objectbox.model.Property) or actual.float == expected.float
-    assert isinstance(expected.bytes, objectbox.model.Property) or actual.bytes == expected.bytes
 
 
 def test_box_basics():
