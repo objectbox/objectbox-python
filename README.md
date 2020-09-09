@@ -64,7 +64,7 @@ box.put(person)       # Update
 box.remove(person)    # Delete
 ```
 
-Additionally, see the [TaskList example app](example).
+Additionally, see the [TaskList example app](https://github.com/objectbox/objectbox-python/tree/main/example).
 
 For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
 
@@ -93,7 +93,8 @@ Help wanted
 -----------
 ObjectBox for Python is still in an early stage with limited feature set (compared to other languages). 
 To bring all these features to Python, we're asking the community to help out. PRs are more than welcome! 
-The ObjectBox team will try its best to guide you and answer questions. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+The ObjectBox team will try its best to guide you and answer questions. 
+See [CONTRIBUTING.md](https://github.com/objectbox/objectbox-python/blob/main/CONTRIBUTING.md) to get started.
 
 Feedback
 --------
