@@ -26,4 +26,6 @@ class ObjectBox:
     def read_tx(self):
         return objectbox.transaction.read(self)
 
+    def write_tx(self):
+        return objectbox.transaction.write(self)
 

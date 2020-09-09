@@ -69,7 +69,7 @@ For more information and code examples, see the tests folder. The docs for other
 * ObjectBox Java = https://docs.objectbox.io
 * ObjectBox Go - https://golang.objectbox.io
 * ObjectBox Swift - https://swift.objectbox.io
-* ObjectBox Dart/Flutter - https://github.com
+* ObjectBox Dart/Flutter - https://github.com/objectbox/objectbox-dart
 
 Some features
 -------------

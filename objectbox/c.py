@@ -336,7 +336,7 @@ obx_box_id_for_put = fn('obx_box_id_for_put', obx_id, [OBX_box_p, obx_id])
 # obx_err (OBX_box* box, uint64_t count, obx_id* out_first_id);
 obx_box_ids_for_put = fn('obx_box_ids_for_put', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
 
-# obx_err (OBX_box* box, obx_id id, const void* data, size_t size, OBXPutMode mode);
+# obx_err (OBX_box* box, obx_id id, const void* data, size_t size);
 obx_box_put = fn('obx_box_put', obx_err, [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);

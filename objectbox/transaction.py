@@ -31,5 +31,7 @@ def write(ob: 'ObjectBox'):
     try:
         yield
         obx_txn_success(tx)
-    finally:
+    except:
+        obx_txn_abort(tx)
         obx_txn_close(tx)
+        raise
