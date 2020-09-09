@@ -64,6 +64,8 @@ box.put(person)       # Update
 box.remove(person)    # Delete
 ```
 
+Additionally, see the [TaskList example app](example).
+
 For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
 
 * ObjectBox Java = https://docs.objectbox.io
