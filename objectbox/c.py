@@ -24,7 +24,7 @@ from objectbox.version import Version
 
 # Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
 # Don't forget to update download-c-lib.py when upgrading to a newer version.
-required_version = "0.10.0"
+required_version = "0.14.0"
 
 
 def shlib_name(library: str) -> str:

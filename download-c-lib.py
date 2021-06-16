@@ -5,23 +5,33 @@ import os
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
-version = "0.10.0"  # see objectbox/c.py required_version
+version = "0.14.0"  # see objectbox/c.py required_version
 
-conan_repo = "https://dl.bintray.com/objectbox/conan/objectbox/objectbox-c"
-conan_channel = "testing"
+release_url = f"https://github.com/objectbox/objectbox-c/releases/download/v{version}/objectbox-%s.%s"
 
 # map between ./objectbox/lib paths and hashes in the conan_repo
 # see https://github.com/objectbox/objectbox-c/blob/main/download.sh for the hashes
 out_dir = "objectbox/lib"
 file_hashes = {
     # header file is the same for all platforms, get it from the linux x86_64 distributable
-    "objectbox.h": "4db1be536558d833e52e862fd84d64d75c2b3656",
+    "objectbox.h": {
+        "conf": "linux-x64",
+        "archiveExt": "tar.gz"
+    },
 
     # linux
-    "x86_64/libobjectbox.so": "4db1be536558d833e52e862fd84d64d75c2b3656",
-    "armv7l/libobjectbox.so": "4a625f0bd5f477eacd9bd35e9c44c834d057524b",
-    "armv6l/libobjectbox.so": "d42930899c74345edc43f8b7519ec7645c13e4d8",
-
+    "x86_64/libobjectbox.so": {
+        "conf": "linux-x64",
+        "archiveExt": "tar.gz"
+    },
+    "armv7l/libobjectbox.so": {
+        "conf": "linux-x64",
+        "archiveExt": "tar.gz"
+    },
+    "armv6l/libobjectbox.so": {
+        "conf": "linux-x64",
+        "archiveExt": "tar.gz"
+    },
     # mac
     "x86_64/libobjectbox.dylib": "46f53f156846659bf39ad6675fa0ee8156e859fe",
 
