@@ -1,6 +1,8 @@
 import urllib.request
 import tarfile
+from zipfile import ZipFile
 import os
+import re
 
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
@@ -12,64 +14,51 @@ release_url = f"https://github.com/objectbox/objectbox-c/releases/download/v{ver
 # map between ./objectbox/lib paths and hashes in the conan_repo
 # see https://github.com/objectbox/objectbox-c/blob/main/download.sh for the hashes
 out_dir = "objectbox/lib"
-file_hashes = {
+release_configs = {
     # header file is the same for all platforms, get it from the linux x86_64 distributable
-    "objectbox.h": {
-        "conf": "linux-x64",
-        "archiveExt": "tar.gz"
-    },
-
+    "objectbox.h": {"conf": "linux-x64", "archiveExt": "tar.gz"},
     # linux
-    "x86_64/libobjectbox.so": {
-        "conf": "linux-x64",
-        "archiveExt": "tar.gz"
-    },
-    "armv7l/libobjectbox.so": {
-        "conf": "linux-x64",
-        "archiveExt": "tar.gz"
-    },
-    "armv6l/libobjectbox.so": {
-        "conf": "linux-x64",
-        "archiveExt": "tar.gz"
-    },
+    "x86_64/libobjectbox.so": {"conf": "linux-x64", "archiveExt": "tar.gz"},
+    "armv7l/libobjectbox.so": {"conf": "linux-x64", "archiveExt": "tar.gz"},
+    "armv6l/libobjectbox.so": {"conf": "linux-x64", "archiveExt": "tar.gz"},
     # mac
-    "x86_64/libobjectbox.dylib": "46f53f156846659bf39ad6675fa0ee8156e859fe",
-
+    "x86_64/libobjectbox.dylib": {"conf": "macos-universal", "archiveExt": "zip"},
     # windows
-    "AMD64/objectbox.dll": "ca33edce272a279b24f87dc0d4cf5bbdcffbc187",
+    "AMD64/objectbox.dll": {"conf": "windows-x64", "archiveExt": "zip"},
 }
 
-
-def url_for(rel_path: str) -> str:
-    return conan_repo + "/" + version + "/" + conan_channel + "/0/package/" \
-           + file_hashes[rel_path] + "/0/conan_package.tgz"
-
+base_dir = os.getcwd()
 
 def fullmkdir(path: str):
     if not os.path.exists(path):
         os.makedirs(path)
 
-
 def download(rel_path: str):
     basename = os.path.basename(rel_path)
     archive_dir = "include" if basename.endswith(".h") else "lib"
-    out_path = out_dir + "/" + rel_path
+    out_path = f"{out_dir}/{rel_path}"
 
     print("Downloading", out_path)
     fullmkdir(os.path.dirname(out_path))
 
     # Download the file from `url`, save it in a temporary directory and get the path to it (e.g. '/tmp/tmpb48zma')
-    tmp_file, headers = urllib.request.urlretrieve(url_for(rel_path))
+    config = release_configs[rel_path]
+    tmp_file, _ = urllib.request.urlretrieve(
+        release_url % (config["conf"], config["archiveExt"])
+    )
 
     # extract the file
-    archive = tarfile.open(tmp_file, mode='r:gz')
-    archived_file = archive.extractfile(archive_dir + "/" + basename)
-    with open(out_path, 'wb') as file:
-        file.writelines(archived_file.readlines())
-    archived_file.close()
-    archive.close()
+    if config["archiveExt"] == "zip":
+        with ZipFile(tmp_file, "r") as archive:
+            with open(out_path, "wb") as out_file:
+                out_file.write(archive.read(f"{archive_dir}/{basename}"))
+    else:
+        with tarfile.open(tmp_file, mode="r:gz") as archive:
+            extract = archive.extractfile(f"{archive_dir}/{basename}")
+            with open(out_path, "wb") as out_file:
+                out_file.write(extract.read())
 
 
-# execute the download for each item in the file hashes
-for key in file_hashes:
+# execute the download for each item in the release configs
+for key in release_configs:
     download(key)
