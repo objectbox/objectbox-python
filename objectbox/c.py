@@ -41,7 +41,8 @@ def shlib_name(library: str) -> str:
 
 # initialize the C library
 lib_path = os.path.dirname(os.path.realpath(__file__))
-lib_path = os.path.join(lib_path, 'lib', platform.machine(), shlib_name('objectbox'))
+lib_path = os.path.join(lib_path, 'lib', \
+    platform.machine() if platform.system() != 'Darwin' else 'macos-universal', shlib_name('objectbox'))
 C = ctypes.CDLL(lib_path)
 
 # load the core library version
