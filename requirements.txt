@@ -2,3 +2,4 @@ pip
 wheel
 flatbuffers==2.0
 pytest>=4.4.1
+twine
