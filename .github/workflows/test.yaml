@@ -2,21 +2,14 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Test
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 jobs:
   test:
     strategy:
       matrix:
-        os: [ ubuntu, windows, macos ]
-        python: [ 3.4, 3.5, 3.6, 3.7, 3.8 ]
-
-        # Python v3.4 is not available on macos and windows
-        exclude:
-          - os: macos
-            python: 3.4
-          - os: windows
-            python: 3.4
+        os: [ubuntu, windows, macos]
+        python: [3.5, 3.6, 3.7, 3.8, 3.9]
 
     runs-on: ${{ matrix.os }}-latest
 
