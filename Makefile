@@ -9,7 +9,7 @@ endif
 export PATH := $(abspath ${VENVBIN}):${PATH}
 
 
-.PHONY: init test build benchmark
+.PHONY: init test build benchmark publish
 
 # Default target executed when no arguments are given to make.
 default_target: build test
@@ -19,9 +19,9 @@ help:				## Show this help
 
 ################################
 
-all: depend build test	## Get dependencies, build and test
+all: depend build test	## Get dependencies, clean, build and test
 
-build: ${VENV} clean	## Build and clean
+build: ${VENV} clean	## Clean and build
 	python setup.py bdist_wheel
 	ls -lh dist
 
@@ -49,3 +49,6 @@ clean:					## Clean build artifacts
 	rm -rf build/
 	rm -rf dist/
 	rm -rf *.egg-info
+
+publish:				## Publish the package built by `make build`
+	python -m twine upload --verbose dist/objectbox*.whl
