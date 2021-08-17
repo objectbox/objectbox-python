@@ -42,7 +42,7 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'flatbuffers==1.12',
+       'flatbuffers==2.0',
     ],
 
     packages=setuptools.find_packages(),
