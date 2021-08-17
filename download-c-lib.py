@@ -1,38 +1,37 @@
 import urllib.request
 import tarfile
+import zipfile
 import os
 
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
-version = "0.10.0"  # see objectbox/c.py required_version
+version = "v0.14.0"  # see objectbox/c.py required_version
+variant = 'objectbox'  # or 'objectbox-sync'
 
-conan_repo = "https://dl.bintray.com/objectbox/conan/objectbox/objectbox-c"
-conan_channel = "testing"
+base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 
-# map between ./objectbox/lib paths and hashes in the conan_repo
-# see https://github.com/objectbox/objectbox-c/blob/main/download.sh for the hashes
+# map between ./objectbox/lib paths and artifact suffixes at https://github.com/objectbox/objectbox-c/releases
 out_dir = "objectbox/lib"
-file_hashes = {
+files = {
     # header file is the same for all platforms, get it from the linux x86_64 distributable
-    "objectbox.h": "4db1be536558d833e52e862fd84d64d75c2b3656",
+    "objectbox.h": "linux-x64.tar.gz",
 
     # linux
-    "x86_64/libobjectbox.so": "4db1be536558d833e52e862fd84d64d75c2b3656",
-    "armv7l/libobjectbox.so": "4a625f0bd5f477eacd9bd35e9c44c834d057524b",
-    "armv6l/libobjectbox.so": "d42930899c74345edc43f8b7519ec7645c13e4d8",
+    "x86_64/libobjectbox.so": "linux-x64.tar.gz",
+    "aarch64/libobjectbox.so": "linux-aarch64.tar.gz",
+    "armv7l/libobjectbox.so": "linux-armv7hf.tar.gz",
+    "armv6l/libobjectbox.so": "linux-armv6hf.tar.gz",
 
     # mac
-    "x86_64/libobjectbox.dylib": "46f53f156846659bf39ad6675fa0ee8156e859fe",
+    "macos-universal/libobjectbox.dylib": "macos-universal.zip",
 
     # windows
-    "AMD64/objectbox.dll": "ca33edce272a279b24f87dc0d4cf5bbdcffbc187",
+    "AMD64/objectbox.dll": "windows-x64.zip",
 }
 
-
 def url_for(rel_path: str) -> str:
-    return conan_repo + "/" + version + "/" + conan_channel + "/0/package/" \
-           + file_hashes[rel_path] + "/0/conan_package.tgz"
+    return base_url + "/" + version + "/" + variant + "-" + files[rel_path]
 
 
 def fullmkdir(path: str):
@@ -49,17 +48,21 @@ def download(rel_path: str):
     fullmkdir(os.path.dirname(out_path))
 
     # Download the file from `url`, save it in a temporary directory and get the path to it (e.g. '/tmp/tmpb48zma')
-    tmp_file, headers = urllib.request.urlretrieve(url_for(rel_path))
+    source_url = url_for(rel_path);
+    tmp_file, headers = urllib.request.urlretrieve(source_url)
 
     # extract the file
-    archive = tarfile.open(tmp_file, mode='r:gz')
-    archived_file = archive.extractfile(archive_dir + "/" + basename)
     with open(out_path, 'wb') as file:
-        file.writelines(archived_file.readlines())
-    archived_file.close()
-    archive.close()
+        if source_url.endswith('.zip'):
+            with zipfile.ZipFile(tmp_file) as archive:
+                with archive.open(archive_dir + "/" + basename) as archived_file:
+                    file.writelines(archived_file.readlines())
+        else:
+            with tarfile.open(tmp_file, mode='r:gz') as archive:
+                with archive.extractfile(archive_dir + "/" + basename) as archived_file:
+                    file.writelines(archived_file.readlines())
 
 
 # execute the download for each item in the file hashes
-for key in file_hashes:
+for key in files:
     download(key)

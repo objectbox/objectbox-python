@@ -24,7 +24,7 @@ from objectbox.version import Version
 
 # Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
 # Don't forget to update download-c-lib.py when upgrading to a newer version.
-required_version = "0.10.0"
+required_version = "0.14.0"
 
 
 def shlib_name(library: str) -> str:
@@ -323,7 +323,7 @@ obx_txn_success = fn('obx_txn_success', obx_err, [OBX_txn_p])
 # OBX_box* (OBX_store* store, obx_schema_id entity_id);
 obx_box = fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 
-# obx_err (OBX_box* box, obx_id id, void** data, size_t* size);
+# obx_err (OBX_box* box, obx_id id, const void** data, size_t* size);
 obx_box_get = fn('obx_box_get', obx_err,
                  [OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
