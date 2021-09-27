@@ -231,7 +231,6 @@ def fn(name: str, restype: type, argtypes):
 
     if restype is obx_err:
         func.errcheck = check_obx_err
-        pass
     elif restype is not None:
         func.errcheck = check_result
 
