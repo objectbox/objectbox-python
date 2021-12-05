@@ -16,6 +16,7 @@
 from objectbox.c import *
 import objectbox.transaction
 
+
 class ObjectBox:
     def __init__(self, c_store: OBX_store_p):
         self._c_store = c_store
@@ -28,4 +29,3 @@ class ObjectBox:
 
     def write_tx(self):
         return objectbox.transaction.write(self)
-

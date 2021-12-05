@@ -92,10 +92,12 @@ class Box:
                 key = ctypes.c_size_t(k)
 
                 # OBX_bytes_array.data[k] = data
-                obx_bytes_array_set(c_bytes_array_p, key, data[k], len(data[k]))
+                obx_bytes_array_set(c_bytes_array_p, key,
+                                    data[k], len(data[k]))
 
             c_ids = (obx_id * len(ids))(*ids.values())
-            obx_box_put_many(self._c_box, c_bytes_array_p, c_ids, OBXPutMode_PUT)
+            obx_box_put_many(self._c_box, c_bytes_array_p,
+                             c_ids, OBXPutMode_PUT)
 
         finally:
             obx_bytes_array_free(c_bytes_array_p)
@@ -108,7 +110,8 @@ class Box:
         with self._ob.read_tx():
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
-            obx_box_get(self._c_box, id, ctypes.byref(c_data), ctypes.byref(c_size))
+            obx_box_get(self._c_box, id, ctypes.byref(
+                c_data), ctypes.byref(c_size))
 
             data = c_voidp_as_bytes(c_data, c_size.value)
             return self._entity.unmarshal(data)
