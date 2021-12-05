@@ -29,7 +29,6 @@ platform) which actually implements the database functionality. The library shou
 #### Initial setup
 If you're just getting started, run the following simple steps to set up the repository on your machine
 * clone this repository
-* `python3 -m pip install --user virtualenv` install [virtualenv](https://pypi.org/project/virtualenv/) if you don't have it yet
 * `make depend` to initialize `virtualenv` and get dependencies (objectbox-c shared library)
 * `make` to build and test
 

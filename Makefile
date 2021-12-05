@@ -12,7 +12,7 @@ endif
 export PATH := $(abspath ${VENVBIN}):${PATH}
 
 
-.PHONY: init test build benchmark publish ${VENV}-init
+.PHONY: init test build benchmark publish venv-init
 
 # Default target executed when no arguments are given to make.
 default_target: build test
@@ -25,30 +25,36 @@ help:				## Show this help
 all: depend build test	## Get dependencies, clean, build and test
 
 build: ${VENV} clean	## Clean and build
-	${PYTHON} setup.py bdist_wheel
+	set -e ; \
+	${PYTHON} setup.py bdist_wheel ; \
 	ls -lh dist
 
 ${VENV}: ${VENVBIN}/activate
 
-${VENV}-init:
-	if [ ! -d "${VENV}" ] ; then ${PYTHON} -m virtualenv ${VENV} ; fi
+venv-init:
+	${PIP} install --user virtualenv
+	${PYTHON} -m virtualenv ${VENV}
 
 # 	remove packages not in the requirements.txt
 # 	install and upgrade based on the requirements.txt
 # 	let make know this is the last time requirements changed
-${VENVBIN}/activate: ${VENV}-init requirements.txt
+${VENVBIN}/activate: requirements.txt
 	set -e ; \
+	if [ ! -d "${VENV}" ] ; then make venv-init ; fi ; \
 	${PIP} freeze | grep -v -f requirements.txt - | grep -v '^#' | grep -v '^-e ' | xargs ${PIP} uninstall -y || echo "never mind" ; \
 	${PIP} install --upgrade -r requirements.txt ; \
 	touch ${VENVBIN}/activate
 
 depend:	${VENV}			## Prepare dependencies
+	set -e ; \
 	${PYTHON} download-c-lib.py
 
 test: ${VENV}			## Test all targets
+	set -e ; \
 	${PYTHON} -m pytest --capture=no --verbose
 
 benchmark: ${VENV}		## Run CRUD benchmarks
+	set -e ; \
 	${PYTHON} -m benchmark
 
 clean:					## Clean build artifacts
@@ -57,4 +63,5 @@ clean:					## Clean build artifacts
 	rm -rf *.egg-info
 
 publish:				## Publish the package built by `make build`
+	set -e ; \
 	${PYTHON} -m twine upload --verbose dist/objectbox*.whl
