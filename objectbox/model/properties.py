@@ -58,7 +58,7 @@ class Property:
         self._name = ""  # set in Entity.fill_properties()
 
         self._py_type = py_type
-        self._ob_type: OBXPropertyType = type if type != None else self.__determine_ob_type()
+        self._ob_type = type if type != None else self.__determine_ob_type()
         self._fb_type = fb_type_map[self._ob_type]
 
         self._is_id = isinstance(self, Id)
