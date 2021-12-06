@@ -41,8 +41,19 @@ from objectbox.model import *
 @Entity(id=1, uid=1)
 class Person:
     id = Id(id=1, uid=1001)
-    first_name = Property(str, id=2, uid=1002)
-    last_name = Property(str, id=3, uid=1003)
+    name = Property(str, id=2, uid=1002)
+    is_enabled = Property(bool, id=3, uid=1003)
+    # int can be stored with 64 (default), 32, 16 or 8 bit precision.
+    int64 = Property(int, id=4, uid=1004)
+    int32 = Property(int, type=PropertyType.int, id=5, uid=1005)
+    int16 = Property(int, type=PropertyType.short, id=6, uid=1006)
+    int8 = Property(int, type=PropertyType.byte, id=7, uid=1007)
+    # float can be stored with 64 or 32 (default) bit precision.
+    float64 = Property(float, id=8, uid=1008)
+    float32 = Property(float, type=PropertyType.float, id=9, uid=1009)
+    byte_array = Property(bytes, id=10, uid=1010)
+    # Regular properties are not stored.
+    transient = ""
 ```
 
 ### Using ObjectBox
@@ -58,16 +69,16 @@ import objectbox
 
 # Configure ObjectBox: should be done only once in the whole program and the "ob" variable should be kept around
 model = objectbox.Model()
-model.entity(Person, last_property_id=objectbox.model.IdUid(3, 1003))
+model.entity(Person, last_property_id=objectbox.model.IdUid(10, 1010))
 model.last_entity_id = objectbox.model.IdUid(1, 1)
 ob = objectbox.Builder().model(model).directory("db").build()
 
 # Open the box of "Person" entity. This can be called many times but you can also pass the variable around
 box = objectbox.Box(ob, Person)
 
-id = box.put(Person(first_name="Joe", last_name="Green"))  # Create
+id = box.put(Person(name="Joe Green"))  # Create
 person = box.get(id)  # Read
-person.last_name = "Black"
+person.name = "Joe Black"
 box.put(person)       # Update
 box.remove(person)    # Delete
 ```
