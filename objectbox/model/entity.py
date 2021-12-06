@@ -68,6 +68,8 @@ class _Entity(object):
                     "programming error - invalid type OB & FB type combination"
                 self.offset_properties.append(prop)
 
+            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop._name, prop._py_type, prop._ob_type, prop._fb_type))
+
         if not self.id_property:
             raise Exception("ID property is not defined")
         elif self.id_property._ob_type != OBXPropertyType_Long:

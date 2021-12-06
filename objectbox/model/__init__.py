@@ -22,5 +22,6 @@ __all__ = [
     'Entity',
     'Id',
     'IdUid',
-    'Property'
+    'Property',
+    'PropertyType'
 ]

@@ -21,9 +21,13 @@ def test_box_basics():
     object = TestEntity()
     object.id = 5
     object.bool = True
-    object.int = 42
+    object.int64 = 9223372036854775807
+    object.int32 = 2147483647
+    object.int16 = 32767
+    object.int8 = 127
     object.str = "foo"
-    object.float = 4.2
+    object.float64 = 4.2
+    object.float32 = 1.5
     object.bytes = bytes([1, 1, 2, 3, 5])
     object.transient = "abcd"
 
@@ -67,7 +71,8 @@ def test_box_bulk():
 
     box.put(TestEntity("first"))
 
-    objects = [TestEntity("second"), TestEntity("third"), TestEntity("fourth"), box.get(1)]
+    objects = [TestEntity("second"), TestEntity("third"),
+               TestEntity("fourth"), box.get(1)]
     box.put(objects)
     assert box.count() == 4
     assert objects[0].id == 2

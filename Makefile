@@ -1,5 +1,8 @@
+SHELL := /bin/bash
 VENV = .venv
 VENVBIN = ${VENV}/bin
+PYTHON = python3
+PIP = ${PYTHON} -m pip
 
 # Detect windows - works on both 32 & 64-bit windows
 ifeq ($(OS),Windows_NT)
@@ -9,7 +12,7 @@ endif
 export PATH := $(abspath ${VENVBIN}):${PATH}
 
 
-.PHONY: init test build benchmark publish
+.PHONY: init test build benchmark publish venv-init
 
 # Default target executed when no arguments are given to make.
 default_target: build test
@@ -22,28 +25,37 @@ help:				## Show this help
 all: depend build test	## Get dependencies, clean, build and test
 
 build: ${VENV} clean	## Clean and build
-	python setup.py bdist_wheel
+	set -e ; \
+	${PYTHON} setup.py bdist_wheel ; \
 	ls -lh dist
 
 ${VENV}: ${VENVBIN}/activate
 
-${VENVBIN}/activate: requirements.txt
-	virtualenv ${VENV}
+venv-init:
+	${PIP} install --user virtualenv
+	${PYTHON} -m virtualenv ${VENV}
+
 # 	remove packages not in the requirements.txt
-	pip3 freeze | grep -v -f requirements.txt - | grep -v '^#' | grep -v '^-e ' | xargs pip3 uninstall -y || echo "never mind"
 # 	install and upgrade based on the requirements.txt
-	python -m pip install --upgrade -r requirements.txt
 # 	let make know this is the last time requirements changed
+${VENVBIN}/activate: requirements.txt
+	set -e ; \
+	if [ ! -d "${VENV}" ] ; then make venv-init ; fi ; \
+	${PIP} freeze | grep -v -f requirements.txt - | grep -v '^#' | grep -v '^-e ' | xargs ${PIP} uninstall -y || echo "never mind" ; \
+	${PIP} install --upgrade -r requirements.txt ; \
 	touch ${VENVBIN}/activate
 
 depend:	${VENV}			## Prepare dependencies
-	python download-c-lib.py
+	set -e ; \
+	${PYTHON} download-c-lib.py
 
 test: ${VENV}			## Test all targets
-	python -m pytest --capture=no --verbose
+	set -e ; \
+	${PYTHON} -m pytest --capture=no --verbose
 
 benchmark: ${VENV}		## Run CRUD benchmarks
-	python -m benchmark
+	set -e ; \
+	${PYTHON} -m benchmark
 
 clean:					## Clean build artifacts
 	rm -rf build/
@@ -51,4 +63,5 @@ clean:					## Clean build artifacts
 	rm -rf *.egg-info
 
 publish:				## Publish the package built by `make build`
-	python -m twine upload --verbose dist/objectbox*.whl
+	set -e ; \
+	${PYTHON} -m twine upload --verbose dist/objectbox*.whl
