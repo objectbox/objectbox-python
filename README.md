@@ -87,10 +87,9 @@ Additionally, see the [TaskList example app](https://github.com/objectbox/object
 
 For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
 
-* ObjectBox Java = https://docs.objectbox.io
+* ObjectBox Java/Dart/Flutter - https://docs.objectbox.io
 * ObjectBox Go - https://golang.objectbox.io
 * ObjectBox Swift - https://swift.objectbox.io
-* ObjectBox Dart/Flutter - https://github.com/objectbox/objectbox-dart
 
 Some features
 -------------
