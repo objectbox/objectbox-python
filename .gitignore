@@ -10,6 +10,9 @@
 # Test temporary files
 testdata/
 
+# ObjectBox databases from example
+*.mdb
+
 # Distribution / packaging
 .Python
 build/
