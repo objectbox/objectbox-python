@@ -83,7 +83,23 @@ box.put(person)       # Update
 box.remove(person)    # Delete
 ```
 
-Additionally, see the [TaskList example app](https://github.com/objectbox/objectbox-python/tree/main/example).
+Additionally, see the [TaskList example app](https://github.com/objectbox/objectbox-python/tree/main/example). After checking out this repository to run the example:
+```
+// Set up virtual environment, download ObjectBox libraries
+make depend
+
+// Activate virtual environment...
+// ...on Linux
+source .venv/bin/activate
+// ...on Windows
+.venv\Scripts\activate
+
+// Run the example
+python3 -m example
+
+// Once done, leave the virtual environment
+deactivate
+```
 
 For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
 
