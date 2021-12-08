@@ -1,7 +1,7 @@
 ObjectBox Python API
 ====================
 
-ObjectBox is a superfast database for objects, now also available for Python with a simple CRUD API.
+[ObjectBox](https://objectbox.io) is a superfast database for objects, now also available for Python with a simple CRUD API.
 
 * Python version: 3.4+
 * Platforms supported:
