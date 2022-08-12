@@ -11,6 +11,19 @@ ObjectBox Python API
   * MacOS x86-64 (64-bit)
   * MacOS arm64 (Apple silicon)
   * Windows x86-64 (64-bit)
+  
+## Table of Contents:
+- [Getting Started](#getting-started)
+   - [Model IDs and UIDs](#model-ids-and-uids)
+   - [model.py](#modelpy)
+- [Using ObjectBox](#using-objectbox)
+- [Some features](#some-features)
+- [Coming in the future](#coming-in-the-future)
+- [Help wanted](#help-wanted)
+- [Feedback](#feedback)
+- [License](#license)
+
+<hr/>
 
 Getting started
 ---------------
