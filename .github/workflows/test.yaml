@@ -7,6 +7,7 @@ on: [push, pull_request]
 jobs:
   test:
     strategy:
+      fail-fast: false # To see all versions that fail.
       matrix:
         os: [ubuntu, windows, macos]
         python: [3.5, 3.6, 3.7, 3.8, 3.9]
