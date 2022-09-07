@@ -32,10 +32,15 @@ build:
     - pip3 install --user pytest
     - rm -r objectbox
     - pip3 install --user --force-reinstall dist/*.whl
-    - python3 -m pytest
+    - ${PYTHON} -m pytest
+
+.test-python3:
+  extends: .test
+  variables:
+    PYTHON: "python3"
 
 .test:linux:x64:
-  extends: .test
+  extends: .test-python3
   tags: [x64, docker, linux]
 
 test:linux:x64:3.7:
@@ -55,7 +60,7 @@ test:linux:x64:3.10:
   image: python:3.10
 
 test:linux:armv7hf:
-  extends: .test
+  extends: .test-python3
   tags: [armv7hf, shell, linux, python3]
 
 # aarch64 version not published
@@ -64,9 +69,11 @@ test:linux:armv7hf:
 #  tags: [aarch64, shell, linux, python3]
 
 test:mac:x64:
-  extends: .test
+  extends: .test-python3
   tags: [mac, x64, shell, python3]
 
 test:windows:x64:
   extends: .test
   tags: [windows, x64, shell, python3]
+  variables:
+    PYTHON: "python.exe"
