@@ -23,7 +23,7 @@ ObjectBox Python API
 - [Feedback](#feedback)
 - [License](#license)
 
-<hr/>
+---
 
 Getting started
 ---------------
