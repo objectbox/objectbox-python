@@ -38,10 +38,6 @@ build:
   extends: .test
   tags: [x64, docker, linux]
 
-test:linux:x64:3.6:
-  extends: .test:linux:x64
-  image: python:3.6
-
 test:linux:x64:3.7:
   extends: .test:linux:x64
   image: python:3.7
