@@ -1,4 +1,4 @@
-# Copyright 2019-2020 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,22 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
+from enum import IntEnum
+from random import random
 
 from objectbox.c import *
 import flatbuffers.number_types
 
 
-# base property
-class Property:
-    def __init__(self, py_type: type, id: int, uid: int):
-        self._id = id
-        self._uid = uid
-        self._name = ""  # set in Entity.fillProperties()
+class PropertyType(IntEnum):
+    bool = OBXPropertyType_Bool
+    byte = OBXPropertyType_Byte
+    short = OBXPropertyType_Short
+    char = OBXPropertyType_Char
+    int = OBXPropertyType_Int
+    long = OBXPropertyType_Long
+    float = OBXPropertyType_Float
+    double = OBXPropertyType_Double
+    string = OBXPropertyType_String
+    # date = OBXPropertyType_Date
+    # relation = OBXPropertyType_Relation
+    byteVector = OBXPropertyType_ByteVector
+    # stringVector = OBXPropertyType_StringVector
 
-        self._fb_type = None  # flatbuffers.number_types
+
+fb_type_map = {
+    PropertyType.bool: flatbuffers.number_types.BoolFlags,
+    PropertyType.byte: flatbuffers.number_types.Int8Flags,
+    PropertyType.short: flatbuffers.number_types.Int16Flags,
+    PropertyType.char: flatbuffers.number_types.Int8Flags,
+    PropertyType.int: flatbuffers.number_types.Int32Flags,
+    PropertyType.long: flatbuffers.number_types.Int64Flags,
+    PropertyType.float: flatbuffers.number_types.Float32Flags,
+    PropertyType.double: flatbuffers.number_types.Float64Flags,
+    PropertyType.string: flatbuffers.number_types.UOffsetTFlags,
+    # PropertyType.date: flatbuffers.number_types.Int64Flags,
+    # PropertyType.relation: flatbuffers.number_types.Int64Flags,
+    PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
+    # PropertyType.stringVector: flatbuffers.number_types.UOffsetTFlags,
+}
+
+
+class Property:
+    def __init__(self, py_type: type, id: int = 0, uid: int = 0, type: PropertyType = None):
+        self._id = id if id != 0 else int(random() * 100)
+        self._uid = uid if uid != 0 else int(random() * 1000)
+        self._name = ""  # set in Entity.fill_properties()
+
         self._py_type = py_type
-        self._ob_type = OBXPropertyType(0)
-        self.__set_basic_type()
+        self._ob_type = type if type != None else self.__determine_ob_type()
+        self._fb_type = fb_type_map[self._ob_type]
 
         self._is_id = isinstance(self, Id)
         self._flags = OBXPropertyFlags(0)
@@ -35,25 +69,24 @@ class Property:
 
         # FlatBuffers marshalling information
         self._fb_slot = self._id - 1
-        self._fb_v_offset = 4 + 2*self._fb_slot
+        self._fb_v_offset = 4 + 2 * self._fb_slot
 
-    def __set_basic_type(self) -> OBXPropertyType:
+    def __determine_ob_type(self) -> OBXPropertyType:
         ts = self._py_type
         if ts == str:
-            self._ob_type = OBXPropertyType_String
-            self._fb_type = flatbuffers.number_types.UOffsetTFlags
+            return OBXPropertyType_String
         elif ts == int:
-            self._ob_type = OBXPropertyType_Long
-            self._fb_type = flatbuffers.number_types.Int64Flags
-        elif ts == bytes:  # or ts == bytearray: might require further tests on read objects due to mutability
-            self._ob_type = OBXPropertyType_ByteVector
-            self._fb_type = flatbuffers.number_types.UOffsetTFlags
+            return OBXPropertyType_Long
+        elif (
+            ts == bytes
+        ):  # or ts == bytearray: might require further tests on read objects due to mutability
+            return OBXPropertyType_ByteVector
         elif ts == float:
-            self._ob_type = OBXPropertyType_Double
-            self._fb_type = flatbuffers.number_types.Float64Flags
+            return OBXPropertyType_Double
         elif ts == bool:
-            self._ob_type = OBXPropertyType_Bool
-            self._fb_type = flatbuffers.number_types.BoolFlags
+            return OBXPropertyType_Bool
+        elif ts == datetime:
+            return OBXPropertyType_Date
         else:
             raise Exception("unknown property type %s" % ts)
 

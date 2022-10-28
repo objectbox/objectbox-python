@@ -1,4 +1,4 @@
-# Copyright 2019-2020 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,22 +43,28 @@ class Model:
 
         entity.last_property_id = last_property_id
 
-        obx_model_entity(self._c_model, c_str(entity.name), entity.id, entity.uid)
+        obx_model_entity(self._c_model, c_str(
+            entity.name), entity.id, entity.uid)
 
         for v in entity.properties:
-            obx_model_property(self._c_model, c_str(v._name), v._ob_type, v._id, v._uid)
+            obx_model_property(self._c_model, c_str(
+                v._name), v._ob_type, v._id, v._uid)
             if v._flags != 0:
                 obx_model_property_flags(self._c_model, v._flags)
 
-        obx_model_entity_last_property_id(self._c_model, last_property_id.id, last_property_id.uid)
+        obx_model_entity_last_property_id(
+            self._c_model, last_property_id.id, last_property_id.uid)
 
     # called by Builder
     def _finish(self):
         if self.last_relation_id:
-            obx_model_last_relation_id(self._c_model, self.last_relation_id.id, self.last_relation_id.uid)
+            obx_model_last_relation_id(
+                self._c_model, self.last_relation_id.id, self.last_relation_id.uid)
 
         if self.last_index_id:
-            obx_model_last_index_id(self._c_model, self.last_index_id.id, self.last_index_id.uid)
+            obx_model_last_index_id(
+                self._c_model, self.last_index_id.id, self.last_index_id.uid)
 
         if self.last_entity_id:
-            obx_model_last_entity_id(self._c_model, self.last_entity_id.id, self.last_entity_id.uid)
+            obx_model_last_entity_id(
+                self._c_model, self.last_entity_id.id, self.last_entity_id.uid)

@@ -1,4 +1,4 @@
-# Copyright 2019-2020 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,10 +23,12 @@ class _Entity(object):
     def __init__(self, cls, id: int, uid: int):
         # currently, ID and UID are mandatory and are not fetched from the model.json
         if id <= 0:
-            raise Exception("invalid or no 'id; given in the @Entity annotation")
+            raise Exception(
+                "invalid or no 'id; given in the @Entity annotation")
 
         if uid <= 0:
-            raise Exception("invalid or no 'uid' given in the @Entity annotation")
+            raise Exception(
+                "invalid or no 'uid' given in the @Entity annotation")
 
         self.cls = cls
         self.name = cls.__name__
@@ -48,7 +50,8 @@ class _Entity(object):
         variables = dict(vars(self.cls))
 
         # filter only subclasses of Property
-        variables = {k: v for k, v in variables.items() if issubclass(type(v), Property)}
+        variables = {k: v for k, v in variables.items(
+        ) if issubclass(type(v), Property)}
 
         for k, prop in variables.items():
             prop._name = k
@@ -56,13 +59,16 @@ class _Entity(object):
 
             if prop._is_id:
                 if self.id_property:
-                    raise Exception("duplicate ID property: '%s' and '%s'" % (self.id_property._name, prop._name))
+                    raise Exception("duplicate ID property: '%s' and '%s'" % (
+                        self.id_property._name, prop._name))
                 self.id_property = prop
 
             if prop._fb_type == flatbuffers.number_types.UOffsetTFlags:
                 assert prop._ob_type in [OBXPropertyType_String, OBXPropertyType_ByteVector], \
                     "programming error - invalid type OB & FB type combination"
                 self.offset_properties.append(prop)
+
+            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop._name, prop._py_type, prop._ob_type, prop._fb_type))
 
         if not self.id_property:
             raise Exception("ID property is not defined")
@@ -106,7 +112,8 @@ class _Entity(object):
                 if val:
                     builder.PrependUOffsetTRelative(val)
             else:
-                val = id if prop == self.id_property else self.get_value(object, prop)
+                val = id if prop == self.id_property else self.get_value(
+                    object, prop)
                 builder.Prepend(prop._fb_type, val)
 
             builder.Slot(prop._fb_slot)
