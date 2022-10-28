@@ -1,14 +1,15 @@
+from datetime import datetime
 from objectbox.model import *
 
 
-@Entity(id=1, uid=1)
+@Entity()
 class Task:
-    id = Id(id=1, uid=1001)
-    text = Property(str, id=2, uid=1002)
+    id = Id()
+    text = Property(str)
 
     # TODO property type DATE
-    date_created = Property(int, id=3, uid=1003)
-    date_finished = Property(int, id=4, uid=1004)
+    date_created = Property(datetime)
+    date_finished = Property(datetime)
 
 
 def get_objectbox_model():
