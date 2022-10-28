@@ -1,5 +1,6 @@
 # IDE
 .idea
+.vscode
 
 # Environment
 .venv/
@@ -8,6 +9,9 @@
 
 # Test temporary files
 testdata/
+
+# ObjectBox databases from example
+*.mdb
 
 # Distribution / packaging
 .Python
@@ -29,3 +33,4 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+**/__pycache__

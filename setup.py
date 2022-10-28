@@ -8,10 +8,14 @@ setuptools.setup(
     name="objectbox",
     version=str(objectbox.version),
     author="ObjectBox",
-    description="ObjectBox is a superfast database for objects",
+    description="ObjectBox is a superfast lightweight database for objects",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/objectbox/objectbox-python",
+    url="https://objectbox.io",
+    project_urls={
+        'GitHub': 'https://github.com/objectbox/objectbox-python',
+        'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
+    },
     python_requires='>=3.4, <4',
     license='Apache 2.0',
     classifiers=[
@@ -23,6 +27,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: C",
         "Programming Language :: C++",
 
@@ -41,7 +46,7 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'flatbuffers==1.12',
+       'flatbuffers==2.0',
     ],
 
     packages=setuptools.find_packages(),

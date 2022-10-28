@@ -7,27 +7,33 @@ import re
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
-version = "0.14.0"  # see objectbox/c.py required_version
+version = "v0.14.0"  # see objectbox/c.py required_version
+variant = 'objectbox'  # or 'objectbox-sync'
 
-release_url = f"https://github.com/objectbox/objectbox-c/releases/download/v{version}/objectbox-%s.%s"
+base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 
-# map between ./objectbox/lib paths and hashes in the conan_repo
-# see https://github.com/objectbox/objectbox-c/blob/main/download.sh for the hashes
+# map between ./objectbox/lib paths and artifact suffixes at https://github.com/objectbox/objectbox-c/releases
 out_dir = "objectbox/lib"
-release_configs = {
+
+files = {
     # header file is the same for all platforms, get it from the linux x86_64 distributable
-    "objectbox.h": {"conf": "linux-x64", "archiveExt": "tar.gz"},
+    "objectbox.h": "linux-x64.tar.gz",
+
     # linux
-    "x86_64/libobjectbox.so": {"conf": "linux-x64", "archiveExt": "tar.gz"},
-    "armv7l/libobjectbox.so": {"conf": "linux-x64", "archiveExt": "tar.gz"},
-    "armv6l/libobjectbox.so": {"conf": "linux-x64", "archiveExt": "tar.gz"},
+    "x86_64/libobjectbox.so": "linux-x64.tar.gz",
+    "aarch64/libobjectbox.so": "linux-aarch64.tar.gz",
+    "armv7l/libobjectbox.so": "linux-armv7hf.tar.gz",
+    "armv6l/libobjectbox.so": "linux-armv6hf.tar.gz",
+
     # mac
-    "x86_64/libobjectbox.dylib": {"conf": "macos-universal", "archiveExt": "zip"},
+    "macos-universal/libobjectbox.dylib": "macos-universal.zip",
+
     # windows
-    "AMD64/objectbox.dll": {"conf": "windows-x64", "archiveExt": "zip"},
+    "AMD64/objectbox.dll": "windows-x64.zip",
 }
 
-base_dir = os.getcwd()
+def url_for(rel_path: str) -> str:
+    return base_url + "/" + version + "/" + variant + "-" + files[rel_path]
 
 def fullmkdir(path: str):
     if not os.path.exists(path):
@@ -42,23 +48,21 @@ def download(rel_path: str):
     fullmkdir(os.path.dirname(out_path))
 
     # Download the file from `url`, save it in a temporary directory and get the path to it (e.g. '/tmp/tmpb48zma')
-    config = release_configs[rel_path]
-    tmp_file, _ = urllib.request.urlretrieve(
-        release_url % (config["conf"], config["archiveExt"])
-    )
+    source_url = url_for(rel_path);
+    tmp_file, headers = urllib.request.urlretrieve(source_url)
 
     # extract the file
-    if config["archiveExt"] == "zip":
-        with ZipFile(tmp_file, "r") as archive:
-            with open(out_path, "wb") as out_file:
-                out_file.write(archive.read(f"{archive_dir}/{basename}"))
-    else:
-        with tarfile.open(tmp_file, mode="r:gz") as archive:
-            extract = archive.extractfile(f"{archive_dir}/{basename}")
-            with open(out_path, "wb") as out_file:
-                out_file.write(extract.read())
+    with open(out_path, 'wb') as file:
+        if source_url.endswith('.zip'):
+            with zipfile.ZipFile(tmp_file) as archive:
+                with archive.open(archive_dir + "/" + basename) as archived_file:
+                    file.writelines(archived_file.readlines())
+        else:
+            with tarfile.open(tmp_file, mode='r:gz') as archive:
+                with archive.extractfile(archive_dir + "/" + basename) as archived_file:
+                    file.writelines(archived_file.readlines())
 
 
-# execute the download for each item in the release configs
-for key in release_configs:
+# execute the download for each item in the file hashes
+for key in files:
     download(key)

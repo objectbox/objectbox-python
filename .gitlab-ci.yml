@@ -3,17 +3,22 @@ stages:
   - test
 
 build:
+  tags: [x64, docker, linux]
   image: python:latest
   stage: build
   script:
-    - pip3 install virtualenv
     # a function to download a library from another Gitlab repos CI artifacts
-    - 'download_library(){ curl --create-dirs -o objectbox/lib/$1 -H "PRIVATE-TOKEN: $CI_API_TOKEN" $2; }'
-    - 'download_library x86_64/libobjectbox.so "${OBXLIB_URL_Linux64}"'
-    - 'download_library x86_64/libobjectbox.dylib "${OBXLIB_URL_Mac64}"'
-    - 'download_library armv7l/libobjectbox.so "${OBXLIB_URL_LinuxARMv7hf}"'
-    - 'download_library armv6l/libobjectbox.so "${OBXLIB_URL_LinuxARMv6hf}"'
-    - 'download_library AMD64/objectbox.dll "${OBXLIB_URL_Win64}"'
+    # URLs stored as CI variables, see https://docs.gitlab.com/ee/api/job_artifacts.html#download-a-single-artifact-file-from-specific-tag-or-branch
+    # FIXME Need to update URLs and extract from archives.
+    #- 'download_library(){ curl --create-dirs -o objectbox/lib/$1 -H "PRIVATE-TOKEN: $CI_API_TOKEN" $2; }'
+    #- 'download_library x86_64/libobjectbox.so "${OBXLIB_URL_Linux64}"'
+    #- 'download_library x86_64/libobjectbox.dylib "${OBXLIB_URL_Mac64}"'
+    #- 'download_library armv7l/libobjectbox.so "${OBXLIB_URL_LinuxARMv7hf}"'
+    #- 'download_library armv6l/libobjectbox.so "${OBXLIB_URL_LinuxARMv6hf}"'
+    #- 'download_library AMD64/objectbox.dll "${OBXLIB_URL_Win64}"'
+    - python -m pip install --upgrade pip
+    # Using released C library
+    - make depend
     - make test
     - make build
   artifacts:
@@ -27,23 +32,16 @@ build:
     - pip3 install --user pytest
     - rm -r objectbox
     - pip3 install --user --force-reinstall dist/*.whl
-    - python3 -m pytest
+    - ${PYTHON} -m pytest
+
+.test-python3:
+  extends: .test
+  variables:
+    PYTHON: "python3"
 
 .test:linux:x64:
-  extends: .test
+  extends: .test-python3
   tags: [x64, docker, linux]
-
-test:linux:x64:3.4:
-  extends: .test:linux:x64
-  image: python:3.4
-
-test:linux:x64:3.5:
-  extends: .test:linux:x64
-  image: python:3.5
-
-test:linux:x64:3.6:
-  extends: .test:linux:x64
-  image: python:3.6
 
 test:linux:x64:3.7:
   extends: .test:linux:x64
@@ -51,22 +49,31 @@ test:linux:x64:3.7:
 
 test:linux:x64:3.8:
   extends: .test:linux:x64
-  image: python:3.8-rc
+  image: python:3.8
 
-test:linux:armv6hf:
-  extends: .test
-  tags: [armv6hf, docker, linux]
-  image: balenalib/raspberry-pi-python:3.7-stretch
+test:linux:x64:3.9:
+  extends: .test:linux:x64
+  image: python:3.9
+
+test:linux:x64:3.10:
+  extends: .test:linux:x64
+  image: python:3.10
 
 test:linux:armv7hf:
-  extends: .test
-  tags: [armv7hf, docker, linux]
-  image: python:3.7
+  extends: .test-python3
+  tags: [armv7hf, shell, linux, python3]
+
+# aarch64 version not published
+#test:linux:aarch64:
+#  extends: .test
+#  tags: [aarch64, shell, linux, python3]
 
 test:mac:x64:
-  extends: .test
+  extends: .test-python3
   tags: [mac, x64, shell, python3]
 
 test:windows:x64:
   extends: .test
   tags: [windows, x64, shell, python3]
+  variables:
+    PYTHON: "python.exe"

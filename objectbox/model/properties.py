@@ -77,9 +77,7 @@ class Property:
             return OBXPropertyType_String
         elif ts == int:
             return OBXPropertyType_Long
-        elif (
-            ts == bytes
-        ):  # or ts == bytearray: might require further tests on read objects due to mutability
+        elif ts == bytes:  # or ts == bytearray: might require further tests on read objects due to mutability
             return OBXPropertyType_ByteVector
         elif ts == float:
             return OBXPropertyType_Double

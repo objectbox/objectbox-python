@@ -1,4 +1,4 @@
-# Copyright 2019-2020 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,20 +41,23 @@ def shlib_name(library: str) -> str:
 
 # initialize the C library
 lib_path = os.path.dirname(os.path.realpath(__file__))
-lib_path = os.path.join(lib_path, 'lib', platform.machine(), shlib_name('objectbox'))
+lib_path = os.path.join(lib_path, 'lib',
+                        platform.machine() if platform.system() != 'Darwin' else 'macos-universal', shlib_name('objectbox'))
 C = ctypes.CDLL(lib_path)
 
 # load the core library version
 __major = ctypes.c_int(0)
 __minor = ctypes.c_int(0)
 __patch = ctypes.c_int(0)
-C.obx_version(ctypes.byref(__major), ctypes.byref(__minor), ctypes.byref(__patch))
+C.obx_version(ctypes.byref(__major), ctypes.byref(
+    __minor), ctypes.byref(__patch))
 
 # C-api (core library) version
 version_core = Version(__major.value, __minor.value, __patch.value)
 
 assert str(version_core) == required_version, \
-    "Incorrect ObjectBox version loaded: %s instead of expected %s " % (str(version_core), required_version)
+    "Incorrect ObjectBox version loaded: %s instead of expected %s " % (
+        str(version_core), required_version)
 
 # define some basic types
 obx_err = ctypes.c_int
@@ -194,7 +197,8 @@ class CoreException(Exception):
         self.code = code
         self.message = py_str(C.obx_last_error_message())
         name = self.codes[code] if code in self.codes else "n/a"
-        super(CoreException, self).__init__("%d (%s) - %s" % (code, name, self.message))
+        super(CoreException, self).__init__(
+            "%d (%s) - %s" % (code, name, self.message))
 
 
 class NotFoundException(Exception):
@@ -227,7 +231,6 @@ def fn(name: str, restype: type, argtypes):
 
     if restype is obx_err:
         func.errcheck = check_obx_err
-        pass
     elif restype is not None:
         func.errcheck = check_result
 
@@ -256,23 +259,28 @@ def c_voidp_as_bytes(voidp, size):
 obx_model = fn('obx_model', OBX_model_p, [])
 
 # obx_err (OBX_model* model, const char* name, obx_schema_id entity_id, obx_uid entity_uid);
-obx_model_entity = fn('obx_model_entity', obx_err, [OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
+obx_model_entity = fn('obx_model_entity', obx_err, [
+                      OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, const char* name, OBXPropertyType type, obx_schema_id property_id, obx_uid property_uid);
 obx_model_property = fn('obx_model_property', obx_err,
                         [OBX_model_p, ctypes.c_char_p, OBXPropertyType, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, OBXPropertyFlags flags);
-obx_model_property_flags = fn('obx_model_property_flags', obx_err, [OBX_model_p, OBXPropertyFlags])
+obx_model_property_flags = fn('obx_model_property_flags', obx_err, [
+                              OBX_model_p, OBXPropertyFlags])
 
 # obx_err (OBX_model*, obx_schema_id entity_id, obx_uid entity_uid);
-obx_model_last_entity_id = fn('obx_model_last_entity_id', None, [OBX_model_p, obx_schema_id, obx_uid])
+obx_model_last_entity_id = fn('obx_model_last_entity_id', None, [
+                              OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id index_id, obx_uid index_uid);
-obx_model_last_index_id = fn('obx_model_last_index_id', None, [OBX_model_p, obx_schema_id, obx_uid])
+obx_model_last_index_id = fn('obx_model_last_index_id', None, [
+                             OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id relation_id, obx_uid relation_uid);
-obx_model_last_relation_id = fn('obx_model_last_relation_id', None, [OBX_model_p, obx_schema_id, obx_uid])
+obx_model_last_relation_id = fn('obx_model_last_relation_id', None, [
+                                OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id property_id, obx_uid property_uid);
 obx_model_entity_last_property_id = fn('obx_model_entity_last_property_id', obx_err,
@@ -282,19 +290,24 @@ obx_model_entity_last_property_id = fn('obx_model_entity_last_property_id', obx_
 obx_opt = fn('obx_opt', OBX_store_options_p, [])
 
 # obx_err (OBX_store_options* opt, const char* dir);
-obx_opt_directory = fn('obx_opt_directory', obx_err, [OBX_store_options_p, ctypes.c_char_p])
+obx_opt_directory = fn('obx_opt_directory', obx_err, [
+                       OBX_store_options_p, ctypes.c_char_p])
 
 # void (OBX_store_options* opt, size_t size_in_kb);
-obx_opt_max_db_size_in_kb = fn('obx_opt_max_db_size_in_kb', None, [OBX_store_options_p, ctypes.c_size_t])
+obx_opt_max_db_size_in_kb = fn('obx_opt_max_db_size_in_kb', None, [
+                               OBX_store_options_p, ctypes.c_size_t])
 
 # void (OBX_store_options* opt, int file_mode);
-obx_opt_file_mode = fn('obx_opt_file_mode', None, [OBX_store_options_p, ctypes.c_uint])
+obx_opt_file_mode = fn('obx_opt_file_mode', None, [
+                       OBX_store_options_p, ctypes.c_uint])
 
 # void (OBX_store_options* opt, int max_readers);
-obx_opt_max_readers = fn('obx_opt_max_readers', None, [OBX_store_options_p, ctypes.c_uint])
+obx_opt_max_readers = fn('obx_opt_max_readers', None, [
+                         OBX_store_options_p, ctypes.c_uint])
 
 # obx_err (OBX_store_options* opt, OBX_model* model);
-obx_opt_model = fn('obx_opt_model', obx_err, [OBX_store_options_p, OBX_model_p])
+obx_opt_model = fn('obx_opt_model', obx_err, [
+                   OBX_store_options_p, OBX_model_p])
 
 # void (OBX_store_options* opt);
 obx_opt_free = fn('obx_opt_free', None, [OBX_store_options_p])
@@ -323,7 +336,7 @@ obx_txn_success = fn('obx_txn_success', obx_err, [OBX_txn_p])
 # OBX_box* (OBX_store* store, obx_schema_id entity_id);
 obx_box = fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 
-# obx_err (OBX_box* box, obx_id id, void** data, size_t* size);
+# obx_err (OBX_box* box, obx_id id, const void** data, size_t* size);
 obx_box_get = fn('obx_box_get', obx_err,
                  [OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
@@ -334,25 +347,31 @@ obx_box_get_all = fn('obx_box_get_all', OBX_bytes_array_p, [OBX_box_p])
 obx_box_id_for_put = fn('obx_box_id_for_put', obx_id, [OBX_box_p, obx_id])
 
 # obx_err (OBX_box* box, uint64_t count, obx_id* out_first_id);
-obx_box_ids_for_put = fn('obx_box_ids_for_put', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
+obx_box_ids_for_put = fn('obx_box_ids_for_put', obx_err, [
+                         OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
 
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size);
-obx_box_put = fn('obx_box_put', obx_err, [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_box_put = fn('obx_box_put', obx_err, [
+                 OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);
-obx_box_put_many = fn('obx_box_put_many', obx_err, [OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
+obx_box_put_many = fn('obx_box_put_many', obx_err, [
+                      OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
 
 # obx_err (OBX_box* box, obx_id id);
 obx_box_remove = fn('obx_box_remove', obx_err, [OBX_box_p, obx_id])
 
 # obx_err (OBX_box* box, uint64_t* out_count);
-obx_box_remove_all = fn('obx_box_remove_all', obx_err, [OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
+obx_box_remove_all = fn('obx_box_remove_all', obx_err, [
+                        OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
 
 # obx_err (OBX_box* box, bool* out_is_empty);
-obx_box_is_empty = fn('obx_box_is_empty', obx_err, [OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
+obx_box_is_empty = fn('obx_box_is_empty', obx_err, [
+                      OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
 
 # obx_err obx_box_count(OBX_box* box, uint64_t limit, uint64_t* out_count);
-obx_box_count = fn('obx_box_count', obx_err, [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+obx_box_count = fn('obx_box_count', obx_err, [
+                   OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
 
 # OBX_bytes_array* (size_t count);
 obx_bytes_array = fn('obx_bytes_array', OBX_bytes_array_p, [ctypes.c_size_t])
