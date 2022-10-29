@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import datetime
 from enum import IntEnum
 
 from objectbox.c import *
@@ -28,7 +29,7 @@ class PropertyType(IntEnum):
     float = OBXPropertyType_Float
     double = OBXPropertyType_Double
     string = OBXPropertyType_String
-    # date = OBXPropertyType_Date
+    date = OBXPropertyType_Date
     # relation = OBXPropertyType_Relation
     byteVector = OBXPropertyType_ByteVector
     # stringVector = OBXPropertyType_StringVector
@@ -44,7 +45,7 @@ fb_type_map = {
     PropertyType.float: flatbuffers.number_types.Float32Flags,
     PropertyType.double: flatbuffers.number_types.Float64Flags,
     PropertyType.string: flatbuffers.number_types.UOffsetTFlags,
-    # PropertyType.date: flatbuffers.number_types.Int64Flags,
+    PropertyType.date: flatbuffers.number_types.Int64Flags,
     # PropertyType.relation: flatbuffers.number_types.Int64Flags,
     PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
     # PropertyType.stringVector: flatbuffers.number_types.UOffsetTFlags,
@@ -81,6 +82,8 @@ class Property:
             return OBXPropertyType_Double
         elif ts == bool:
             return OBXPropertyType_Bool
+        elif ts == datetime:
+            return OBXPropertyType_Date
         else:
             raise Exception("unknown property type %s" % ts)
 

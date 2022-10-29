@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from datetime import datetime
 import flatbuffers
 from objectbox.c import *
 from objectbox.model.properties import Property
@@ -78,8 +79,10 @@ class _Entity(object):
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
-        if val == prop:
-            return prop._py_type()  # default (empty) value for the given type
+        if isinstance(val, datetime):  # handle datetimes first
+            return int(val.timestamp())
+        elif val == prop:
+            return prop._py_type() if not hasattr(prop._py_type, "timestamp") else 0  # default (empty) value for the given type
         return val
 
     def get_object_id(self, object) -> int:
@@ -143,6 +146,9 @@ class _Entity(object):
 
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
+            elif prop._ob_type == OBXPropertyType_Date:
+                table_val = table.Get(prop._fb_type, o + table.Pos)
+                val = datetime.fromtimestamp(table_val) if table_val != 0 else 0  # default timestamp
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
 

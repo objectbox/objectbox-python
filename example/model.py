@@ -1,3 +1,4 @@
+from datetime import datetime
 from objectbox.model import *
 
 
@@ -7,8 +8,8 @@ class Task:
     text = Property(str, id=2, uid=1002)
 
     # TODO property type DATE
-    date_created = Property(int, id=3, uid=1003)
-    date_finished = Property(int, id=4, uid=1004)
+    date_created = Property(datetime, id=3, uid=1003)
+    date_finished = Property(datetime, id=4, uid=1004)
 
 
 def get_objectbox_model():
