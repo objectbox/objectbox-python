@@ -80,7 +80,7 @@ class _Entity(object):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
         if isinstance(val, datetime):  # handle datetimes first
-            return int(val.timestamp())
+            return int(val.timestamp()) if prop._ob_type == OBXPropertyType_Date else val.timestamp()
         elif val == prop:
             return prop._py_type() if not hasattr(prop._py_type, "timestamp") else 0  # default (empty) value for the given type
         return val
@@ -146,7 +146,7 @@ class _Entity(object):
 
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
-            elif prop._ob_type == OBXPropertyType_Date:
+            elif prop._ob_type == OBXPropertyType_Date or prop._ob_type == OBXPropertyType_DateNano:
                 table_val = table.Get(prop._fb_type, o + table.Pos)
                 val = datetime.fromtimestamp(table_val) if table_val != 0 else 0  # default timestamp
             else:

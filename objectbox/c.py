@@ -394,6 +394,7 @@ OBXPropertyType_Double = 8
 OBXPropertyType_String = 9
 OBXPropertyType_Date = 10
 OBXPropertyType_Relation = 11
+OBXPropertyType_DateNano = 12
 OBXPropertyType_ByteVector = 23
 OBXPropertyType_StringVector = 30
 

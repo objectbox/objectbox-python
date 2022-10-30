@@ -7,8 +7,7 @@ class Task:
     id = Id(id=1, uid=1001)
     text = Property(str, id=2, uid=1002)
 
-    # TODO property type DATE
-    date_created = Property(datetime, id=3, uid=1003)
+    date_created = Property(datetime, type=PropertyType.dateNano, id=3, uid=1003)
     date_finished = Property(datetime, id=4, uid=1004)
 
 
