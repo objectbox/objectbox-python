@@ -383,6 +383,18 @@ obx_bytes_array_set = fn('obx_bytes_array_set', obx_err,
 # void (OBX_bytes_array * array);
 obx_bytes_array_free = fn('obx_bytes_array_free', None, [OBX_bytes_array_p])
 
+# obx_err (OBX_box* box, obx_schema_id relation_id, obx_id source_id, obx_id target_id)
+obx_box_rel_put = fn('obx_box_rel_put', obx_err, [OBX_box_p, obx_schema_id, obx_id, obx_id])
+
+# obx_err (OBX_box* box, obx_schema_id relation_id, obx_id source_id, obx_id target_id)
+obx_box_rel_remove = fn('obx_box_rel_remove', obx_err, [OBX_box_p, obx_schema_id, obx_id, obx_id])
+
+# OBX_id_array* (OBX_box* box, obx_schema_id relation_id, obx_id id)
+obx_box_rel_get_ids = fn('obx_box_rel_get_ids', OBX_id_array_p, [obx_schema_id, obx_id])
+
+# OBX_id_array* (OBX_box* box, obx_schema_id relation_id, obx_id id)
+obx_box_rel_get_backlink_ids = fn('obx_box_rel_get_backlink_ids', OBX_id_array_p, [OBX_box_p, obx_schema_id, obx_id])
+
 OBXPropertyType_Bool = 1
 OBXPropertyType_Byte = 2
 OBXPropertyType_Short = 3
