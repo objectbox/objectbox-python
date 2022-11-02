@@ -17,6 +17,9 @@ from enum import IntEnum
 from objectbox.c import *
 import flatbuffers.number_types
 
+class Relation:
+    source_id: int
+    target_id: int
 
 class PropertyType(IntEnum):
     bool = OBXPropertyType_Bool
@@ -29,7 +32,7 @@ class PropertyType(IntEnum):
     double = OBXPropertyType_Double
     string = OBXPropertyType_String
     # date = OBXPropertyType_Date
-    # relation = OBXPropertyType_Relation
+    relation = OBXPropertyType_Relation
     byteVector = OBXPropertyType_ByteVector
     # stringVector = OBXPropertyType_StringVector
 
@@ -45,16 +48,17 @@ fb_type_map = {
     PropertyType.double: flatbuffers.number_types.Float64Flags,
     PropertyType.string: flatbuffers.number_types.UOffsetTFlags,
     # PropertyType.date: flatbuffers.number_types.Int64Flags,
-    # PropertyType.relation: flatbuffers.number_types.Int64Flags,
+    PropertyType.relation: flatbuffers.number_types.Int64Flags,
     PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
     # PropertyType.stringVector: flatbuffers.number_types.UOffsetTFlags,
 }
 
 
 class Property:
-    def __init__(self, py_type: type, id: int, uid: int, type: PropertyType = None):
+    def __init__(self, py_type: type, id: int, uid: int, target_id: "IdUid" = None, type: PropertyType = None):
         self._id = id
         self._uid = uid
+        self._target_id = target_id
         self._name = ""  # set in Entity.fill_properties()
 
         self._py_type = py_type

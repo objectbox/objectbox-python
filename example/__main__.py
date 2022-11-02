@@ -22,17 +22,17 @@ class TasklistCmd(Cmd):
     def do_ls(self, _):
         """list tasks"""
 
-        tasks = self._box.get_all()
+        tasks: list(Task) = self._box.get_all()
 
         print("%3s  %-29s  %-29s  %s" % ("ID", "Created", "Finished", "Text"))
         for task in tasks:
             print("%3d  %-29s  %-29s  %s" % (
-            task.id, format_date(task.date_created), format_date(task.date_finished), task.text))
+            task.id, format_date(task.date_created), format_date(task.date_finished), task.info.text))
 
     def do_new(self, text: str):
         """create a new task with the given text (all arguments concatenated)"""
         task = Task()
-        task.text = text
+        task.info.text = text
         task.date_created = now_ms()
         self._box.put(task)
 

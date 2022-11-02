@@ -37,8 +37,8 @@ class _Entity(object):
 
         self.last_property_id = None  # IdUid - set in model.entity()
 
-        self.properties = list()  # List[Property]
-        self.offset_properties = list()  # List[Property]
+        self.properties: list[Property] = list()  # List[Property]
+        self.offset_properties: list[Property] = list()  # List[Property]
         self.id_property = None
         self.fill_properties()
 
@@ -68,7 +68,7 @@ class _Entity(object):
                     "programming error - invalid type OB & FB type combination"
                 self.offset_properties.append(prop)
 
-            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop._name, prop._py_type, prop._ob_type, prop._fb_type))
+            print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop._name, prop._py_type, prop._ob_type, prop._fb_type))
 
         if not self.id_property:
             raise Exception("ID property is not defined")
@@ -143,6 +143,8 @@ class _Entity(object):
 
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
+            elif prop._ob_type == OBXPropertyType_Relation:
+                val = table.Get(prop._fb_type, o + table.Pos)
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
 
