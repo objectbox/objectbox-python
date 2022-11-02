@@ -79,8 +79,8 @@ class _Entity(object):
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
-        if isinstance(val, datetime):  # handle datetimes first
-            return int(val.timestamp()) if prop._ob_type == OBXPropertyType_Date else val.timestamp()
+        if hasattr(val, "timestamp"):  # handle datetimes first
+            return int(val.timestamp())
         elif val == prop:
             return prop._py_type() if not hasattr(prop._py_type, "timestamp") else 0  # default (empty) value for the given type
         return val

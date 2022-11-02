@@ -1,12 +1,12 @@
 from cmd import Cmd
 import objectbox
-from datetime import datetime
+from datetime import datetime, timezone
 from example.model import *
 
 
 # objectbox expects date timestamp in milliseconds since UNIX epoch
 def now_ms() -> int:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 def format_date(timestamp_ms: datetime) -> str:
