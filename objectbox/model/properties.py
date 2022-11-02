@@ -91,6 +91,8 @@ class Property:
     def __set_flags(self):
         if self._is_id:
             self._flags = OBXPropertyFlags_ID
+        elif self._ob_type == OBXPropertyType_Relation:
+            self._flags = OBXPropertyFlags_INDEXED | OBXPropertyFlags_INDEX_PARTIAL_SKIP_ZERO
 
 
 # ID property (primary key)

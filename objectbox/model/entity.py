@@ -143,8 +143,6 @@ class _Entity(object):
 
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
-            elif prop._ob_type == OBXPropertyType_Relation:
-                val = table.Get(prop._fb_type, o + table.Pos)
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
 
