@@ -1,5 +1,6 @@
 import pytest
 import objectbox
+import numpy as np
 from tests.model import TestEntity
 from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
 
@@ -29,12 +30,19 @@ def test_box_basics():
     object.float64 = 4.2
     object.float32 = 1.5
     object.bytes = bytes([1, 1, 2, 3, 5])
+    object.ints = np.array([1, 2, 3, 555, 120, 222], dtype=np.int32)
+    object.longs = np.array([9182, 8273, 7364, 6455, 55462547], dtype=np.int64)
+    object.floats = np.array([0.1, 1.2, 2.3, 3.4, 4.5], dtype=np.float32)
+    object.doubles = np.array([99.99, 88.88, 77.77, 66.66, 55.595425], dtype=np.float64)
+    object.ints_list = [91, 82, 73, 64, 55]
+    object.longs_list = [4568, 8714, 1234, 5678, 9012240941]
+    object.floats_list = [0.11, 1.22, 2.33, 3.44, 4.5595]
+    object.doubles_list = [99.1999, 88.2888, 77.3777, 66.4666, 55.6597555]
     object.transient = "abcd"
 
     id = box.put(object)
     assert id == 5
     assert id == object.id
-
     # check the count
     assert not box.is_empty()
     assert box.count() == 2

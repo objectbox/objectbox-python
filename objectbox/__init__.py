@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 # Python binding version
-version = Version(0, 4, 0)
+version = Version(0, 5, 0)
 
 
 def version_info():

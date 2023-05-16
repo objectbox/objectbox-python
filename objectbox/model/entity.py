@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 
 import flatbuffers
+import numpy as np
 from objectbox.c import *
 from objectbox.model.properties import Property
 
@@ -64,8 +65,14 @@ class _Entity(object):
                 self.id_property = prop
 
             if prop._fb_type == flatbuffers.number_types.UOffsetTFlags:
-                assert prop._ob_type in [OBXPropertyType_String, OBXPropertyType_ByteVector], \
-                    "programming error - invalid type OB & FB type combination"
+                assert prop._ob_type in [
+                    OBXPropertyType_String,
+                    OBXPropertyType_ByteVector,
+                    OBXPropertyType_IntVector,
+                    OBXPropertyType_LongVector,
+                    OBXPropertyType_FloatVector,
+                    OBXPropertyType_DoubleVector,
+                ], "programming error - invalid type OB & FB type combination"
                 self.offset_properties.append(prop)
 
             # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop._name, prop._py_type, prop._ob_type, prop._fb_type))
@@ -78,8 +85,14 @@ class _Entity(object):
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
-        if val == prop:
-            return prop._py_type()  # default (empty) value for the given type
+        if prop._py_type == list[int] or prop._py_type == list[float]:
+            if (val == np.array(prop)).all():
+                return prop._py_type()
+        elif prop._py_type == np.ndarray:
+            if (val == np.array(prop)).all():
+                return np.array([0])
+        elif val == prop:
+                return prop._py_type()  # default (empty) value for the given type
         return val
 
     def get_object_id(self, object) -> int:
@@ -99,6 +112,14 @@ class _Entity(object):
                 offsets[prop._id] = builder.CreateString(val.encode('utf-8'))
             elif prop._ob_type == OBXPropertyType_ByteVector:
                 offsets[prop._id] = builder.CreateByteVector(val)
+            elif prop._ob_type == OBXPropertyType_IntVector:
+                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.int32))
+            elif prop._ob_type == OBXPropertyType_LongVector:
+                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.int64))
+            elif prop._ob_type == OBXPropertyType_FloatVector:
+                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float32))
+            elif prop._ob_type == OBXPropertyType_DoubleVector:
+                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
             else:
                 assert False, "programming error - invalid type OB & FB type combination"
 
@@ -143,6 +164,22 @@ class _Entity(object):
 
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
+            elif prop._ob_type == OBXPropertyType_IntVector:
+                val = table.GetVectorAsNumpy(flatbuffers.number_types.Int32Flags, o)
+                if prop._py_type == list[int]:
+                    val = val.tolist()
+            elif prop._ob_type == OBXPropertyType_LongVector:
+                val = table.GetVectorAsNumpy(flatbuffers.number_types.Int64Flags, o)
+                if prop._py_type == list[int]:
+                    val = val.tolist()
+            elif prop._ob_type == OBXPropertyType_FloatVector:
+                val = table.GetVectorAsNumpy(flatbuffers.number_types.Float32Flags, o)
+                if prop._py_type == list[float]:
+                    val = val.tolist()
+            elif prop._ob_type == OBXPropertyType_DoubleVector:
+                val = table.GetVectorAsNumpy(flatbuffers.number_types.Float64Flags, o)
+                if prop._py_type == list[float]:
+                    val = val.tolist()
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
 

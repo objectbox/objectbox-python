@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ from enum import IntEnum
 
 from objectbox.c import *
 import flatbuffers.number_types
+import numpy as np
 
 
 class PropertyType(IntEnum):
@@ -31,6 +32,10 @@ class PropertyType(IntEnum):
     # date = OBXPropertyType_Date
     # relation = OBXPropertyType_Relation
     byteVector = OBXPropertyType_ByteVector
+    intVector = OBXPropertyType_IntVector
+    longVector = OBXPropertyType_LongVector
+    floatVector = OBXPropertyType_FloatVector
+    doubleVector = OBXPropertyType_DoubleVector
     # stringVector = OBXPropertyType_StringVector
 
 
@@ -47,6 +52,10 @@ fb_type_map = {
     # PropertyType.date: flatbuffers.number_types.Int64Flags,
     # PropertyType.relation: flatbuffers.number_types.Int64Flags,
     PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
+    PropertyType.intVector: flatbuffers.number_types.UOffsetTFlags,
+    PropertyType.longVector: flatbuffers.number_types.UOffsetTFlags,
+    PropertyType.floatVector: flatbuffers.number_types.UOffsetTFlags,
+    PropertyType.doubleVector: flatbuffers.number_types.UOffsetTFlags,
     # PropertyType.stringVector: flatbuffers.number_types.UOffsetTFlags,
 }
 
@@ -77,6 +86,12 @@ class Property:
             return OBXPropertyType_Long
         elif ts == bytes:  # or ts == bytearray: might require further tests on read objects due to mutability
             return OBXPropertyType_ByteVector
+        elif ts == list[int]:
+            return OBXPropertyType_LongVector
+        elif ts == list[float]:
+            return OBXPropertyType_DoubleVector
+        elif ts == np.ndarray:
+            return OBXPropertyType_DoubleVector
         elif ts == float:
             return OBXPropertyType_Double
         elif ts == bool:

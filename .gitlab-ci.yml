@@ -30,6 +30,7 @@ build:
   stage: test
   script:
     - pip3 install --user pytest
+    - pip3 install --user numpy
     - rm -r objectbox
     - pip3 install --user --force-reinstall dist/*.whl
     - ${PYTHON} -m pytest
