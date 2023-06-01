@@ -85,7 +85,7 @@ class _Entity(object):
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
-        if prop._py_type == list[int] or prop._py_type == list[float]:
+        if prop._py_type == list:
             if (val == np.array(prop)).all():
                 return prop._py_type()
         elif prop._py_type == np.ndarray:
@@ -161,28 +161,20 @@ class _Entity(object):
                 # access the FB byte vector information
                 start = table.Vector(o)
                 size = table.VectorLen(o)
-
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
             elif prop._ob_type == OBXPropertyType_IntVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int32Flags, o)
-                if prop._py_type == list[int]:
-                    val = val.tolist()
             elif prop._ob_type == OBXPropertyType_LongVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int64Flags, o)
-                if prop._py_type == list[int]:
-                    val = val.tolist()
             elif prop._ob_type == OBXPropertyType_FloatVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Float32Flags, o)
-                if prop._py_type == list[float]:
-                    val = val.tolist()
             elif prop._ob_type == OBXPropertyType_DoubleVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Float64Flags, o)
-                if prop._py_type == list[float]:
-                    val = val.tolist()
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
-
+            if prop._py_type == list:
+                val = val.tolist()
             setattr(obj, prop._name, val)
         return obj
 

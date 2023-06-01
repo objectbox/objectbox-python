@@ -86,11 +86,7 @@ class Property:
             return OBXPropertyType_Long
         elif ts == bytes:  # or ts == bytearray: might require further tests on read objects due to mutability
             return OBXPropertyType_ByteVector
-        elif ts == list[int]:
-            return OBXPropertyType_LongVector
-        elif ts == list[float]:
-            return OBXPropertyType_DoubleVector
-        elif ts == np.ndarray:
+        elif ts == list or ts == np.ndarray:
             return OBXPropertyType_DoubleVector
         elif ts == float:
             return OBXPropertyType_Double
