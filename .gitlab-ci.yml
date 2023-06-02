@@ -60,9 +60,9 @@ test:linux:x64:3.10:
   extends: .test:linux:x64
   image: python:3.10
 
-test:linux:armv7hf:
-  extends: .test-python3
-  tags: [armv7hf, shell, linux, python3]
+# test:linux:armv7hf:
+#   extends: .test-python3
+#   tags: [armv7hf, shell, linux, python3]
 
 # aarch64 version not published
 #test:linux:aarch64:
