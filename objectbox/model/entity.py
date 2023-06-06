@@ -85,12 +85,9 @@ class _Entity(object):
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
-        if prop._py_type == list:
+        if prop._py_type == np.ndarray:
             if (val == np.array(prop)).all():
-                return prop._py_type()
-        elif prop._py_type == np.ndarray:
-            if (val == np.array(prop)).all():
-                return np.array([0])
+                return np.array([])
         elif val == prop:
                 return prop._py_type()  # default (empty) value for the given type
         return val
