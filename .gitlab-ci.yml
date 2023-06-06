@@ -72,6 +72,9 @@ test:linux:x64:3.10:
 test:mac:x64:
   extends: .test-python3
   tags: [mac, x64, shell, python3]
+  script:
+    - make depend
+    - make test
 
 test:windows:x64:
   extends: .test
