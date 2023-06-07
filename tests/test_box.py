@@ -3,6 +3,7 @@ import objectbox
 import numpy as np
 from tests.model import TestEntity
 from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
+import time
 
 
 def test_box_basics():
@@ -38,6 +39,8 @@ def test_box_basics():
     object.longs_list = [4568, 8714, 1234, 5678, 9012240941]
     object.floats_list = [0.11, 1.22, 2.33, 3.44, 4.5595]
     object.doubles_list = [99.1999, 88.2888, 77.3777, 66.4666, 55.6597555]
+    object.date = time.time() * 1000  # milliseconds since UNIX epoch
+    object.date_nano = time.time_ns()  # nanoseconds since UNIX epoch
     object.transient = "abcd"
 
     id = box.put(object)
@@ -54,6 +57,8 @@ def test_box_basics():
 
     # update
     object.str = "bar"
+    object.date = time.time_ns() / 1000000  # check that date can also be int
+    object.date_nano = time.time() * 1000000000  # check that date_nano can also be float
     id = box.put(object)
     assert id == 5
 

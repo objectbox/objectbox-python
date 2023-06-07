@@ -15,6 +15,7 @@
 
 import flatbuffers
 import numpy as np
+from math import floor
 from objectbox.c import *
 from objectbox.model.properties import Property
 
@@ -132,6 +133,8 @@ class _Entity(object):
             else:
                 val = id if prop == self.id_property else self.get_value(
                     object, prop)
+                if prop._ob_type == OBXPropertyType_Date or prop._ob_type == OBXPropertyType_DateNano:
+                    val = floor(val)  # use floor to allow for float types
                 builder.Prepend(prop._fb_type, val)
 
             builder.Slot(prop._fb_slot)

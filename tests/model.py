@@ -22,6 +22,8 @@ class TestEntity:
     longs_list = Property(list, type=PropertyType.longVector, id=16, uid=1016)
     floats_list = Property(list, type=PropertyType.floatVector, id=17, uid=1017)
     doubles_list = Property(list, type=PropertyType.doubleVector, id=18, uid=1018)
+    date = Property(int, type=PropertyType.date, id=19, uid=1019)
+    date_nano = Property(int, type=PropertyType.dateNano, id=20, uid=1020)
     transient = ""  # not "Property" so it's not stored
 
     def __init__(self, string: str = ""):
