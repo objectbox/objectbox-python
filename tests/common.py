@@ -3,6 +3,7 @@ import os
 import shutil
 import pytest
 from tests.model import TestEntity
+import numpy as np
 
 test_dir = 'testdata'
 
@@ -23,7 +24,7 @@ def autocleanup():
 def load_empty_test_objectbox(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
     from objectbox.model import IdUid
-    model.entity(TestEntity, last_property_id=IdUid(10, 1010))
+    model.entity(TestEntity, last_property_id=IdUid(18, 1018))
     model.last_entity_id = IdUid(1, 1)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
@@ -35,6 +36,14 @@ def assert_equal_prop(actual, expected, default):
     assert actual == expected or (isinstance(
         expected, objectbox.model.Property) and actual == default)
 
+def assert_equal_prop_vector(actual, expected, default):
+    assert (actual == np.array(expected)).all() or (isinstance(
+        expected, objectbox.model.Property) and actual == default)
+
+# compare approx values for list
+def assert_equal_prop_list(actual, expected, default):
+    assert pytest.approx(actual) == expected or (isinstance(
+        expected, objectbox.model.Property) and actual == default)
 
 def assert_equal(actual: TestEntity, expected: TestEntity):
     """Check that two TestEntity objects have the same property data"""
@@ -46,3 +55,11 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop(actual.float64, expected.float64, 0)
     assert_equal_prop(actual.float32, expected.float32, 0)
     assert_equal_prop(actual.bytes, expected.bytes, b'')
+    assert_equal_prop_vector(actual.ints, expected.ints, np.array([]))
+    assert_equal_prop_vector(actual.longs, expected.longs, np.array([]))
+    assert_equal_prop_vector(actual.floats, expected.floats, np.array([]))
+    assert_equal_prop_vector(actual.doubles, expected.doubles, np.array([]))
+    assert_equal_prop_list(actual.ints_list, expected.ints_list, [])
+    assert_equal_prop_list(actual.longs_list, expected.longs_list, [])
+    assert_equal_prop_list(actual.floats_list, expected.floats_list, [])
+    assert_equal_prop_list(actual.doubles_list, expected.doubles_list, [])

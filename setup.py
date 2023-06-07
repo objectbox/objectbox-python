@@ -46,7 +46,7 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'flatbuffers==2.0',
+       'flatbuffers==23.5.26',
     ],
 
     packages=setuptools.find_packages(),

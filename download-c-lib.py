@@ -6,7 +6,7 @@ import os
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
-version = "v0.14.0"  # see objectbox/c.py required_version
+version = "v0.18.1"  # see objectbox/c.py required_version
 variant = 'objectbox'  # or 'objectbox-sync'
 
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"

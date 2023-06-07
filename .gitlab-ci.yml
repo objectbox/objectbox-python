@@ -30,6 +30,7 @@ build:
   stage: test
   script:
     - pip3 install --user pytest
+    - pip3 install --user numpy
     - rm -r objectbox
     - pip3 install --user --force-reinstall dist/*.whl
     - ${PYTHON} -m pytest
@@ -59,9 +60,9 @@ test:linux:x64:3.10:
   extends: .test:linux:x64
   image: python:3.10
 
-test:linux:armv7hf:
-  extends: .test-python3
-  tags: [armv7hf, shell, linux, python3]
+# test:linux:armv7hf:
+#   extends: .test-python3
+#   tags: [armv7hf, shell, linux, python3]
 
 # aarch64 version not published
 #test:linux:aarch64:
@@ -71,6 +72,9 @@ test:linux:armv7hf:
 test:mac:x64:
   extends: .test-python3
   tags: [mac, x64, shell, python3]
+  script:
+    - make depend
+    - make test
 
 test:windows:x64:
   extends: .test

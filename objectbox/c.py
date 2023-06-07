@@ -24,7 +24,7 @@ from objectbox.version import Version
 
 # Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
 # Don't forget to update download-c-lib.py when upgrading to a newer version.
-required_version = "0.14.0"
+required_version = "0.18.1"
 
 
 def shlib_name(library: str) -> str:
@@ -395,6 +395,10 @@ OBXPropertyType_String = 9
 OBXPropertyType_Date = 10
 OBXPropertyType_Relation = 11
 OBXPropertyType_ByteVector = 23
+OBXPropertyType_IntVector = 26
+OBXPropertyType_LongVector = 27
+OBXPropertyType_FloatVector = 28
+OBXPropertyType_DoubleVector = 29
 OBXPropertyType_StringVector = 30
 
 OBXPropertyFlags_ID = 1

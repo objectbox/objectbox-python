@@ -1,5 +1,6 @@
 pip
 wheel
-flatbuffers==2.0
+flatbuffers==23.5.26
 pytest>=4.4.1
 twine
+numpy
