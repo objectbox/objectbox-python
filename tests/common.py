@@ -2,7 +2,7 @@ import objectbox
 import os
 import shutil
 import pytest
-from tests.model import TestEntity
+from tests.model import TestEntity, TestEntityDatetime
 import numpy as np
 
 test_dir = 'testdata'
@@ -25,6 +25,17 @@ def load_empty_test_objectbox(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
     from objectbox.model import IdUid
     model.entity(TestEntity, last_property_id=IdUid(20, 1020))
+    model.last_entity_id = IdUid(1, 1)
+
+    db_name = test_dir if len(name) == 0 else test_dir + "/" + name
+
+    return objectbox.Builder().model(model).directory(db_name).build()
+
+
+def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
+    model = objectbox.Model()
+    from objectbox.model import IdUid
+    model.entity(TestEntityDatetime, last_property_id=IdUid(3, 1003))
     model.last_entity_id = IdUid(1, 1)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
