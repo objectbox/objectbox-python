@@ -4,6 +4,7 @@ import numpy as np
 from tests.model import TestEntity
 from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
 import time
+from math import floor
 
 
 def test_box_basics():
@@ -57,8 +58,8 @@ def test_box_basics():
 
     # update
     object.str = "bar"
-    object.date = time.time_ns() / 1000000  # check that date can also be int
-    object.date_nano = time.time() * 1000000000  # check that date_nano can also be float
+    object.date = floor(time.time_ns() / 1000000)  # check that date can also be int
+    object.date_nano = float(time.time() * 1000000000)  # check that date_nano can also be float
     id = box.put(object)
     assert id == 5
 
