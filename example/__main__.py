@@ -1,17 +1,16 @@
 from cmd import Cmd
 import objectbox
-import datetime
+import time
 from example.model import *
 
 
 # objectbox expects date timestamp in milliseconds since UNIX epoch
 def now_ms() -> int:
-    seconds: float = datetime.datetime.utcnow().timestamp()
-    return round(seconds * 1000)
+    return time.time_ns() / 1000000
 
 
 def format_date(timestamp_ms: int) -> str:
-    return "" if timestamp_ms == 0 else str(datetime.datetime.fromtimestamp(timestamp_ms / 1000))
+    return "" if timestamp_ms == 0 else time.ctime(timestamp_ms / 1000)
 
 
 class TasklistCmd(Cmd):

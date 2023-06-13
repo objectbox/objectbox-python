@@ -1,8 +1,16 @@
 import pytest
 import objectbox
+from tests.model import TestEntity, TestEntityDatetime
+from tests.common import (
+    autocleanup,
+    load_empty_test_objectbox,
+    load_empty_test_datetime,
+    assert_equal,
+)
 import numpy as np
-from tests.model import TestEntity
-from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
+from datetime import datetime
+import time
+from math import floor
 
 
 def test_box_basics():
@@ -38,6 +46,8 @@ def test_box_basics():
     object.longs_list = [4568, 8714, 1234, 5678, 9012240941]
     object.floats_list = [0.11, 1.22, 2.33, 3.44, 4.5595]
     object.doubles_list = [99.1999, 88.2888, 77.3777, 66.4666, 55.6597555]
+    object.date = time.time() * 1000  # milliseconds since UNIX epoch
+    object.date_nano = time.time_ns()  # nanoseconds since UNIX epoch
     object.transient = "abcd"
 
     id = box.put(object)
@@ -54,6 +64,8 @@ def test_box_basics():
 
     # update
     object.str = "bar"
+    object.date = floor(time.time_ns() / 1000000)  # check that date can also be int
+    object.date_nano = float(time.time() * 1000000000)  # check that date_nano can also be float
     id = box.put(object)
     assert id == 5
 
@@ -71,6 +83,8 @@ def test_box_basics():
         box.get(object.id)
     with pytest.raises(objectbox.NotFoundException):
         box.get(1)
+
+    ob.close()
 
 
 def test_box_bulk():
@@ -104,3 +118,59 @@ def test_box_bulk():
     removed = box.remove_all()
     assert removed == 4
     assert box.count() == 0
+
+    ob.close()
+
+
+def test_datetime():
+    ob = load_empty_test_datetime()
+    box = objectbox.Box(ob, TestEntityDatetime)
+
+    assert box.is_empty()
+    assert box.count() == 0
+
+    # creat - deferred for now, as there is an issue with 0 timestamp on Windows
+    # object = TestEntityDatetime()
+    # id = box.put(object)
+    # assert id == 1
+    # assert id == object.id
+
+    # create with a given ID and some data
+    object = TestEntityDatetime()
+    object.id = 5
+    object.date = datetime.utcnow()  # milliseconds since UNIX epoch
+    object.date_nano = datetime.utcnow()  # nanoseconds since UNIX epoch
+
+    id = box.put(object)
+    assert id == 5
+    assert id == object.id
+    # check the count
+    assert not box.is_empty()
+    assert box.count() == 1
+
+    # read
+    read = box.get(object.id)
+    assert pytest.approx(read.date.timestamp()) == object.date.timestamp()
+
+    # update
+    object.str = "bar"
+    object.date = datetime.utcnow()
+    object.date_nano = datetime.utcnow()
+    id = box.put(object)
+    assert id == 5
+
+    # read again
+    read = box.get(object.id)
+    assert pytest.approx(read.date.timestamp()) == object.date.timestamp()
+
+    # remove
+    box.remove(object)
+
+    # check they're gone
+    assert box.count() == 0
+    with pytest.raises(objectbox.NotFoundException):
+        box.get(object.id)
+    with pytest.raises(objectbox.NotFoundException):
+        box.get(1)
+
+    ob.close()

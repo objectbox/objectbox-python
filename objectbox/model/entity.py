@@ -15,6 +15,8 @@
 
 import flatbuffers
 import numpy as np
+from math import floor
+from datetime import datetime
 from objectbox.c import *
 from objectbox.model.properties import Property
 
@@ -88,8 +90,11 @@ class _Entity(object):
         if prop._py_type == np.ndarray:
             if (val == np.array(prop)).all():
                 return np.array([])
+        elif prop._py_type == datetime:
+            if val == prop:
+                return datetime.fromtimestamp(0)
         elif val == prop:
-                return prop._py_type()  # default (empty) value for the given type
+            return prop._py_type()  # default (empty) value for the given type
         return val
 
     def get_object_id(self, object) -> int:
@@ -130,8 +135,15 @@ class _Entity(object):
                 if val:
                     builder.PrependUOffsetTRelative(val)
             else:
-                val = id if prop == self.id_property else self.get_value(
-                    object, prop)
+                val = id if prop == self.id_property else self.get_value(object, prop)
+                if prop._ob_type == OBXPropertyType_Date:
+                    if prop._py_type == datetime:
+                        val = val.timestamp() * 1000  # timestamp returns seconds, convert to milliseconds
+                    val = floor(val)  # use floor to allow for float types
+                elif prop._ob_type == OBXPropertyType_DateNano:
+                    if prop._py_type == datetime:
+                        val = val.timestamp() * 1000000000  # convert to nanoseconds
+                    val = floor(val)  # use floor to allow for float types
                 builder.Prepend(prop._fb_type, val)
 
             builder.Slot(prop._fb_slot)
@@ -160,6 +172,12 @@ class _Entity(object):
                 size = table.VectorLen(o)
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start+size])
+            elif prop._ob_type == OBXPropertyType_Date and prop._py_type == datetime:
+                table_val = table.Get(prop._fb_type, o + table.Pos)
+                val = datetime.fromtimestamp(table_val/1000) if table_val != 0 else datetime.fromtimestamp(0)  # default timestamp
+            elif prop._ob_type == OBXPropertyType_DateNano and prop._py_type == datetime:
+                table_val = table.Get(prop._fb_type, o + table.Pos)
+                val = datetime.fromtimestamp(table_val/1000000000) if table_val != 0 else datetime.fromtimestamp(0)  # default timestamp
             elif prop._ob_type == OBXPropertyType_IntVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int32Flags, o)
             elif prop._ob_type == OBXPropertyType_LongVector:

@@ -1,7 +1,6 @@
-import pytest
 import objectbox
 from tests.model import TestEntity
-from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
+from tests.common import autocleanup, load_empty_test_objectbox
 
 
 def test_transactions():
@@ -39,3 +38,5 @@ def test_transactions():
         assert 0
     except Exception as err:
         assert "Cannot start a write transaction inside a read only transaction" in str(err)
+    finally:
+        ob.close()
