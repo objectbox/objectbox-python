@@ -1,5 +1,5 @@
 import objectbox
-from tests.common import autocleanup, load_empty_test_objectbox, assert_equal
+from tests.common import load_empty_test_objectbox
 
 
 def test_version():

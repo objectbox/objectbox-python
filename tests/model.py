@@ -30,7 +30,7 @@ class TestEntity:
     def __init__(self, string: str = ""):
         self.str = string
 
-@Entity(id=1, uid=1)
+@Entity(id=2, uid=2)
 class TestEntityDatetime:
     id = Id(id=1, uid=1001)
     date = Property(datetime, type=PropertyType.date, id=2, uid=1002)

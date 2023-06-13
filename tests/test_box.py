@@ -2,7 +2,6 @@ import pytest
 import objectbox
 from tests.model import TestEntity, TestEntityDatetime
 from tests.common import (
-    autocleanup,
     load_empty_test_objectbox,
     load_empty_test_datetime,
     assert_equal,
@@ -84,6 +83,8 @@ def test_box_basics():
     with pytest.raises(objectbox.NotFoundException):
         box.get(1)
 
+    ob.close()
+
 
 def test_box_bulk():
     ob = load_empty_test_objectbox()
@@ -116,6 +117,8 @@ def test_box_bulk():
     removed = box.remove_all()
     assert removed == 4
     assert box.count() == 0
+
+    ob.close()
 
 
 def test_datetime():
@@ -170,6 +173,8 @@ def test_datetime():
     with pytest.raises(objectbox.NotFoundException):
         box.get(1)
 
+    ob.close()
+
 
 def test_box_bulk_datetime():
     ob = load_empty_test_datetime()
@@ -196,3 +201,5 @@ def test_box_bulk_datetime():
     removed = box.remove_all()
     assert removed == 4
     assert box.count() == 0
+
+    ob.close()

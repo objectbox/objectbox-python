@@ -21,11 +21,19 @@ class ObjectBox:
     def __init__(self, c_store: OBX_store_p):
         self._c_store = c_store
 
+        self._closed = False
+
     def __del__(self):
-        obx_store_close(self._c_store)
+        self.close()
 
     def read_tx(self):
         return objectbox.transaction.read(self)
 
     def write_tx(self):
         return objectbox.transaction.write(self)
+
+    def close(self):
+        if not self._closed:
+            obx_store_close(self._c_store)
+            self._closed = True
+
