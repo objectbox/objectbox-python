@@ -1,6 +1,6 @@
 import objectbox
 from tests.model import TestEntity
-from tests.common import load_empty_test_objectbox
+from tests.common import autocleanup, load_empty_test_objectbox
 
 
 def test_transactions():

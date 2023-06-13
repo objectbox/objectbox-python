@@ -2,6 +2,7 @@ import pytest
 import objectbox
 from tests.model import TestEntity, TestEntityDatetime
 from tests.common import (
+    autocleanup,
     load_empty_test_objectbox,
     load_empty_test_datetime,
     assert_equal,
