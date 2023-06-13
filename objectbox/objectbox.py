@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,6 @@ class ObjectBox:
     def __init__(self, c_store: OBX_store_p):
         self._c_store = c_store
 
-        self._closed = False
-
     def __del__(self):
         self.close()
 
@@ -33,7 +31,7 @@ class ObjectBox:
         return objectbox.transaction.write(self)
 
     def close(self):
-        if not self._closed:
-            obx_store_close(self._c_store)
-            self._closed = True
-
+        c_store_to_close = self._c_store
+        if c_store_to_close:
+            self._c_store = None
+            obx_store_close(c_store_to_close)
