@@ -1,17 +1,8 @@
 ObjectBox Python API
 ====================
-
-[ObjectBox](https://objectbox.io) is a superfast database for objects, now also available for Python with a simple CRUD API.
-
-* Python version: 3.4+
-* Platforms supported:
-  * Linux x86-64 (64-bit)
-  * Linux ARMv6hf (e.g. Raspberry PI Zero)
-  * Linux ARMv7hf (e.g. Raspberry PI 3)
-  * MacOS x86-64 (64-bit)
-  * MacOS arm64 (Apple silicon)
-  * Windows x86-64 (64-bit)
-  
+[ObjectBox](https://objectbox.io) is a superfast database for objects, now also available for Python (3.4+) with a simple CRUD API.
+And because it's an embedded database, there's no setup required.
+ 
 ## Table of Contents:
 - [Getting Started](#getting-started)
    - [Model IDs and UIDs](#model-ids-and-uids)
@@ -27,7 +18,6 @@ ObjectBox Python API
 
 Getting started
 ---------------
-
 First of all, install the latest version:
 
 ```bash
@@ -122,13 +112,18 @@ For more information and code examples, see the tests folder. The docs for other
 
 Some features
 -------------
-
-* automatic transactions (ACID compliant)
-* bulk operations
+* Automatic transactions (ACID compliant)
+* Bulk operations
+* Vector types, e.g. for AI vector embeddings
+* Platforms supported with native speed:
+  * Linux x86-64 (64-bit)
+  * Linux ARMv6hf (e.g. Raspberry PI Zero)
+  * Linux ARMv7hf (e.g. Raspberry PI 3; available only on request)
+  * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
+  * Windows x86-64 (64-bit)
 
 Coming in the future
 --------------------
-
 The goodness you know from the other ObjectBox language-bindings, e.g.,
 
 * model management (no need to manually set id/uid)
@@ -140,15 +135,13 @@ The goodness you know from the other ObjectBox language-bindings, e.g.,
 
 Help wanted
 -----------
-
-ObjectBox for Python is still in an early stage with limited feature set (compared to other languages).
+ObjectBox for Python is still in an early stage with limited feature set (compared to our other supported languages).
 To bring all these features to Python, we're asking the community to help out. PRs are more than welcome!
 The ObjectBox team will try its best to guide you and answer questions.
 See [CONTRIBUTING.md](https://github.com/objectbox/objectbox-python/blob/main/CONTRIBUTING.md) to get started.
 
 Feedback
 --------
-
 Also, please let us know your feedback by opening an issue: for example, if you experience errors or if you have ideas
 for how to improve the API. Thanks!
 
@@ -156,7 +149,7 @@ License
 -------
 
 ```text
-Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
