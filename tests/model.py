@@ -32,9 +32,9 @@ class TestEntity:
 
 @Entity(id=2, uid=2)
 class TestEntityDatetime:
-    id = Id(id=1, uid=1001)
-    date = Property(datetime, type=PropertyType.date, id=2, uid=1002)
-    date_nano = Property(datetime, type=PropertyType.dateNano, id=3, uid=1003)
+    id = Id(id=1, uid=2001)
+    date = Property(datetime, type=PropertyType.date, id=2, uid=2002)
+    date_nano = Property(datetime, type=PropertyType.dateNano, id=3, uid=2003)
 
     def __init__(self, string: str = ""):
         self.str = string
