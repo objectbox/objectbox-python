@@ -56,6 +56,7 @@ setuptools.setup(
             'lib/x86_64/*',
             'lib/armv7l/*',
             'lib/armv6l/*',
+            'lib/macos-universal/*',
             # Windows
             'lib/AMD64/*',
         ],
