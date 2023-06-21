@@ -1,7 +1,7 @@
 from objectbox.model import *
 import numpy as np
 from datetime import datetime
-from typing import Generic
+from typing import Generic, Dict, Any
 
 
 @Entity(id=1, uid=1)
@@ -37,6 +37,15 @@ class TestEntityDatetime:
     id = Id(id=1, uid=2001)
     date = Property(datetime, type=PropertyType.date, id=2, uid=2002)
     date_nano = Property(datetime, type=PropertyType.dateNano, id=3, uid=2003)
+
+    def __init__(self, string: str = ""):
+        self.str = string
+
+@Entity(id=3, uid=3)
+class TestEntityFlex:
+    id = Id(id=1, uid=3001)
+    flex_dict = Property(Dict[str, Any], type=PropertyType.flex, id=2, uid=3002)
+    flex_int = Property(int, type=PropertyType.flex, id=3, uid=3003)
 
     def __init__(self, string: str = ""):
         self.str = string

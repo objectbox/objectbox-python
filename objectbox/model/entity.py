@@ -128,7 +128,9 @@ class _Entity(object):
             elif prop._ob_type == OBXPropertyType_DoubleVector:
                 offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
             elif prop._ob_type == OBXPropertyType_Flex:
-                buffer = flatbuffers.flexbuffers.Dumps(val)
+                flex_builder = flatbuffers.flexbuffers.Builder()
+                flex_builder.Add(val)
+                buffer = flex_builder.Finish()
                 offsets[prop._id] = builder.CreateByteVector(bytes(buffer))
             else:
                 assert False, "programming error - invalid type OB & FB type combination"
