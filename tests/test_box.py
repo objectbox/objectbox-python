@@ -6,6 +6,7 @@ from tests.common import (
     load_empty_test_objectbox,
     load_empty_test_datetime,
     assert_equal,
+    put_flex,
 )
 import numpy as np
 from datetime import datetime
@@ -48,6 +49,7 @@ def test_box_basics():
     object.doubles_list = [99.1999, 88.2888, 77.3777, 66.4666, 55.6597555]
     object.date = time.time() * 1000  # milliseconds since UNIX epoch
     object.date_nano = time.time_ns()  # nanoseconds since UNIX epoch
+    object.flex = dict(a=1, b=2, c=3)
     object.transient = "abcd"
 
     id = box.put(object)
@@ -172,5 +174,37 @@ def test_datetime():
         box.get(object.id)
     with pytest.raises(objectbox.NotFoundException):
         box.get(1)
+
+    ob.close()
+
+
+def test_flex():
+    ob = load_empty_test_objectbox()
+    box = objectbox.Box(ob, TestEntity)
+    object = TestEntity()
+
+    # Put a None type first
+    put_flex(object, box, None)
+
+    # Update to int
+    put_flex(object, box, 1)
+
+    # Update to float
+    put_flex(object, box, 1.2)
+
+    # Update to string
+    put_flex(object, box, "foo")
+
+    # Update to int list
+    put_flex(object, box, [1, 2, 3])
+
+    # Update to float list
+    put_flex(object, box, [1.1, 2.2, 3.3])
+
+    # Update to dict
+    put_flex(object, box, {"a": 1, "b": 2})
+    
+    # Update to bool
+    put_flex(object, box, True)
 
     ob.close()

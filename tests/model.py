@@ -1,6 +1,7 @@
 from objectbox.model import *
 import numpy as np
 from datetime import datetime
+from typing import Generic
 
 
 @Entity(id=1, uid=1)
@@ -25,6 +26,7 @@ class TestEntity:
     doubles_list = Property(list, type=PropertyType.doubleVector, id=18, uid=1018)
     date = Property(int, type=PropertyType.date, id=19, uid=1019)
     date_nano = Property(int, type=PropertyType.dateNano, id=20, uid=1020)
+    flex = Property(Generic, type=PropertyType.flex, id=21, uid=1021)
     transient = ""  # not "Property" so it's not stored
 
     def __init__(self, string: str = ""):

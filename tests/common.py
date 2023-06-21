@@ -24,7 +24,7 @@ def autocleanup():
 def load_empty_test_objectbox(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
     from objectbox.model import IdUid
-    model.entity(TestEntity, last_property_id=IdUid(20, 1020))
+    model.entity(TestEntity, last_property_id=IdUid(21, 1021))
     model.last_entity_id = IdUid(2, 2)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
@@ -76,3 +76,12 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop_approx(actual.doubles_list, expected.doubles_list, [])
     assert_equal_prop_approx(actual.date, expected.date, 0)
     assert_equal_prop(actual.date_nano, expected.date_nano, 0)
+    assert_equal_prop(actual.flex, expected.flex, {})
+
+
+def put_flex(object, box, property):
+    object.flex = property
+    id = box.put(object)
+    assert id == object.id
+    read = box.get(object.id)
+    assert read.flex == object.flex

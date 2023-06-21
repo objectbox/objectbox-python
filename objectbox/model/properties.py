@@ -31,6 +31,7 @@ class PropertyType(IntEnum):
     string = OBXPropertyType_String
     date = OBXPropertyType_Date
     dateNano = OBXPropertyType_DateNano
+    flex = OBXPropertyType_Flex
     # relation = OBXPropertyType_Relation
     byteVector = OBXPropertyType_ByteVector
     intVector = OBXPropertyType_IntVector
@@ -52,6 +53,7 @@ fb_type_map = {
     PropertyType.string: flatbuffers.number_types.UOffsetTFlags,
     PropertyType.date: flatbuffers.number_types.Int64Flags,
     PropertyType.dateNano: flatbuffers.number_types.Int64Flags,
+    PropertyType.flex: flatbuffers.number_types.UOffsetTFlags,
     # PropertyType.relation: flatbuffers.number_types.Int64Flags,
     PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
     PropertyType.intVector: flatbuffers.number_types.UOffsetTFlags,

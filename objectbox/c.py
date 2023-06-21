@@ -395,6 +395,7 @@ OBXPropertyType_String = 9
 OBXPropertyType_Date = 10
 OBXPropertyType_Relation = 11
 OBXPropertyType_DateNano = 12
+OBXPropertyType_Flex = 13
 OBXPropertyType_ByteVector = 23
 OBXPropertyType_IntVector = 26
 OBXPropertyType_LongVector = 27
