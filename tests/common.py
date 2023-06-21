@@ -76,7 +76,7 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop_approx(actual.doubles_list, expected.doubles_list, [])
     assert_equal_prop_approx(actual.date, expected.date, 0)
     assert_equal_prop(actual.date_nano, expected.date_nano, 0)
-    assert_equal_prop(actual.flex, expected.flex, {})
+    assert_equal_prop(actual.flex, expected.flex, None)
 
 
 def put_flex(object, box, property):

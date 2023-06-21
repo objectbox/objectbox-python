@@ -97,7 +97,7 @@ class _Entity(object):
             if prop._py_type == datetime:
                 return datetime.fromtimestamp(0)
             if prop._py_type == Generic:
-                return {}
+                return None
             else:
                 return prop._py_type()  # default (empty) value for the given type
         return val
