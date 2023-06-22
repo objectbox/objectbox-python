@@ -233,6 +233,13 @@ def test_flex_dict():
     box = objectbox.Box(ob, TestEntityFlex)
     object = TestEntityFlex()
 
+    # Put an empty object
+    id = box.put(object)
+    assert id == object.id
+    read = box.get(object.id)
+    assert read.flex_dict == None
+    assert read.flex_int == None
+
     object.flex_dict = {"a": 1, "b": 2}
     object.flex_int = 25
     id = box.put(object)
