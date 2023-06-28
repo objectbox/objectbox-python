@@ -15,7 +15,7 @@ class TestEntity:
     int8 = Property(int, type=PropertyType.byte, id=7, uid=1007)
     float64 = Property(float, type=PropertyType.double, id=8, uid=1008)
     float32 = Property(float, type=PropertyType.float, id=9, uid=1009)
-    bytes = Property(bytes, id=10, uid=1010)
+    bytes = Property(bytes, id=10, uid=1010, index_type=IndexType.hash64)
     ints = Property(np.ndarray, type=PropertyType.intVector, id=11, uid=1011)
     longs = Property(np.ndarray, type=PropertyType.longVector, id=12, uid=1012)
     floats = Property(np.ndarray, type=PropertyType.floatVector, id=13, uid=1013)
