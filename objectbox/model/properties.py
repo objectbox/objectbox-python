@@ -64,8 +64,14 @@ fb_type_map = {
 }
 
 
+class IndexType(IntEnum):
+    value = OBXPropertyFlags_INDEXED
+    hash = OBXPropertyFlags_INDEX_HASH
+    hash64 = OBXPropertyFlags_INDEX_HASH64
+
+
 class Property:
-    def __init__(self, py_type: type, id: int, uid: int, type: PropertyType = None):
+    def __init__(self, py_type: type, id: int, uid: int, type: PropertyType = None, index: bool = None, index_type: IndexType = None):
         self._id = id
         self._uid = uid
         self._name = ""  # set in Entity.fill_properties()
@@ -81,6 +87,18 @@ class Property:
         # FlatBuffers marshalling information
         self._fb_slot = self._id - 1
         self._fb_v_offset = 4 + 2*self._fb_slot
+
+        if index_type:
+            if index == True or index == None:
+                self._index = True
+                self._index_type = index_type
+            elif index == False:
+                raise Exception(f"trying to set index type on property with id {self._id} while index is set to False")
+        else:
+            self._index = index if index != None else False
+            if index:
+                self._index_type = IndexType.value if self._py_type != str else IndexType.hash
+
 
     def __determine_ob_type(self) -> OBXPropertyType:
         ts = self._py_type

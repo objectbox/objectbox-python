@@ -1,4 +1,5 @@
 from objectbox.model import *
+from objectbox.model.properties import IndexType
 import numpy as np
 from datetime import datetime
 from typing import Generic, Dict, Any
@@ -7,15 +8,17 @@ from typing import Generic, Dict, Any
 @Entity(id=1, uid=1)
 class TestEntity:
     id = Id(id=1, uid=1001)
-    str = Property(str, id=2, uid=1002)
+    # TODO Enable indexing dynamically, e.g. have a constructor to enable index(es).
+    #      E.g. indexString=False (defaults to false). Same for bytes.
+    str = Property(str, id=2, uid=1002, index=True)
     bool = Property(bool, id=3, uid=1003)
-    int64 = Property(int, type=PropertyType.long, id=4, uid=1004)
-    int32 = Property(int, type=PropertyType.int, id=5, uid=1005)
-    int16 = Property(int, type=PropertyType.short, id=6, uid=1006)
+    int64 = Property(int, type=PropertyType.long, id=4, uid=1004, index=True)
+    int32 = Property(int, type=PropertyType.int, id=5, uid=1005, index=True, index_type=IndexType.hash)
+    int16 = Property(int, type=PropertyType.short, id=6, uid=1006, index_type=IndexType.hash)
     int8 = Property(int, type=PropertyType.byte, id=7, uid=1007)
     float64 = Property(float, type=PropertyType.double, id=8, uid=1008)
     float32 = Property(float, type=PropertyType.float, id=9, uid=1009)
-    bytes = Property(bytes, id=10, uid=1010)
+    bytes = Property(bytes, id=10, uid=1010, index_type=IndexType.hash64)
     ints = Property(np.ndarray, type=PropertyType.intVector, id=11, uid=1011)
     longs = Property(np.ndarray, type=PropertyType.longVector, id=12, uid=1012)
     floats = Property(np.ndarray, type=PropertyType.floatVector, id=13, uid=1013)
@@ -31,6 +34,7 @@ class TestEntity:
 
     def __init__(self, string: str = ""):
         self.str = string
+
 
 @Entity(id=2, uid=2)
 class TestEntityDatetime:
