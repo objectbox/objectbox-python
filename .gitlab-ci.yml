@@ -48,14 +48,13 @@ test:linux:x64:
       #       If this becomes a problem, we could e.g. specify a minor version explicitly.
       - PYTHON_VERSION: [ '3.7', '3.8', '3.9', '3.10', '3.11']
 
-# test:linux:armv7hf:
-#   extends: .test
-#   tags: [armv7hf, shell, linux, python3]
+test:linux:armv7hf:
+   extends: .test
+   tags: [armv7hf, shell, linux, python3]
 
-# aarch64 version not published
-#test:linux:aarch64:
-#  extends: .test
-#  tags: [aarch64, shell, linux, python3]
+test:linux:aarch64:
+  extends: .test
+  tags: [aarch64, shell, linux, python3]
 
 test:mac:x64:
   extends: .test
