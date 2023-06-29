@@ -7,6 +7,8 @@ from datetime import datetime
 @Entity(id=1, uid=1)
 class TestEntity:
     id = Id(id=1, uid=1001)
+    # TODO Enable indexing dynamically, e.g. have a constructor to enable index(es).
+    #      E.g. indexString=False (defaults to false). Same for bytes.
     str = Property(str, id=2, uid=1002, index=True)
     bool = Property(bool, id=3, uid=1003)
     int64 = Property(int, type=PropertyType.long, id=4, uid=1004, index=True)
