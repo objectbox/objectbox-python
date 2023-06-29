@@ -2,7 +2,7 @@ import objectbox
 import os
 import shutil
 import pytest
-from tests.model import TestEntity, TestEntityDatetime
+from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex
 import numpy as np
 
 test_dir = 'testdata'
@@ -24,7 +24,7 @@ def autocleanup():
 def load_empty_test_objectbox(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
     from objectbox.model import IdUid
-    model.entity(TestEntity, last_property_id=IdUid(20, 1020))
+    model.entity(TestEntity, last_property_id=IdUid(21, 1021))
     model.last_entity_id = IdUid(2, 2)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
@@ -35,8 +35,19 @@ def load_empty_test_objectbox(name: str = "") -> objectbox.ObjectBox:
 def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
     from objectbox.model import IdUid
-    model.entity(TestEntityDatetime, last_property_id=IdUid(3, 2003))
+    model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
     model.last_entity_id = IdUid(2, 2)
+
+    db_name = test_dir if len(name) == 0 else test_dir + "/" + name
+
+    return objectbox.Builder().model(model).directory(db_name).build()
+
+
+def load_empty_test_flex(name: str = "") -> objectbox.ObjectBox:
+    model = objectbox.Model()
+    from objectbox.model import IdUid
+    model.entity(TestEntityFlex, last_property_id=IdUid(3, 3003))
+    model.last_entity_id = IdUid(3, 3)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
 
@@ -76,3 +87,4 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop_approx(actual.doubles_list, expected.doubles_list, [])
     assert_equal_prop_approx(actual.date, expected.date, 0)
     assert_equal_prop(actual.date_nano, expected.date_nano, 0)
+    assert_equal_prop(actual.flex, expected.flex, None)

@@ -14,6 +14,8 @@
 
 
 import flatbuffers
+import flatbuffers.flexbuffers
+from typing import Generic
 import numpy as np
 from math import floor
 from datetime import datetime
@@ -74,6 +76,7 @@ class _Entity(object):
                     OBXPropertyType_LongVector,
                     OBXPropertyType_FloatVector,
                     OBXPropertyType_DoubleVector,
+                    OBXPropertyType_Flex,
                 ], "programming error - invalid type OB & FB type combination"
                 self.offset_properties.append(prop)
 
@@ -90,11 +93,13 @@ class _Entity(object):
         if prop._py_type == np.ndarray:
             if (val == np.array(prop)).all():
                 return np.array([])
-        elif prop._py_type == datetime:
-            if val == prop:
-                return datetime.fromtimestamp(0)
         elif val == prop:
-            return prop._py_type()  # default (empty) value for the given type
+            if prop._py_type == datetime:
+                return datetime.fromtimestamp(0)
+            if prop._ob_type == OBXPropertyType_Flex:
+                return None
+            else:
+                return prop._py_type()  # default (empty) value for the given type
         return val
 
     def get_object_id(self, object) -> int:
@@ -122,6 +127,11 @@ class _Entity(object):
                 offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float32))
             elif prop._ob_type == OBXPropertyType_DoubleVector:
                 offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
+            elif prop._ob_type == OBXPropertyType_Flex:
+                flex_builder = flatbuffers.flexbuffers.Builder()
+                flex_builder.Add(val)
+                buffer = flex_builder.Finish()
+                offsets[prop._id] = builder.CreateByteVector(bytes(buffer))
             else:
                 assert False, "programming error - invalid type OB & FB type combination"
 
@@ -186,6 +196,13 @@ class _Entity(object):
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Float32Flags, o)
             elif prop._ob_type == OBXPropertyType_DoubleVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Float64Flags, o)
+            elif prop._ob_type == OBXPropertyType_Flex:
+                # access the FB byte vector information
+                start = table.Vector(o)
+                size = table.VectorLen(o)
+                # slice the vector as bytes
+                buf = table.Bytes[start:start+size]
+                val = flatbuffers.flexbuffers.Loads(buf)
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
             if prop._py_type == list:

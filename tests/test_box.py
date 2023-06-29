@@ -1,10 +1,11 @@
 import pytest
 import objectbox
-from tests.model import TestEntity, TestEntityDatetime
+from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex
 from tests.common import (
     autocleanup,
     load_empty_test_objectbox,
     load_empty_test_datetime,
+    load_empty_test_flex,
     assert_equal,
 )
 import numpy as np
@@ -48,6 +49,7 @@ def test_box_basics():
     object.doubles_list = [99.1999, 88.2888, 77.3777, 66.4666, 55.6597555]
     object.date = time.time() * 1000  # milliseconds since UNIX epoch
     object.date_nano = time.time_ns()  # nanoseconds since UNIX epoch
+    object.flex = dict(a=1, b=2, c=3)
     object.transient = "abcd"
 
     id = box.put(object)
@@ -174,3 +176,74 @@ def test_datetime():
         box.get(1)
 
     ob.close()
+
+
+def test_flex():
+
+    def test_put_get(object: TestEntity, box: objectbox.Box, property):
+        object.flex = property
+        id = box.put(object)
+        assert id == object.id
+        read = box.get(object.id)
+        assert read.flex == object.flex
+
+    ob = load_empty_test_objectbox()
+    box = objectbox.Box(ob, TestEntity)
+    object = TestEntity()
+
+    # Put an empty object
+    id = box.put(object)
+    assert id == object.id
+
+    # Put a None type object
+    test_put_get(object, box, None)
+
+    # Update to int
+    test_put_get(object, box, 1)
+
+    # Update to float
+    test_put_get(object, box, 1.2)
+
+    # Update to string
+    test_put_get(object, box, "foo")
+
+    # Update to int list
+    test_put_get(object, box, [1, 2, 3])
+
+    # Update to float list
+    test_put_get(object, box, [1.1, 2.2, 3.3])
+
+    # Update to dict
+    test_put_get(object, box, {"a": 1, "b": 2})
+    
+    # Update to bool
+    test_put_get(object, box, True)
+
+    # Update to dict inside dict
+    test_put_get(object, box, {"a": 1, "b": {"c": 2}})
+
+    # Update to list inside dict
+    test_put_get(object, box, {"a": 1, "b": [1, 2, 3]})
+
+    ob.close()
+
+
+def test_flex_dict():
+    ob = load_empty_test_flex()
+    box = objectbox.Box(ob, TestEntityFlex)
+    object = TestEntityFlex()
+
+    # Put an empty object
+    id = box.put(object)
+    assert id == object.id
+    read = box.get(object.id)
+    assert read.flex_dict == None
+    assert read.flex_int == None
+
+    object.flex_dict = {"a": 1, "b": 2}
+    object.flex_int = 25
+    id = box.put(object)
+    assert id == object.id
+    read = box.get(object.id)
+    assert read.flex_dict == object.flex_dict
+    assert read.flex_int == object.flex_int
