@@ -15,6 +15,8 @@
 
 from objectbox.model.entity import _Entity
 from objectbox.objectbox import ObjectBox
+from objectbox.query_builder import QueryBuilder
+from objectbox.condition import QueryCondition
 from objectbox.c import *
 
 
@@ -147,3 +149,7 @@ class Box:
         count = ctypes.c_uint64()
         obx_box_remove_all(self._c_box, ctypes.byref(count))
         return int(count.value)
+    
+    def query(self, condition: QueryCondition) -> QueryBuilder:
+        qb = QueryBuilder(self._ob, self, self._entity, condition)
+        return qb

@@ -14,6 +14,7 @@
 
 from enum import IntEnum
 
+from objectbox.condition import QueryCondition, _ConditionOp
 from objectbox.c import *
 import flatbuffers.number_types
 import numpy as np
@@ -127,6 +128,39 @@ class Property:
         if self._is_id:
             self._flags = OBXPropertyFlags_ID
 
+    def op(self, op: _ConditionOp, value, case_sensitive: bool = True) -> QueryCondition:
+        return QueryCondition(self._id, op, value, case_sensitive)
+
+    def equals(self, value, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.eq, value, case_sensitive)
+        
+    def not_equals(self, value, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.notEq, value, case_sensitive)
+    
+    def contains(self, value: str, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.contains, value, case_sensitive)
+    
+    def starts_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.startsWith, value, case_sensitive)
+    
+    def ends_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.endsWith, value, case_sensitive)
+    
+    def greater_than(self, value, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.gt, value, case_sensitive)
+    
+    def greater_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.greaterOrEq, value, case_sensitive)
+    
+    def less_than(self, value, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.lt, value, case_sensitive)
+    
+    def less_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
+        return self.op(_ConditionOp.lessOrEq, value, case_sensitive)
+    
+    def between(self, value_a, value_b) -> QueryCondition:
+        return QueryCondition(self._id, _ConditionOp.between, value_a, value_b)
+    
 
 # ID property (primary key)
 class Id(Property):
