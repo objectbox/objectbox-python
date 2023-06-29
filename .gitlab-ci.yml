@@ -2,6 +2,7 @@ stages:
   - build
   - test
 
+# First, build the source and package it as a python wheel
 build:
   tags: [x64, docker, linux]
   image: python:latest
@@ -26,55 +27,38 @@ build:
     paths:
       - dist/*.whl
 
+# Next, test the packaged wheel built by "build"
 .test:
   stage: test
   script:
-    - pip3 install --user pytest
-    - pip3 install --user numpy
-    - rm -r objectbox
-    - pip3 install --user --force-reinstall dist/*.whl
+    - pip3 install --user pytest numpy
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - pip3 install --user --force-reinstall dist/*.whl  # Artifacts from the previous stage (downloaded by default)
     - ${PYTHON} -m pytest
-
-.test-python3:
-  extends: .test
   variables:
     PYTHON: "python3"
 
-.test:linux:x64:
-  extends: .test-python3
+test:linux:x64:
+  extends: .test
   tags: [x64, docker, linux]
+  image: python:$PYTHON_VERSION
+  parallel:
+    matrix:
+      # Note: Docker images will have an arbitrary minor version due to "if-not-present" pull policy.
+      #       If this becomes a problem, we could e.g. specify a minor version explicitly.
+      - PYTHON_VERSION: [ '3.7', '3.8', '3.9', '3.10', '3.11']
 
-test:linux:x64:3.7:
-  extends: .test:linux:x64
-  image: python:3.7
+test:linux:armv7hf:
+   extends: .test
+   tags: [armv7hf, shell, linux, python3]
 
-test:linux:x64:3.8:
-  extends: .test:linux:x64
-  image: python:3.8
-
-test:linux:x64:3.9:
-  extends: .test:linux:x64
-  image: python:3.9
-
-test:linux:x64:3.10:
-  extends: .test:linux:x64
-  image: python:3.10
-
-# test:linux:armv7hf:
-#   extends: .test-python3
-#   tags: [armv7hf, shell, linux, python3]
-
-# aarch64 version not published
-#test:linux:aarch64:
-#  extends: .test
-#  tags: [aarch64, shell, linux, python3]
+test:linux:aarch64:
+  extends: .test
+  tags: [aarch64, shell, linux, python3]
 
 test:mac:x64:
-  extends: .test-python3
+  extends: .test
   tags: [mac, x64, shell, python3]
-  script:
-    - make depend
-    - make test
 
 test:windows:x64:
   extends: .test

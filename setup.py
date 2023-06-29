@@ -28,6 +28,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Programming Language :: C",
         "Programming Language :: C++",
 
@@ -54,8 +56,10 @@ setuptools.setup(
         'objectbox': [
             # Linux, macOS
             'lib/x86_64/*',
+            'lib/aarch64/*',
             'lib/armv7l/*',
             'lib/armv6l/*',
+            'lib/macos-universal/*',
             # Windows
             'lib/AMD64/*',
         ],
