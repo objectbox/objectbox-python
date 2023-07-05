@@ -19,7 +19,7 @@ class TestEntity:
     float64 = Property(float, type=PropertyType.double, id=8, uid=1008)
     float32 = Property(float, type=PropertyType.float, id=9, uid=1009)
     bools = Property(np.ndarray, type=PropertyType.boolVector, id=10, uid=1010)
-    bytes = Property(bytes, id=11, uid=1011)
+    bytes = Property(bytes, id=11, uid=1011, index_type=IndexType.hash64)
     shorts = Property(np.ndarray, type=PropertyType.shortVector, id=12, uid=1012)
     chars = Property(np.ndarray, type=PropertyType.charVector, id=13, uid=1013)
     ints = Property(np.ndarray, type=PropertyType.intVector, id=14, uid=1014)

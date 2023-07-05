@@ -29,7 +29,7 @@ def test_index_basics():
     assert box._entity.properties[5]._index_type == IndexType.hash
 
     # bytes - index type overwritten to hash64
-    assert box._entity.properties[9]._index_type == IndexType.hash64
+    assert box._entity.properties[10]._index_type == IndexType.hash64
 
 
 def test_index_error():
