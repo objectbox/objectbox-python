@@ -33,7 +33,10 @@ class PropertyType(IntEnum):
     dateNano = OBXPropertyType_DateNano
     flex = OBXPropertyType_Flex
     # relation = OBXPropertyType_Relation
+    boolVector = OBXPropertyType_BoolVector
     byteVector = OBXPropertyType_ByteVector
+    shortVector = OBXPropertyType_ShortVector
+    charVector = OBXPropertyType_CharVector
     intVector = OBXPropertyType_IntVector
     longVector = OBXPropertyType_LongVector
     floatVector = OBXPropertyType_FloatVector
@@ -55,7 +58,10 @@ fb_type_map = {
     PropertyType.dateNano: flatbuffers.number_types.Int64Flags,
     PropertyType.flex: flatbuffers.number_types.UOffsetTFlags,
     # PropertyType.relation: flatbuffers.number_types.Int64Flags,
+    PropertyType.boolVector: flatbuffers.number_types.UOffsetTFlags,
     PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
+    PropertyType.shortVector: flatbuffers.number_types.UOffsetTFlags,
+    PropertyType.charVector: flatbuffers.number_types.UOffsetTFlags,
     PropertyType.intVector: flatbuffers.number_types.UOffsetTFlags,
     PropertyType.longVector: flatbuffers.number_types.UOffsetTFlags,
     PropertyType.floatVector: flatbuffers.number_types.UOffsetTFlags,
