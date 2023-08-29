@@ -79,7 +79,9 @@ ob = objectbox.Builder().model(model).directory("db").build()
 # Open the box of "Person" entity. This can be called many times but you can also pass the variable around
 box = objectbox.Box(ob, Person)
 
-id = box.put(Person(name="Joe Green"))  # Create
+person = Person()
+person.name = "Joe Green"
+id = box.put(person)  # Create
 person = box.get(id)  # Read
 person.name = "Joe Black"
 box.put(person)       # Update
