@@ -31,7 +31,7 @@ build:
 .test:
   stage: test
   script:
-    - pip3 install --user pytest numpy
+    - pip3 install --user pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - pip3 install --user --force-reinstall dist/*.whl  # Artifacts from the previous stage (downloaded by default)
     - ${PYTHON} -m pytest
