@@ -21,16 +21,13 @@ def autocleanup():
     remove_test_dir()
 
 
-def load_empty_test_objectbox(name: str = "") -> objectbox.ObjectBox:
+def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
     model = objectbox.Model()
     from objectbox.model import IdUid
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
     model.last_entity_id = IdUid(2, 2)
 
-    db_name = test_dir if len(name) == 0 else test_dir + "/" + name
-
     return objectbox.Builder().model(model).directory(db_name).build()
-
 
 def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()

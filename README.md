@@ -121,6 +121,7 @@ Some features
   * Linux x86-64 (64-bit)
   * Linux ARMv6hf (e.g. Raspberry PI Zero)
   * Linux ARMv7hf (e.g. Raspberry PI 3; available only on request)
+  * Linux ARMv8   (e.g. Raspberry PI 4)
   * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
   * Windows x86-64 (64-bit)
 
@@ -151,7 +152,7 @@ License
 -------
 
 ```text
-Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

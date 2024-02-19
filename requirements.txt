@@ -1,4 +1,5 @@
 pip
+setuptools
 wheel
 flatbuffers==23.5.26
 pytest>=4.4.1

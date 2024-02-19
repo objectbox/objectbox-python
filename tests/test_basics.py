@@ -17,10 +17,10 @@ from tests.common import load_empty_test_objectbox
 
 def test_version():
     assert objectbox.version.major == 0  # update for major version changes
-    assert objectbox.version.minor >= 5
+    assert objectbox.version.minor >= 6
 
     assert objectbox.version_core.major == 0  # update for major version changes
-    assert objectbox.version_core.minor >= 18
+    assert objectbox.version_core.minor >= 21
 
     info = objectbox.version_info()
     print("\nVersion found:", info)
