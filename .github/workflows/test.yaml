@@ -10,7 +10,7 @@ jobs:
       fail-fast: false # To see all versions that fail.
       matrix:
         os: ["ubuntu", "windows", "macos"]
-        python: ["3.7", "3.8", "3.9", "3.10"] # https://devguide.python.org/versions/#versions
+        python: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"] # https://devguide.python.org/versions/#versions
 
     runs-on: ${{ matrix.os }}-latest
 
