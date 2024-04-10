@@ -10,15 +10,15 @@ def test_transactions():
     assert box.is_empty()
 
     with ob.write_tx():
-        box.put(TestEntity("first"))
-        box.put(TestEntity("second"))
+        box.put(TestEntity(str="first"))
+        box.put(TestEntity(str="second"))
 
     assert box.count() == 2
 
     try:
         with ob.write_tx():
-            box.put(TestEntity("third"))
-            box.put(TestEntity("fourth"))
+            box.put(TestEntity(str="third"))
+            box.put(TestEntity(str="fourth"))
             raise Exception("mission abort!")
 
         # exception must be propagated so this line must not execute
@@ -32,7 +32,7 @@ def test_transactions():
     # can't write in a read TX
     try:
         with ob.read_tx():
-            box.put(TestEntity("third"))
+            box.put(TestEntity(str="third"))
 
         # exception must be propagated so this line must not execute
         assert 0
