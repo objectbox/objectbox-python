@@ -18,6 +18,7 @@ from objectbox.condition import QueryCondition, _ConditionOp
 from objectbox.c import *
 import flatbuffers.number_types
 import numpy as np
+from dataclasses import dataclass
 
 
 class PropertyType(IntEnum):
@@ -72,42 +73,68 @@ fb_type_map = {
 
 
 class IndexType(IntEnum):
-    value = OBXPropertyFlags_INDEXED
-    hash = OBXPropertyFlags_INDEX_HASH
-    hash64 = OBXPropertyFlags_INDEX_HASH64
+    VALUE = OBXPropertyFlags_INDEXED
+    HASH = OBXPropertyFlags_INDEX_HASH
+    HASH64 = OBXPropertyFlags_INDEX_HASH64
+
+
+@dataclass
+class Index:
+    id: int
+    uid: int
+    # TODO HNSW isn't a type but HASH and HASH64 are, remove type member and make HashIndex and Hash64Index classes?
+    type: IndexType = IndexType.VALUE
+
+
+class HnswFlags(IntEnum):
+    NONE = 0
+    DEBUG_LOGS = 1
+    DEBUG_LOGS_DETAILED = 2
+    VECTOR_CACHE_SIMD_PADDING_OFF = 4
+    REPARATION_LIMIT_CANDIDATES = 8
+
+
+class HnswDistanceType(IntEnum):
+    UNKNOWN = OBXHnswDistanceType_UNKNOWN,
+    EUCLIDEAN = OBXHnswDistanceType_EUCLIDEAN
+
+
+@dataclass
+class HnswIndex:
+    id: int
+    uid: int
+    dimensions: int
+    neighbors_per_node: Optional[int] = None
+    indexing_search_count: Optional[int] = None
+    flags: HnswFlags = HnswFlags.NONE
+    distance_type: HnswDistanceType = HnswDistanceType.EUCLIDEAN
+    reparation_backlink_probability: Optional[float] = None
+    vector_cache_hint_size_kb: Optional[float] = None
 
 
 class Property:
-    def __init__(self, py_type: type, id: int, uid: int, type: PropertyType = None, index: bool = None, index_type: IndexType = None):
-        self._id = id
-        self._uid = uid
+    def __init__(self, pytype: Type, **kwargs):
+        self._id = kwargs['id']
+        self._uid = kwargs['uid']
         self._name = ""  # set in Entity.fill_properties()
 
-        self._py_type = py_type
-        self._ob_type = type if type != None else self.__determine_ob_type()
+        self._py_type = pytype
+        self._ob_type = kwargs['type'] if 'type' in kwargs else self._determine_ob_type()
         self._fb_type = fb_type_map[self._ob_type]
 
         self._is_id = isinstance(self, Id)
-        self._flags = OBXPropertyFlags(0)
-        self.__set_flags()
+        self._flags = 0
 
         # FlatBuffers marshalling information
         self._fb_slot = self._id - 1
-        self._fb_v_offset = 4 + 2*self._fb_slot
+        self._fb_v_offset = 4 + 2 * self._fb_slot
 
-        if index_type:
-            if index == True or index == None:
-                self._index = True
-                self._index_type = index_type
-            elif index == False:
-                raise Exception(f"trying to set index type on property with id {self._id} while index is set to False")
-        else:
-            self._index = index if index != None else False
-            if index:
-                self._index_type = IndexType.value if self._py_type != str else IndexType.hash
+        self._index = kwargs.get('index', None)
 
+        self._set_flags()
 
-    def __determine_ob_type(self) -> OBXPropertyType:
+    def _determine_ob_type(self) -> OBXPropertyType:
+        """ Tries to infer the OBX property type from the Python type. """
         ts = self._py_type
         if ts == str:
             return OBXPropertyType_String
@@ -124,9 +151,15 @@ class Property:
         else:
             raise Exception("unknown property type %s" % ts)
 
-    def __set_flags(self):
+    def _set_flags(self):
         if self._is_id:
-            self._flags = OBXPropertyFlags_ID
+            self._flags |= OBXPropertyFlags_ID
+
+        if self._index is not None:
+            self._flags |= OBXPropertyFlags_INDEXED
+            if isinstance(self._index, Index):  # Generic index
+                self._flags |= self._index.type
+        print("Flags set to", self._flags, bin(self._flags))
 
     def op(self, op: _ConditionOp, value, case_sensitive: bool = True) -> QueryCondition:
         return QueryCondition(self._id, op, value, case_sensitive)
@@ -165,4 +198,4 @@ class Property:
 # ID property (primary key)
 class Id(Property):
     def __init__(self, py_type: type = int, id: int = 0, uid: int = 0):
-        super(Id, self).__init__(py_type, id, uid)
+        super(Id, self).__init__(py_type, id=id, uid=uid)

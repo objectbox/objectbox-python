@@ -90,6 +90,13 @@ class _Entity(object):
         elif self.id_property._ob_type != OBXPropertyType_Long:
             raise Exception("ID property must be an int")
 
+    def get_property(self, name: str):
+        """ Gets the property having the given name. """
+        for prop in self.properties:
+            if prop._name == name:
+                return prop
+        raise Exception(f"Property \"{name}\" not found in Entity: \"{self.name}\"")
+
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
@@ -228,12 +235,8 @@ class _Entity(object):
         return obj
 
 
-# entity decorator - wrap _Entity to allow @Entity(id=, uid=), i.e. no class argument
-def Entity(cls=None, id: int = 0, uid: int = 0):
-    if cls:
+def Entity(id: int = 0, uid: int = 0):
+    """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
+    def wrapper(cls):
         return _Entity(cls, id, uid)
-    else:
-        def wrapper(cls):
-            return _Entity(cls, id, uid)
-
-        return wrapper
+    return wrapper
