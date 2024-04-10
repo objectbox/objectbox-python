@@ -19,6 +19,7 @@ class Query:
     def __init__(self, c_query, box: 'Box'):
         self._c_query = c_query
         self._box = box
+        self._entity = self._box._entity
         self._ob = box._ob
 
     def find(self) -> list:
@@ -96,8 +97,31 @@ class Query:
         obx_query_remove(self._c_query, ctypes.byref(count))
         return int(count.value)
     
-    def offset(self, offset: int):
-        return obx_query_offset(self._c_query, offset)
+    def offset(self, offset: int) -> 'Query':
+        obx_query_offset(self._c_query, offset)
+        return self
     
-    def limit(self, limit: int):
-        return obx_query_limit(self._c_query, limit)
+    def limit(self, limit: int) -> 'Query':
+        obx_query_limit(self._c_query, limit)
+        return self
+
+    def set_parameter_string(self, prop: Union[int, str, 'Property'], value: str) -> 'Query':
+        prop_id = self._entity.get_property_id(prop)
+        obx_query_param_string(self._c_query, self._entity.id, prop_id, c_str(value))
+        return self
+
+    def set_parameter_int(self, prop: Union[int, str, 'Property'], value: int) -> 'Query':
+        prop_id = self._entity.get_property_id(prop)
+        obx_query_param_int(self._c_query, self._entity.id, prop_id, value)
+        return self
+
+    def set_parameter_vector_f32(self,
+                                 prop: Union[int, str, 'Property'],
+                                 value: Union[List[float], np.ndarray]) -> 'Query':
+        if isinstance(value, np.ndarray) and value.dtype != np.float32:
+            raise Exception(f"value dtype is expected to be np.float32, got: {value.dtype}")
+        prop_id = self._entity.get_property_id(prop)
+        c_value = py_list_to_c_array(value, ctypes.c_float)
+        num_el = len(value)
+        obx_query_param_vector_float32(self._c_query, self._entity.id, prop_id, c_value, num_el)
+        return self

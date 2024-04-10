@@ -103,6 +103,17 @@ class _Entity(object):
                 return prop
         raise Exception(f"Property \"{name}\" not found in Entity: \"{self.name}\"")
 
+    def get_property_id(self, prop: Union[int, str, Property]) -> int:
+        """ A convenient way to get the property ID regardless having its ID, name or Property. """
+        if isinstance(prop, int):
+            return prop  # We already have it!
+        elif isinstance(prop, str):
+            return self.get_property(prop)._id
+        elif isinstance(prop, Property):
+            return prop._id
+        else:
+            raise Exception(f"Unsupported Property type: {type(prop)}")
+
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)

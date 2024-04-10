@@ -18,6 +18,7 @@ import os
 import platform
 from objectbox.version import Version
 from typing import *
+import numpy as np
 
 # This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
 # The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
@@ -329,13 +330,20 @@ def c_voidp_as_bytes(voidp, size):
     return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
 
 
-def py_list_to_c_array(py_list: List[Any], c_type):
-    """ Converts the given python list into a C array. """
-    return (c_type * len(py_list))(*py_list)
+def py_list_to_c_array(py_list: Union[List[Any], np.ndarray], c_type):
+    """ Converts the given python list or ndarray into a C array. """
+    if isinstance(py_list, np.ndarray):
+        if py_list.ndim != 1:
+            raise Exception(f"ndarray is expected to be 1-dimensional. Input shape: {py_list.shape}")
+        return py_list.ctypes.data_as(ctypes.POINTER(c_type))
+    elif isinstance(py_list, list):
+        return (c_type * len(py_list))(*py_list)
+    else:
+        raise Exception(f"Unsupported Python list type: {type(py_list)}")
 
 
-def py_list_to_c_pointer(py_list: List[Any], c_type):
-    """ Converts the given python list into a C array and returns a pointer type. """
+def py_list_to_c_pointer(py_list: Union[List[Any], np.ndarray], c_type):
+    """ Converts the given python list or ndarray into a C array, and returns a pointer type. """
     return ctypes.cast(py_list_to_c_array(py_list, c_type), ctypes.POINTER(c_type))
 
 
@@ -676,8 +684,16 @@ obx_qb_any = c_fn('obx_qb_any', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond_p
 # OBX_C_API obx_err obx_qb_param_alias(OBX_query_builder* builder, const char* alias);
 obx_qb_param_alias = c_fn_rc('obx_qb_param_alias', [OBX_query_builder_p, ctypes.c_char_p])
 
+# OBX_C_API obx_err obx_query_param_string(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id, const char* value);
+obx_query_param_string = c_fn_rc('obx_query_param_string', [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.c_char_p])
+
+# OBX_C_API obx_err obx_query_param_int(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id, int64_t value);
+obx_query_param_int = c_fn_rc('obx_query_param_int', [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.c_int64])
+
 # OBX_C_API obx_err obx_query_param_vector_float32(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id, const float* value, size_t element_count);
-# TODO
+obx_query_param_vector_float32 = c_fn_rc('obx_query_param_vector_float32',
+                                         [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.POINTER(ctypes.c_float),
+                                          ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_query_param_alias_vector_float32(OBX_query* query, const char* alias, const float* value, size_t element_count);
 # TODO

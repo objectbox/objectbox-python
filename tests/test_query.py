@@ -1,9 +1,11 @@
 import objectbox
+from objectbox import *
 from objectbox.model import *
 from objectbox.c import *
+from objectbox.query import *
 import pytest
 from tests.common import (load_empty_test_objectbox, create_test_objectbox, autocleanup)
-from tests.model import TestEntity
+from tests.model import *
 
 
 def test_basics():
@@ -224,3 +226,54 @@ def test_any_all():
     assert ids == [2, 3]
 
 
+def test_set_parameter():
+    db = create_test_objectbox()
+
+    box_test_entity = objectbox.Box(db, TestEntity)
+    box_test_entity.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
+    box_test_entity.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
+    box_test_entity.put(TestEntity(str="Bar", int64=10, int32=226, int8=126))
+    box_test_entity.put(TestEntity(str="Foster", int64=2, int32=301, int8=42))
+    box_test_entity.put(TestEntity(str="Fox", int64=10, int32=157, int8=11))
+    box_test_entity.put(TestEntity(str="Barrakuda", int64=4, int32=386, int8=60))
+
+    box_vector_entity = objectbox.Box(db, VectorEntity)
+    box_vector_entity.put(VectorEntity(name="Object 1", vector=[1, 1]))
+    box_vector_entity.put(VectorEntity(name="Object 2", vector=[2, 2]))
+    box_vector_entity.put(VectorEntity(name="Object 3", vector=[3, 3]))
+    box_vector_entity.put(VectorEntity(name="Object 4", vector=[4, 4]))
+    box_vector_entity.put(VectorEntity(name="Object 5", vector=[5, 5]))
+
+    qb = box_test_entity.query()
+    qb.starts_with_string("str", "fo", case_sensitive=False)
+    qb.greater_than_int("int32", 150)
+    qb.greater_than_int("int64", 0)
+    query = qb.build()
+    assert query.find_ids() == [1, 4, 5]
+
+    # Test set_parameter_string
+    query.set_parameter_string("str", "bar")
+    assert query.find_ids() == [3, 6]
+
+    # Test set_parameter_int
+    query.set_parameter_int("int64", 8)
+    assert query.find_ids() == [3]
+
+    qb = box_vector_entity.query()
+    qb.nearest_neighbors_f32("vector", [3.4, 3.4], 3)
+    query = qb.build()
+    assert query.find_ids() == sorted([3, 4, 2])
+
+    # set_parameter_vector_f32
+    # set_parameter_int (NN count)
+    query.set_parameter_vector_f32("vector", [4.9, 4.9])
+    assert query.find_ids() == sorted([5, 4, 3])
+
+    query.set_parameter_vector_f32("vector", [0, 0])
+    assert query.find_ids() == sorted([1, 2, 3])
+
+    query.set_parameter_vector_f32("vector", [2.5, 2.1])
+    assert query.find_ids() == sorted([2, 3, 1])
+
+    query.set_parameter_int("vector", 2)
+    assert query.find_ids() == sorted([2, 3])
