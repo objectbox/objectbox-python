@@ -18,84 +18,111 @@ def test_query_basics():
     id1 = box.put(object1)
     box.put(object2)
 
-
     # String queries
+    str_prop: Property = TestEntity.get_property("str")
 
-    str_prop: Property = TestEntity.properties[1]
-    query = box.query(str_prop.equals("bar")).build()
+    query = box.query() \
+        .equals_string(str_prop._id, "bar", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box.query(str_prop.not_equals("bar")).build()
+    query = box.query() \
+        .not_equals_string(str_prop._id, "bar", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box.query(str_prop.contains("ba")).build()
+    query = box.query() \
+        .contains_string(str_prop._id, "ba", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box.query(str_prop.starts_with("f")).build()
+    query = box.query() \
+        .starts_with_string(str_prop._id, "f", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box.query(str_prop.ends_with("o")).build()
+    query = box.query() \
+        .ends_with_string(str_prop._id, "o", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box.query(str_prop.greater_than("bar")).build()
+    query = box.query() \
+        .greater_than_string(str_prop._id, "bar", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box.query(str_prop.greater_or_equal("bar")).build()
+    query = box.query() \
+        .greater_or_equal_string(str_prop._id, "bar", True) \
+        .build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    query = box.query(str_prop.less_than("foo")).build()
+    query = box.query() \
+        .less_than_string(str_prop._id, "foo", True) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box.query(str_prop.less_or_equal("foo")).build()
+    query = box.query() \
+        .less_or_equal_string(str_prop._id, "foo", True) \
+        .build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
-
 
     # Int queries
+    int_prop: Property = TestEntity.get_property("int64")
 
-    int_prop: Property = TestEntity.properties[3]
-    query = box.query(int_prop.equals(123)).build()
+    query = box.query() \
+        .equals_int(int_prop._id, 123) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
 
-    query = box.query(int_prop.not_equals(123)).build()
+    query = box.query() \
+        .not_equals_int(int_prop._id, 123) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].int64 == 456
 
-    query = box.query(int_prop.greater_than(123)).build()
+    query = box.query() \
+        .greater_than_int(int_prop._id, 123) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].int64 == 456
 
-    query = box.query(int_prop.greater_or_equal(123)).build()
+    query = box.query() \
+        .greater_or_equal_int(int_prop._id, 123) \
+        .build()
     assert query.count() == 2
     assert query.find()[0].int64 == 123
     assert query.find()[1].int64 == 456
 
-    query = box.query(int_prop.less_than(456)).build()
+    query = box.query() \
+        .less_than_int(int_prop._id, 456) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
 
-    query = box.query(int_prop.less_or_equal(456)).build()
+    query = box.query() \
+        .less_or_equal_int(int_prop._id, 456) \
+        .build()
     assert query.count() == 2
     assert query.find()[0].int64 == 123
     assert query.find()[1].int64 == 456
 
-    query = box.query(int_prop.between(100, 200)).build()
+    query = box.query() \
+        .between_2ints(int_prop._id, 100, 200) \
+        .build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
-
-    with pytest.raises(CoreException):
-        box.query(int_prop.equals("foo")).build()
 
     assert query.remove() == 1
 
@@ -114,7 +141,11 @@ def test_offset_limit():
     object3.str = "c"
     box.put([object0, object1, object2, object3])
 
-    query = box.query(TestEntity.properties[3].equals(0)).build()
+    int_prop: Property = TestEntity.get_property("int64")
+
+    query = box.query() \
+        .equals_int(int_prop._id, 0) \
+        .build()
     assert query.count() == 4
 
     query.offset(2)

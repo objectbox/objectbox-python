@@ -28,6 +28,7 @@ def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
     model = objectbox.Model()
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
     model.last_entity_id = IdUid(2, 2)
+    model.last_index_id = IdUid(2, 10002)
 
     return objectbox.Builder().model(model).directory(db_name).build()
 

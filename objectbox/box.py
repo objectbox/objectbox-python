@@ -149,7 +149,7 @@ class Box:
         count = ctypes.c_uint64()
         obx_box_remove_all(self._c_box, ctypes.byref(count))
         return int(count.value)
-    
-    def query(self, condition: QueryCondition) -> QueryBuilder:
-        qb = QueryBuilder(self._ob, self, self._entity, condition)
-        return qb
+
+    def query(self) -> QueryBuilder:
+        """ Creates a QueryBuilder for the Entity managed by the Box. """
+        return QueryBuilder(self._ob, self)
