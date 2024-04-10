@@ -58,7 +58,7 @@ def _test_random_points(num_points: int, num_query_points: int, seed: Optional[i
 
         # Run ANN with OBX
         query_builder = QueryBuilder(db, box)
-        query_builder.nearest_neighbors_f32(VectorEntity.get_property("vector")._id, query_point, k)
+        query_builder.nearest_neighbors_f32("vector", query_point, k)
         query = query_builder.build()
         obx_result = [id_ for id_, score in query.find_ids_with_scores()]  # Ignore score
         assert len(obx_result) == k
@@ -78,3 +78,82 @@ def test_random_points():
     _test_random_points(num_points=100, num_query_points=10, seed=13)
     _test_random_points(num_points=100, num_query_points=10, seed=14)
     _test_random_points(num_points=100, num_query_points=10, seed=15)
+
+
+def test_combined_nn_search():
+    """ Tests NN search combined with regular query conditions, offset and limit. """
+
+    db = create_test_objectbox()
+
+    box = objectbox.Box(db, VectorEntity)
+
+    box.put(VectorEntity(name="Power of red", vector=[1, 1]))
+    box.put(VectorEntity(name="Blueberry", vector=[2, 2]))
+    box.put(VectorEntity(name="Red", vector=[3, 3]))
+    box.put(VectorEntity(name="Blue sea", vector=[4, 4]))
+    box.put(VectorEntity(name="Lightblue", vector=[5, 5]))
+    box.put(VectorEntity(name="Red apple", vector=[6, 6]))
+    box.put(VectorEntity(name="Hundred", vector=[7, 7]))
+    box.put(VectorEntity(name="Tired", vector=[8, 8]))
+    box.put(VectorEntity(name="Power of blue", vector=[9, 9]))
+
+    assert box.count() == 9
+
+    # Test condition + NN search
+    query = box.query() \
+        .nearest_neighbors_f32("vector", [4.1, 4.2], 6) \
+        .contains_string("name", "red", case_sensitive=False) \
+        .build()
+    # 4, 5, 3, 6, 2, 7
+    # Filtered: 3, 6, 7
+    search_results = query.find_with_scores()
+    assert len(search_results) == 3
+    assert search_results[0][0].name == "Red"
+    assert search_results[1][0].name == "Red apple"
+    assert search_results[2][0].name == "Hundred"
+
+    # Test offset/limit on find_with_scores (result is ordered by score desc)
+    query.offset(1)
+    query.limit(1)
+    search_results = query.find_with_scores()
+    assert len(search_results) == 1
+    assert search_results[0][0].name == "Red apple"
+
+    # Regular condition + NN search
+    query = box.query() \
+        .nearest_neighbors_f32("vector", [9.2, 8.9], 7) \
+        .starts_with_string("name", "Blue", case_sensitive=True) \
+        .build()
+
+    search_results = query.find_with_scores()
+    assert len(search_results) == 1
+    assert search_results[0][0].name == "Blue sea"
+
+    # Regular condition + NN search
+    query = box.query() \
+        .nearest_neighbors_f32("vector", [7.7, 7.7], 8) \
+        .contains_string("name", "blue", case_sensitive=False) \
+        .build()
+    # 8, 7, 9, 6, 5, 4, 3, 2
+    # Filtered: 9, 5, 4, 2
+    search_results = query.find_ids_with_scores()
+    assert len(search_results) == 4
+    assert search_results[0][0] == 9
+    assert search_results[1][0] == 5
+    assert search_results[2][0] == 4
+    assert search_results[3][0] == 2
+
+    search_results = query.find_ids()
+    assert len(search_results) == 4
+    assert search_results[0] == 2
+    assert search_results[1] == 4
+    assert search_results[2] == 5
+    assert search_results[3] == 9
+
+    # Test offset/limit on find_ids (result is ordered by ID asc)
+    query.offset(1)
+    query.limit(2)
+    search_results = query.find_ids()
+    assert len(search_results) == 2
+    assert search_results[0] == 4
+    assert search_results[1] == 5
