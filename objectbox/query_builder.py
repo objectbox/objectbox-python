@@ -1,17 +1,17 @@
-from objectbox.model.entity import _Entity
+import ctypes
+import numpy as np
+from typing import *
+
 from objectbox.objectbox import ObjectBox
 from objectbox.query import Query
 from objectbox.c import *
 
 
 class QueryBuilder:
-    def __init__(self, ob: ObjectBox, box: 'Box', entity: '_Entity', condition: 'QueryCondition'):
-        if not isinstance(entity, _Entity):
-            raise Exception("Given type is not an Entity")
+    def __init__(self, ob: ObjectBox, box: 'Box'):
         self._box = box
-        self._entity = entity
-        self._condition = condition
-        self._c_builder = obx_query_builder(ob._c_store, entity.id)
+        self._entity = box._entity
+        self._c_builder = obx_query_builder(ob._c_store, box._entity.id)
 
     def close(self) -> int:
         return obx_qb_close(self)
@@ -85,11 +85,17 @@ class QueryBuilder:
     def between_2ints(self, property_id: int, value_a: int, value_b: int):
         obx_qb_between_2ints(self._c_builder, property_id, value_a, value_b)
         return self
-    
-    def apply_condition(self):
-        self._condition.apply(self)
-    
+
+    def nearest_neighbors_f32(self, vector_property_id: int, query_vector: Union[np.ndarray, List[float]], element_count: int):
+        if isinstance(query_vector, np.ndarray):
+            if query_vector.dtype != np.float32:
+                raise Exception(f"query_vector dtype must be float32")
+            query_vector_data = query_vector.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        else:  # List[float]
+            query_vector_data = (ctypes.c_float * len(query_vector))(*query_vector)
+        obx_qb_nearest_neighbors_f32(self._c_builder, vector_property_id, query_vector_data, element_count)
+        return self
+
     def build(self) -> Query:
-        self.apply_condition()
         c_query = obx_query(self._c_builder)
         return Query(c_query, self._box)

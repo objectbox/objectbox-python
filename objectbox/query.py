@@ -22,10 +22,10 @@ class Query:
         self._ob = box._ob
 
     def find(self) -> list:
+        """ Finds a list of objects matching query. """
         with self._ob.read_tx():
             # OBX_bytes_array*
             c_bytes_array_p = obx_query_find(self._c_query)
-
             try:
                 # OBX_bytes_array
                 c_bytes_array = c_bytes_array_p.contents
@@ -36,10 +36,47 @@ class Query:
                     c_bytes = c_bytes_array.data[i]
                     data = c_voidp_as_bytes(c_bytes.data, c_bytes.size)
                     result.append(self._box._entity.unmarshal(data))
-
                 return result
             finally:
                 obx_bytes_array_free(c_bytes_array_p)
+
+    def find_ids(self) -> List[int]:
+        """ Finds a list of object IDs matching query. The result is sorted by ID (ascending order). """
+        c_id_array_p = obx_query_find_ids(self._c_query)
+        try:
+            return list(c_id_array_p.contents)
+        finally:
+            obx_id_array_free(c_id_array_p)
+
+    def find_with_scores(self):
+        """ Finds objects matching the query associated to their query score (e.g. distance in NN search).
+        The result is sorted by score in ascending order. """
+        c_bytes_score_array_p = obx_query_find_with_scores(self._c_query)
+        try:
+            # OBX_bytes_score_array
+            c_bytes_score_array: OBX_bytes_score_array = c_bytes_score_array_p.contents
+            result = []
+            for i in range(c_bytes_score_array.count):
+                # TODO implement
+                pass
+            return result
+        finally:
+            obx_bytes_score_array_free(c_bytes_score_array_p)
+
+    def find_ids_with_scores(self) -> List[Tuple[int, float]]:
+        """ Finds object IDs matching the query associated to their query score (e.g. distance in NN search).
+        The resulting list is sorted by score in ascending order. """
+        c_id_score_array_p = obx_query_find_ids_with_scores(self._c_query)
+        try:
+            # OBX_id_score_array
+            c_id_score_array: OBX_bytes_score_array = c_id_score_array_p.contents
+            result = []
+            for i in range(c_id_score_array.count):
+                c_id_score: OBX_id_score = c_id_score_array.ids_scores[i]
+                result.append((c_id_score.id, c_id_score.score))
+            return result
+        finally:
+            obx_id_score_array_free(c_id_score_array_p)
 
     def count(self) -> int:
         count = ctypes.c_uint64()
