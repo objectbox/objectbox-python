@@ -237,25 +237,35 @@ class CoreException(Exception):
         10502: "FILE_CORRUPT"
     }
 
-    def __init__(self, code):
+    def __init__(self, code: int):
         self.code = code
         self.message = py_str(C.obx_last_error_message())
         name = self.codes[code] if code in self.codes else "n/a"
-        super(CoreException, self).__init__(
-            "%d (%s) - %s" % (code, name, self.message))
+        super(CoreException, self).__init__("%d (%s) - %s" % (code, name, self.message))
+
+    @staticmethod
+    def last():
+        """ Creates a CoreException of the last error that was generated in core. """
+        return CoreException(C.obx_last_error())
 
 
 class NotFoundException(Exception):
     pass
 
 
-# assert the the returned obx_err is empty
 def check_obx_err(code: obx_err, func, args) -> obx_err:
+    """ Raises an exception if obx_err is not successful. """
     if code == 404:
         raise NotFoundException()
     elif code != 0:
         raise CoreException(code)
+    return code
 
+
+def check_obx_qb_cond(code: obx_qb_cond, func, args) -> obx_qb_cond:
+    """ Raises an exception if obx_qb_cond is not successful. """
+    if code == 0:
+        raise CoreException(code)
     return code
 
 
@@ -279,11 +289,19 @@ def c_fn(name: str, restype: Optional[type], argtypes):
 
 # like c_fn, but for functions returning obx_err
 def c_fn_rc(name: str, argtypes):
+    """ Like c_fn, but for functions returning obx_err (checks obx_err validity). """
     func = C.__getattr__(name)
     func.argtypes = argtypes
     func.restype = obx_err
     func.errcheck = check_obx_err
+    return func
 
+def c_fn_qb_cond(name: str, argtypes):
+    """ Like c_fn, but for functions returning obx_qb_cond (checks obx_qb_cond validity). """
+    func = C.__getattr__(name)
+    func.argtypes = argtypes
+    func.restype = obx_qb_cond
+    func.errcheck = check_obx_qb_cond
     return func
 
 def py_str(ptr: ctypes.c_char_p) -> str:
@@ -430,8 +448,7 @@ obx_box_ids_for_put = c_fn_rc('obx_box_ids_for_put', [
                          OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
 
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size);
-obx_box_put = c_fn_rc('obx_box_put', [
-                 OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_box_put = c_fn_rc('obx_box_put', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);
 obx_box_put_many = c_fn_rc('obx_box_put_many', [
@@ -620,9 +637,7 @@ obx_qb_param_alias = c_fn_rc('obx_qb_param_alias', [OBX_query_builder_p, ctypes.
 obx_qb_order = c_fn_rc('obx_qb_order', [OBX_query_builder_p, obx_schema_id, OBXOrderFlags])
 
 # OBX_C_API obx_qb_cond obx_qb_nearest_neighbors_f32(OBX_query_builder* builder, obx_schema_id vector_property_id, const float* query_vector, size_t max_result_count)
-obx_qb_nearest_neighbors_f32 = \
-    c_fn('obx_qb_nearest_neighbors_f32', obx_qb_cond, [OBX_query_builder_p, obx_schema_id,
-                                                       ctypes.pointer(ctypes.c_float), ctypes.c_size_t])
+obx_qb_nearest_neighbors_f32 = c_fn_qb_cond('obx_qb_nearest_neighbors_f32', [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
 
 # OBX_C_API OBX_query* obx_query(OBX_query_builder* builder);
 obx_query = c_fn('obx_query', OBX_query_p, [OBX_query_builder_p])
@@ -686,6 +701,9 @@ obx_bytes_array_set = c_fn_rc('obx_bytes_array_set', [
 
 # void (OBX_bytes_array * array);
 obx_bytes_array_free = c_fn('obx_bytes_array_free', None, [OBX_bytes_array_p])
+
+# OBX_C_API void obx_id_array_free(OBX_id_array* array);
+obx_id_array_free = c_fn('obx_id_array_free', None, [OBX_id_array_p])
 
 # OBX_C_API void obx_bytes_score_array_free(OBX_bytes_score_array* array)
 obx_bytes_score_array_free = c_fn('obx_bytes_score_array_free', None, [OBX_bytes_score_array_p])
