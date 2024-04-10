@@ -13,10 +13,10 @@
 # limitations under the License.
 
 
+from objectbox.logger import logger
 from objectbox.model.entity import _Entity
 from objectbox.model.properties import *
 from objectbox.c import *
-import logging
 
 
 class IdUid:
@@ -50,11 +50,12 @@ class Model:
         if index.distance_type is not None:
             obx_model_property_index_hnsw_distance_type(self._c_model, index.distance_type)
         if index.reparation_backlink_probability is not None:
-            obx_model_property_index_hnsw_reparation_backlink_probability(self._c_model, index.reparation_backlink_probability)
+            obx_model_property_index_hnsw_reparation_backlink_probability(self._c_model,
+                                                                          index.reparation_backlink_probability)
         if index.vector_cache_hint_size_kb is not None:
             obx_model_property_index_hnsw_vector_cache_hint_size_kb(self._c_model, index.vector_cache_hint_size_kb)
 
-    def entity(self, entity: _Entity, last_property_id: IdUid, last_index_id: Optional[IdUid] = None):
+    def entity(self, entity: _Entity, last_property_id: IdUid):
         if not isinstance(entity, _Entity):
             raise Exception("Given type is not an Entity. Are you passing an instance instead of a type or did you "
                             "forget the '@Entity' annotation?")
@@ -63,12 +64,12 @@ class Model:
 
         obx_model_entity(self._c_model, c_str(entity.name), entity.id, entity.uid)
 
-        logging.debug(f"Creating entity \"{entity.name}\" (ID={entity.id}, {entity.uid})")
+        logger.debug(f"Creating entity \"{entity.name}\" (ID={entity.id}, {entity.uid})")
 
         for property_ in entity.properties:
             obx_model_property(self._c_model, c_str(property_._name), property_._ob_type, property_._id, property_._uid)
 
-            logging.debug(f"Creating property \"\" (ID={property_._id}, UID={property_._uid})")
+            logger.debug(f"Creating property \"{property_._name}\" (ID={property_._id}, UID={property_._uid})")
 
             if property_._flags != 0:
                 obx_model_property_flags(self._c_model, property_._flags)
@@ -77,9 +78,9 @@ class Model:
                 index = property_._index
                 if isinstance(index, HnswIndex):
                     self._set_hnsw_params(index)
-                    logging.debug(f"  HNSW index (ID={index.id}, UID{index.uid}); Dimensions: {index.dimensions}")
+                    logger.debug(f"  HNSW index (ID={index.id}, UID{index.uid}); Dimensions: {index.dimensions}")
                 else:
-                    logging.debug(f"  Index (ID={index.id}, UID{index.uid}); Type: {index.type}")
+                    logger.debug(f"  Index (ID={index.id}, UID{index.uid}); Type: {index.type}")
                 obx_model_property_index_id(self._c_model, index.id, index.uid)
 
         obx_model_entity_last_property_id(self._c_model, last_property_id.id, last_property_id.uid)
