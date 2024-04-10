@@ -43,7 +43,8 @@ def shlib_name(library: str) -> str:
 # initialize the C library
 lib_path = os.path.dirname(os.path.realpath(__file__))
 lib_path = os.path.join(lib_path, 'lib',
-                        platform.machine() if platform.system() != 'Darwin' else 'macos-universal', shlib_name('objectbox'))
+                        platform.machine() if platform.system() != 'Darwin' else 'macos-universal',
+                        shlib_name('objectbox'))
 C = ctypes.CDLL(lib_path)
 
 # load the core library version
@@ -275,6 +276,7 @@ def check_result(result, func, args):
         raise CoreException(C.obx_last_error_code())
     return result
 
+
 # creates a global function "name" with the given restype & argtypes, calling C function with the same name.
 # restype is used for error checking: if not None, check_result will throw an exception if the result is empty.
 def c_fn(name: str, restype: Optional[type], argtypes):
@@ -287,6 +289,7 @@ def c_fn(name: str, restype: Optional[type], argtypes):
 
     return func
 
+
 # like c_fn, but for functions returning obx_err
 def c_fn_rc(name: str, argtypes):
     """ Like c_fn, but for functions returning obx_err (checks obx_err validity). """
@@ -296,6 +299,7 @@ def c_fn_rc(name: str, argtypes):
     func.errcheck = check_obx_err
     return func
 
+
 def c_fn_qb_cond(name: str, argtypes):
     """ Like c_fn, but for functions returning obx_qb_cond (checks obx_qb_cond validity). """
     func = C.__getattr__(name)
@@ -303,6 +307,7 @@ def c_fn_qb_cond(name: str, argtypes):
     func.restype = obx_qb_cond
     func.errcheck = check_obx_qb_cond
     return func
+
 
 def py_str(ptr: ctypes.c_char_p) -> str:
     return ctypes.c_char_p(ptr).value.decode("utf-8")
@@ -327,11 +332,11 @@ obx_model = c_fn('obx_model', OBX_model_p, [])
 
 # obx_err (OBX_model* model, const char* name, obx_schema_id entity_id, obx_uid entity_uid);
 obx_model_entity = c_fn_rc('obx_model_entity', [
-                      OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
+    OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, const char* name, OBXPropertyType type, obx_schema_id property_id, obx_uid property_uid);
 obx_model_property = c_fn_rc('obx_model_property',
-                        [OBX_model_p, ctypes.c_char_p, OBXPropertyType, obx_schema_id, obx_uid])
+                             [OBX_model_p, ctypes.c_char_p, OBXPropertyType, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, OBXPropertyFlags flags);
 obx_model_property_flags = c_fn_rc('obx_model_property_flags', [OBX_model_p, OBXPropertyFlags])
@@ -369,42 +374,42 @@ obx_model_property_index_hnsw_vector_cache_hint_size_kb = \
 
 # obx_err (OBX_model*, obx_schema_id entity_id, obx_uid entity_uid);
 obx_model_last_entity_id = c_fn('obx_model_last_entity_id', None, [
-                              OBX_model_p, obx_schema_id, obx_uid])
+    OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id index_id, obx_uid index_uid);
 obx_model_last_index_id = c_fn('obx_model_last_index_id', None, [
-                             OBX_model_p, obx_schema_id, obx_uid])
+    OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id relation_id, obx_uid relation_uid);
 obx_model_last_relation_id = c_fn('obx_model_last_relation_id', None, [
-                                OBX_model_p, obx_schema_id, obx_uid])
+    OBX_model_p, obx_schema_id, obx_uid])
 
 # obx_err (OBX_model* model, obx_schema_id property_id, obx_uid property_uid);
 obx_model_entity_last_property_id = c_fn_rc('obx_model_entity_last_property_id',
-                                       [OBX_model_p, obx_schema_id, obx_uid])
+                                            [OBX_model_p, obx_schema_id, obx_uid])
 
 # OBX_store_options* ();
 obx_opt = c_fn('obx_opt', OBX_store_options_p, [])
 
 # obx_err (OBX_store_options* opt, const char* dir);
 obx_opt_directory = c_fn_rc('obx_opt_directory', [
-                       OBX_store_options_p, ctypes.c_char_p])
+    OBX_store_options_p, ctypes.c_char_p])
 
 # void (OBX_store_options* opt, size_t size_in_kb);
 obx_opt_max_db_size_in_kb = c_fn('obx_opt_max_db_size_in_kb', None, [
-                               OBX_store_options_p, ctypes.c_size_t])
+    OBX_store_options_p, ctypes.c_size_t])
 
 # void (OBX_store_options* opt, int file_mode);
 obx_opt_file_mode = c_fn('obx_opt_file_mode', None, [
-                       OBX_store_options_p, ctypes.c_uint])
+    OBX_store_options_p, ctypes.c_uint])
 
 # void (OBX_store_options* opt, int max_readers);
 obx_opt_max_readers = c_fn('obx_opt_max_readers', None, [
-                         OBX_store_options_p, ctypes.c_uint])
+    OBX_store_options_p, ctypes.c_uint])
 
 # obx_err (OBX_store_options* opt, OBX_model* model);
 obx_opt_model = c_fn_rc('obx_opt_model', [
-                   OBX_store_options_p, OBX_model_p])
+    OBX_store_options_p, OBX_model_p])
 
 # void (OBX_store_options* opt);
 obx_opt_free = c_fn('obx_opt_free', None, [OBX_store_options_p])
@@ -435,7 +440,7 @@ obx_box = c_fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 
 # obx_err (OBX_box* box, obx_id id, const void** data, size_t* size);
 obx_box_get = c_fn_rc('obx_box_get', [
-                 OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+    OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
 # OBX_bytes_array* (OBX_box* box);
 obx_box_get_all = c_fn('obx_box_get_all', OBX_bytes_array_p, [OBX_box_p])
@@ -445,29 +450,29 @@ obx_box_id_for_put = c_fn('obx_box_id_for_put', obx_id, [OBX_box_p, obx_id])
 
 # obx_err (OBX_box* box, uint64_t count, obx_id* out_first_id);
 obx_box_ids_for_put = c_fn_rc('obx_box_ids_for_put', [
-                         OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
+    OBX_box_p, ctypes.c_uint64, ctypes.POINTER(obx_id)])
 
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size);
 obx_box_put = c_fn_rc('obx_box_put', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);
 obx_box_put_many = c_fn_rc('obx_box_put_many', [
-                      OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
+    OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
 
 # obx_err (OBX_box* box, obx_id id);
 obx_box_remove = c_fn_rc('obx_box_remove', [OBX_box_p, obx_id])
 
 # obx_err (OBX_box* box, uint64_t* out_count);
 obx_box_remove_all = c_fn_rc('obx_box_remove_all', [
-                        OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
+    OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
 
 # obx_err (OBX_box* box, bool* out_is_empty);
 obx_box_is_empty = c_fn_rc('obx_box_is_empty', [
-                      OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
+    OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
 
 # obx_err obx_box_count(OBX_box* box, uint64_t limit, uint64_t* out_count);
 obx_box_count = c_fn_rc('obx_box_count', [
-                   OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+    OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
 
 # OBX_query_builder* obx_query_builder(OBX_store* store, obx_schema_id entity_id);
 obx_query_builder = c_fn('obx_query_builder', OBX_query_builder_p, [OBX_store_p, obx_schema_id])
@@ -492,55 +497,70 @@ obx_qb_not_null = c_fn('obx_qb_not_null', obx_qb_cond, [OBX_query_builder_p, obx
 
 # OBX_C_API obx_qb_cond obx_qb_equals_string(OBX_query_builder* builder, obx_schema_id property_id, const char* value,
 #                                            bool case_sensitive);
-obx_qb_equals_string = c_fn('obx_qb_equals_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_equals_string = c_fn('obx_qb_equals_string', obx_qb_cond,
+                            [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_co nd obx_qb_not_equals_string(OBX_query_builder* builder, obx_schema_id property_id, const char* value,
 #                                               bool case_sensitive);
-obx_qb_not_equals_string = c_fn('obx_qb_not_equals_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_not_equals_string = c_fn('obx_qb_not_equals_string', obx_qb_cond,
+                                [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_contains_string(OBX_query_builder* builder, obx_schema_id property_id, const char* value,
 #                                              bool case_sensitive);
-obx_qb_contains_string = c_fn('obx_qb_contains_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_contains_string = c_fn('obx_qb_contains_string', obx_qb_cond,
+                              [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_contains_element_string(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                      const char* value, bool case_sensitive);
-obx_qb_contains_element_string = c_fn('obx_qb_contains_element_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_contains_element_string = c_fn('obx_qb_contains_element_string', obx_qb_cond,
+                                      [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_contains_key_value_string(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                        const char* key, const char* value, bool case_sensitive);
-obx_qb_contains_key_value_string = c_fn('obx_qb_contains_key_value_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_contains_key_value_string = c_fn('obx_qb_contains_key_value_string', obx_qb_cond,
+                                        [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_char_p,
+                                         ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_starts_with_string(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                 const char* value, bool case_sensitive);
-obx_qb_starts_with_string = c_fn('obx_qb_starts_with_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_starts_with_string = c_fn('obx_qb_starts_with_string', obx_qb_cond,
+                                 [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_ends_with_string(OBX_query_builder* builder, obx_schema_id property_id, const char* value,
 #                                               bool case_sensitive);
-obx_qb_ends_with_string = c_fn('obx_qb_ends_with_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_ends_with_string = c_fn('obx_qb_ends_with_string', obx_qb_cond,
+                               [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_than_string(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                  const char* value, bool case_sensitive);
-obx_qb_greater_than_string = c_fn('obx_qb_greater_than_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_greater_than_string = c_fn('obx_qb_greater_than_string', obx_qb_cond,
+                                  [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_or_equal_string(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                      const char* value, bool case_sensitive);
-obx_qb_greater_or_equal_string = c_fn('obx_qb_greater_or_equal_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_greater_or_equal_string = c_fn('obx_qb_greater_or_equal_string', obx_qb_cond,
+                                      [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_less_than_string(OBX_query_builder* builder, obx_schema_id property_id, const char* value,
 #                                               bool case_sensitive);
-obx_qb_less_than_string = c_fn('obx_qb_less_than_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_less_than_string = c_fn('obx_qb_less_than_string', obx_qb_cond,
+                               [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_less_or_equal_string(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                   const char* value, bool case_sensitive);
-obx_qb_less_or_equal_string = c_fn('obx_qb_less_or_equal_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_less_or_equal_string = c_fn('obx_qb_less_or_equal_string', obx_qb_cond,
+                                   [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_in_strings(OBX_query_builder* builder, obx_schema_id property_id,
 #                                         const char* const values[], size_t count, bool case_sensitive);
-obx_qb_in_strings = c_fn('obx_qb_in_strings', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t, ctypes.c_bool])
+obx_qb_in_strings = c_fn('obx_qb_in_strings', obx_qb_cond,
+                         [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t,
+                          ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_any_equals_string(OBX_query_builder* builder, obx_schema_id property_id, const char* value,
 #                                                bool case_sensitive);
-obx_qb_any_equals_string = c_fn('obx_qb_any_equals_string', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
+obx_qb_any_equals_string = c_fn('obx_qb_any_equals_string', obx_qb_cond,
+                                [OBX_query_builder_p, obx_schema_id, ctypes.c_char_p, ctypes.c_bool])
 
 # OBX_C_API obx_qb_cond obx_qb_equals_int(OBX_query_builder* builder, obx_schema_id property_id, int64_t value);
 obx_qb_equals_int = c_fn('obx_qb_equals_int', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
@@ -549,74 +569,91 @@ obx_qb_equals_int = c_fn('obx_qb_equals_int', obx_qb_cond, [OBX_query_builder_p,
 obx_qb_not_equals_int = c_fn('obx_qb_not_equals_int', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_than_int(OBX_query_builder* builder, obx_schema_id property_id, int64_t value);
-obx_qb_greater_than_int = c_fn('obx_qb_greater_than_int', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
+obx_qb_greater_than_int = c_fn('obx_qb_greater_than_int', obx_qb_cond,
+                               [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_or_equal_int(OBX_query_builder* builder, obx_schema_id property_id, int64_t value);
-obx_qb_greater_or_equal_int = c_fn('obx_qb_greater_or_equal_int', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
+obx_qb_greater_or_equal_int = c_fn('obx_qb_greater_or_equal_int', obx_qb_cond,
+                                   [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
 
 # OBX_C_API obx_qb_cond obx_qb_less_than_int(OBX_query_builder* builder, obx_schema_id property_id, int64_t value);
 obx_qb_less_than_int = c_fn('obx_qb_less_than_int', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
 
 # OBX_C_API obx_qb_cond obx_qb_less_or_equal_int(OBX_query_builder* builder, obx_schema_id property_id, int64_t value);
-obx_qb_less_or_equal_int = c_fn('obx_qb_less_or_equal_int', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
+obx_qb_less_or_equal_int = c_fn('obx_qb_less_or_equal_int', obx_qb_cond,
+                                [OBX_query_builder_p, obx_schema_id, ctypes.c_int64])
 
 # OBX_C_API obx_qb_cond obx_qb_between_2ints(OBX_query_builder* builder, obx_schema_id property_id, int64_t value_a,
 #                                            int64_t value_b);
-obx_qb_between_2ints = c_fn('obx_qb_between_2ints', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_int64, ctypes.c_int64])
+obx_qb_between_2ints = c_fn('obx_qb_between_2ints', obx_qb_cond,
+                            [OBX_query_builder_p, obx_schema_id, ctypes.c_int64, ctypes.c_int64])
 
 # OBX_C_API obx_qb_cond obx_qb_in_int64s(OBX_query_builder* builder, obx_schema_id property_id, const int64_t values[],
 #                                        size_t count);
-obx_qb_in_int64s = c_fn('obx_qb_in_int64s', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t])
+obx_qb_in_int64s = c_fn('obx_qb_in_int64s', obx_qb_cond,
+                        [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_not_in_int64s(OBX_query_builder* builder, obx_schema_id property_id,
 #                                            const int64_t values[], size_t count);
-obx_qb_not_in_int64s = c_fn('obx_qb_not_in_int64s', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t])
+obx_qb_not_in_int64s = c_fn('obx_qb_not_in_int64s', obx_qb_cond,
+                            [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_in_int32s(OBX_query_builder* builder, obx_schema_id property_id, const int32_t values[],
 #                                        size_t count);
-obx_qb_in_int32s = c_fn('obx_qb_in_int32s', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int32), ctypes.c_size_t])
+obx_qb_in_int32s = c_fn('obx_qb_in_int32s', obx_qb_cond,
+                        [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int32), ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_not_in_int32s(OBX_query_builder* builder, obx_schema_id property_id,
 #                                            const int32_t values[], size_t count);
-obx_qb_not_in_int32s = c_fn('obx_qb_not_in_int32s', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int32), ctypes.c_size_t])
-
+obx_qb_not_in_int32s = c_fn('obx_qb_not_in_int32s', obx_qb_cond,
+                            [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_int32), ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_than_double(OBX_query_builder* builder, obx_schema_id property_id, double value);
-obx_qb_greater_than_double = c_fn('obx_qb_greater_than_double', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
+obx_qb_greater_than_double = c_fn('obx_qb_greater_than_double', obx_qb_cond,
+                                  [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_or_equal_double(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                      double value);
-obx_qb_greater_or_equal_double = c_fn('obx_qb_greater_or_equal_double', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
+obx_qb_greater_or_equal_double = c_fn('obx_qb_greater_or_equal_double', obx_qb_cond,
+                                      [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
 
 # OBX_C_API obx_qb_cond obx_qb_less_than_double(OBX_query_builder* builder, obx_schema_id property_id, double value);
-obx_qb_less_than_double = c_fn('obx_qb_less_than_double', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
+obx_qb_less_than_double = c_fn('obx_qb_less_than_double', obx_qb_cond,
+                               [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
 
 # OBX_C_API obx_qb_cond obx_qb_less_or_equal_double(OBX_query_builder* builder, obx_schema_id property_id, double value);
-obx_qb_less_or_equal_double = c_fn('obx_qb_less_or_equal_double', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
+obx_qb_less_or_equal_double = c_fn('obx_qb_less_or_equal_double', obx_qb_cond,
+                                   [OBX_query_builder_p, obx_schema_id, ctypes.c_double])
 
 # OBX_C_API obx_qb_cond obx_qb_between_2doubles(OBX_query_builder* builder, obx_schema_id property_id, double value_a,
 #                                               double value_b);
-obx_qb_between_2doubles = c_fn('obx_qb_between_2doubles', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_double, ctypes.c_double])
+obx_qb_between_2doubles = c_fn('obx_qb_between_2doubles', obx_qb_cond,
+                               [OBX_query_builder_p, obx_schema_id, ctypes.c_double, ctypes.c_double])
 
 # OBX_C_API obx_qb_cond obx_qb_equals_bytes(OBX_query_builder* builder, obx_schema_id property_id, const void* value,
 #                                           size_t size);
-obx_qb_equals_bytes = c_fn('obx_qb_equals_bytes', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_qb_equals_bytes = c_fn('obx_qb_equals_bytes', obx_qb_cond,
+                           [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_than_bytes(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                 const void* value, size_t size);
-obx_qb_greater_than_bytes = c_fn('obx_qb_greater_than_bytes', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_qb_greater_than_bytes = c_fn('obx_qb_greater_than_bytes', obx_qb_cond,
+                                 [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_greater_or_equal_bytes(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                     const void* value, size_t size);
-obx_qb_greater_or_equal_bytes = c_fn('obx_qb_greater_or_equal_bytes', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_qb_greater_or_equal_bytes = c_fn('obx_qb_greater_or_equal_bytes', obx_qb_cond,
+                                     [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_less_than_bytes(OBX_query_builder* builder, obx_schema_id property_id, const void* value,
 #                                              size_t size);
-obx_qb_less_than_bytes = c_fn('obx_qb_less_than_bytes', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_qb_less_than_bytes = c_fn('obx_qb_less_than_bytes', obx_qb_cond,
+                              [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_less_or_equal_bytes(OBX_query_builder* builder, obx_schema_id property_id,
 #                                                  const void* value, size_t size);
-obx_qb_less_or_equal_bytes = c_fn('obx_qb_less_or_equal_bytes', obx_qb_cond, [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
+obx_qb_less_or_equal_bytes = c_fn('obx_qb_less_or_equal_bytes', obx_qb_cond,
+                                  [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_all(OBX_query_builder* builder, const obx_qb_cond conditions[], size_t count);
 obx_qb_all = c_fn('obx_qb_all', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond, ctypes.c_size_t])
@@ -637,7 +674,9 @@ obx_qb_param_alias = c_fn_rc('obx_qb_param_alias', [OBX_query_builder_p, ctypes.
 obx_qb_order = c_fn_rc('obx_qb_order', [OBX_query_builder_p, obx_schema_id, OBXOrderFlags])
 
 # OBX_C_API obx_qb_cond obx_qb_nearest_neighbors_f32(OBX_query_builder* builder, obx_schema_id vector_property_id, const float* query_vector, size_t max_result_count)
-obx_qb_nearest_neighbors_f32 = c_fn_qb_cond('obx_qb_nearest_neighbors_f32', [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
+obx_qb_nearest_neighbors_f32 = c_fn_qb_cond('obx_qb_nearest_neighbors_f32',
+                                            [OBX_query_builder_p, obx_schema_id, ctypes.POINTER(ctypes.c_float),
+                                             ctypes.c_size_t])
 
 # OBX_C_API OBX_query* obx_query(OBX_query_builder* builder);
 obx_query = c_fn('obx_query', OBX_query_p, [OBX_query_builder_p])
@@ -661,13 +700,15 @@ obx_query_limit = c_fn_rc('obx_query_limit', [OBX_query_p, ctypes.c_size_t])
 obx_query_find = c_fn('obx_query_find', OBX_bytes_array_p, [OBX_query_p])
 
 # OBX_C_API obx_err obx_query_find_first(OBX_query* query, const void** data, size_t* size);
-obx_query_find_first = c_fn_rc('obx_query_find_first', [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+obx_query_find_first = c_fn_rc('obx_query_find_first',
+                               [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
 # OBX_C_API obx_err obx_query_find_unique(OBX_query* query, const void** data, size_t* size);
-obx_query_find_unique = c_fn_rc('obx_query_find_unique', [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+obx_query_find_unique = c_fn_rc('obx_query_find_unique',
+                                [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
 # OBX_C_API OBX_bytes_score_array* obx_query_find_with_scores(OBX_query* query);
-obx_query_find_with_scores = c_fn('obx_query_find_with_scores', OBX_bytes_score_array_p, [OBX_query_p])  # TODO
+obx_query_find_with_scores = c_fn('obx_query_find_with_scores', OBX_bytes_score_array_p, [OBX_query_p])
 
 # typedef bool obx_data_visitor(void* user_data, const void* data, size_t size);
 
@@ -678,7 +719,7 @@ obx_query_find_with_scores = c_fn('obx_query_find_with_scores', OBX_bytes_score_
 obx_query_find_ids = c_fn('obx_query_find_ids', OBX_id_array_p, [OBX_query_p])
 
 # OBX_C_API OBX_id_score_array* obx_query_find_ids_with_scores(OBX_query* query);
-obx_query_find_ids_with_scores = c_fn('obx_query_find_ids_with_scores', OBX_id_score_array_p, [OBX_query_p])  # TODO
+obx_query_find_ids_with_scores = c_fn('obx_query_find_ids_with_scores', OBX_id_score_array_p, [OBX_query_p])
 
 # OBX_C_API obx_err obx_query_count(OBX_query* query, uint64_t* out_count);
 obx_query_count = c_fn_rc('obx_query_count', [OBX_query_p, ctypes.POINTER(ctypes.c_uint64)])
@@ -697,7 +738,7 @@ obx_bytes_array = c_fn('obx_bytes_array', OBX_bytes_array_p, [ctypes.c_size_t])
 
 # obx_err (OBX_bytes_array* array, size_t index, const void* data, size_t size);
 obx_bytes_array_set = c_fn_rc('obx_bytes_array_set', [
-                         OBX_bytes_array_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_size_t])
+    OBX_bytes_array_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_size_t])
 
 # void (OBX_bytes_array * array);
 obx_bytes_array_free = c_fn('obx_bytes_array_free', None, [OBX_bytes_array_p])
