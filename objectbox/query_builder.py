@@ -113,17 +113,17 @@ class QueryBuilder:
         if isinstance(query_vector, np.ndarray) and query_vector.dtype != np.float32:
             raise Exception(f"query_vector dtype is expected to be np.float32, got: {query_vector.dtype}")
         prop_id = self._entity.get_property_id(prop)
-        c_query_vector = py_list_to_c_array(query_vector, ctypes.c_float)
+        c_query_vector = c_array(query_vector, ctypes.c_float)
         cond = obx_qb_nearest_neighbors_f32(self._c_builder, prop_id, c_query_vector, element_count)
         return cond
 
     def any(self, conditions: List[obx_qb_cond]) -> obx_qb_cond:
-        c_conditions = py_list_to_c_pointer(conditions, obx_qb_cond)
+        c_conditions = c_array(conditions, obx_qb_cond)
         cond = obx_qb_any(self._c_builder, c_conditions, len(conditions))
         return cond
 
     def all(self, conditions: List[obx_qb_cond]) -> obx_qb_cond:
-        c_conditions = py_list_to_c_pointer(conditions, obx_qb_cond)
+        c_conditions = c_array_pointer(conditions, obx_qb_cond)
         cond = obx_qb_all(self._c_builder, c_conditions, len(conditions))
         return cond
 

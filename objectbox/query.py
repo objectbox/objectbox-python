@@ -91,16 +91,16 @@ class Query:
         count = ctypes.c_uint64()
         obx_query_count(self._c_query, ctypes.byref(count))
         return int(count.value)
-    
+
     def remove(self) -> int:
         count = ctypes.c_uint64()
         obx_query_remove(self._c_query, ctypes.byref(count))
         return int(count.value)
-    
+
     def offset(self, offset: int) -> 'Query':
         obx_query_offset(self._c_query, offset)
         return self
-    
+
     def limit(self, limit: int) -> 'Query':
         obx_query_limit(self._c_query, limit)
         return self
@@ -121,7 +121,7 @@ class Query:
         if isinstance(value, np.ndarray) and value.dtype != np.float32:
             raise Exception(f"value dtype is expected to be np.float32, got: {value.dtype}")
         prop_id = self._entity.get_property_id(prop)
-        c_value = py_list_to_c_array(value, ctypes.c_float)
+        c_value = c_array(value, ctypes.c_float)
         num_el = len(value)
         obx_query_param_vector_float32(self._c_query, self._entity.id, prop_id, c_value, num_el)
         return self

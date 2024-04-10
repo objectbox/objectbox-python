@@ -330,8 +330,8 @@ def c_voidp_as_bytes(voidp, size):
     return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
 
 
-def py_list_to_c_array(py_list: Union[List[Any], np.ndarray], c_type):
-    """ Converts the given python list or ndarray into a C array. """
+def c_array(py_list: Union[List[Any], np.ndarray], c_type):
+    """ Converts the given python list or ndarray into a C array of c_type. """
     if isinstance(py_list, np.ndarray):
         if py_list.ndim != 1:
             raise Exception(f"ndarray is expected to be 1-dimensional. Input shape: {py_list.shape}")
@@ -342,9 +342,9 @@ def py_list_to_c_array(py_list: Union[List[Any], np.ndarray], c_type):
         raise Exception(f"Unsupported Python list type: {type(py_list)}")
 
 
-def py_list_to_c_pointer(py_list: Union[List[Any], np.ndarray], c_type):
-    """ Converts the given python list or ndarray into a C array, and returns a pointer type. """
-    return ctypes.cast(py_list_to_c_array(py_list, c_type), ctypes.POINTER(c_type))
+def c_array_pointer(py_list: Union[List[Any], np.ndarray], c_type):
+    """ Converts the given python list or ndarray into a C array of c_type. Returns its pointer type. """
+    return ctypes.cast(c_array(py_list, c_type), ctypes.POINTER(c_type))
 
 
 # OBX_model* (void);
