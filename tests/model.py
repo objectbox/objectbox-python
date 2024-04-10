@@ -52,6 +52,7 @@ class TestEntityDatetime:
     def __init__(self, string: str = ""):
         self.str = string
 
+
 @Entity(id=3, uid=3)
 class TestEntityFlex:
     id = Id(id=1, uid=3001)
@@ -60,3 +61,14 @@ class TestEntityFlex:
 
     def __init__(self, string: str = ""):
         self.str = string
+
+
+@Entity(id=4, uid=4)
+class VectorEntity:
+    id = Id(id=1, uid=4001)
+    name = Property(str, type=PropertyType.string, id=2, uid=4002)
+    vector = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=4003,
+                      index=HnswIndex(
+                          id=3, uid=40001,
+                          dimensions=2, distance_type=HnswDistanceType.EUCLIDEAN)
+                      )
