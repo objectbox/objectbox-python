@@ -159,7 +159,6 @@ class Property:
             self._flags |= OBXPropertyFlags_INDEXED
             if isinstance(self._index, Index):  # Generic index
                 self._flags |= self._index.type
-        print("Flags set to", self._flags, bin(self._flags))
 
     def op(self, op: _ConditionOp, value, case_sensitive: bool = True) -> QueryCondition:
         return QueryCondition(self._id, op, value, case_sensitive)

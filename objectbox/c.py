@@ -162,7 +162,7 @@ OBX_id_score_p = ctypes.POINTER(OBX_id_score)
 
 class OBX_id_score_array(ctypes.Structure):
     _fields_ = [
-        ('ids_scores', ctypes.POINTER(OBX_id_score)),
+        ('ids_scores', OBX_id_score_p),
         ('count', ctypes.c_size_t)
     ]
 
