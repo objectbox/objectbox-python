@@ -68,6 +68,8 @@ obx_uid = ctypes.c_uint64
 obx_id = ctypes.c_uint64
 obx_qb_cond = ctypes.c_int
 
+obx_qb_cond_p = ctypes.POINTER(obx_qb_cond)
+
 # enums
 OBXPropertyType = ctypes.c_int
 OBXPropertyFlags = ctypes.c_int
@@ -325,6 +327,16 @@ def c_voidp_as_bytes(voidp, size):
 
     # create a memory view
     return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
+
+
+def py_list_to_c_array(py_list: List[Any], c_type):
+    """ Converts the given python list into a C array. """
+    return (c_type * len(py_list))(*py_list)
+
+
+def py_list_to_c_pointer(py_list: List[Any], c_type):
+    """ Converts the given python list into a C array and returns a pointer type. """
+    return ctypes.cast(py_list_to_c_array(py_list, c_type), ctypes.POINTER(c_type))
 
 
 # OBX_model* (void);
@@ -656,10 +668,10 @@ obx_qb_less_or_equal_bytes = c_fn('obx_qb_less_or_equal_bytes', obx_qb_cond,
                                   [OBX_query_builder_p, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_all(OBX_query_builder* builder, const obx_qb_cond conditions[], size_t count);
-obx_qb_all = c_fn('obx_qb_all', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond, ctypes.c_size_t])
+obx_qb_all = c_fn('obx_qb_all', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond_p, ctypes.c_size_t])
 
 # OBX_C_API obx_qb_cond obx_qb_any(OBX_query_builder* builder, const obx_qb_cond conditions[], size_t count);
-obx_qb_any = c_fn('obx_qb_any', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond, ctypes.c_size_t])
+obx_qb_any = c_fn('obx_qb_any', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond_p, ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_qb_param_alias(OBX_query_builder* builder, const char* alias);
 obx_qb_param_alias = c_fn_rc('obx_qb_param_alias', [OBX_query_builder_p, ctypes.c_char_p])

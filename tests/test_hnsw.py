@@ -57,9 +57,9 @@ def _test_random_points(num_points: int, num_query_points: int, seed: Optional[i
         assert len(expected_result) == k
 
         # Run ANN with OBX
-        query_builder = QueryBuilder(db, box)
-        query_builder.nearest_neighbors_f32("vector", query_point, k)
-        query = query_builder.build()
+        qb = box.query()
+        qb.nearest_neighbors_f32("vector", query_point, k)
+        query = qb.build()
         obx_result = [id_ for id_, score in query.find_ids_with_scores()]  # Ignore score
         assert len(obx_result) == k
 
@@ -100,10 +100,10 @@ def test_combined_nn_search():
     assert box.count() == 9
 
     # Test condition + NN search
-    query = box.query() \
-        .nearest_neighbors_f32("vector", [4.1, 4.2], 6) \
-        .contains_string("name", "red", case_sensitive=False) \
-        .build()
+    qb = box.query()
+    qb.nearest_neighbors_f32("vector", [4.1, 4.2], 6)
+    qb.contains_string("name", "red", case_sensitive=False)
+    query = qb.build()
     # 4, 5, 3, 6, 2, 7
     # Filtered: 3, 6, 7
     search_results = query.find_with_scores()
@@ -120,20 +120,20 @@ def test_combined_nn_search():
     assert search_results[0][0].name == "Red apple"
 
     # Regular condition + NN search
-    query = box.query() \
-        .nearest_neighbors_f32("vector", [9.2, 8.9], 7) \
-        .starts_with_string("name", "Blue", case_sensitive=True) \
-        .build()
+    qb = box.query()
+    qb.nearest_neighbors_f32("vector", [9.2, 8.9], 7)
+    qb.starts_with_string("name", "Blue", case_sensitive=True)
+    query = qb.build()
 
     search_results = query.find_with_scores()
     assert len(search_results) == 1
     assert search_results[0][0].name == "Blue sea"
 
     # Regular condition + NN search
-    query = box.query() \
-        .nearest_neighbors_f32("vector", [7.7, 7.7], 8) \
-        .contains_string("name", "blue", case_sensitive=False) \
-        .build()
+    qb = box.query()
+    qb.nearest_neighbors_f32("vector", [7.7, 7.7], 8)
+    qb.contains_string("name", "blue", case_sensitive=False)
+    query = qb.build()
     # 8, 7, 9, 6, 5, 4, 3, 2
     # Filtered: 9, 5, 4, 2
     search_results = query.find_ids_with_scores()
