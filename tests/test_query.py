@@ -249,3 +249,34 @@ def test_set_parameter():
 
     query.set_parameter_int("vector", 2)
     assert query.find_ids() == sorted([2, 3])
+
+
+def test_set_parameter_alias():
+    db = load_empty_test_objectbox()
+    box = objectbox.Box(db, TestEntity)
+
+    object0 = TestEntity()
+    object0.str = "Foo"
+    object0.int64 = 2
+    object0.int32 = 703
+    object0.int8 = 101
+
+    object1 = TestEntity()
+    object1.str = "FooBar"
+    object1.int64 = 10
+    object1.int32 = 49
+    object1.int8 = 45
+
+    box.put([object0, object1])
+
+    str_prop: Property = TestEntity.properties[1]
+    qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
+
+    query = qb.build()
+    assert query.find()[0].str == "Foo"
+    assert query.count() == 1
+
+    query.set_parameter_alias_string("foo_filter", "FooBar")
+
+    assert query.find()[0].str == "FooBar"
+    assert query.count() == 1

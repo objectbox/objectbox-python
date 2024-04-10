@@ -130,3 +130,7 @@ class QueryBuilder:
     def build(self) -> Query:
         c_query = obx_query(self._c_builder)
         return Query(c_query, self._box)
+
+    def alias(self, alias: str):
+        obx_qb_param_alias(self._c_builder, c_str(alias))
+        return self

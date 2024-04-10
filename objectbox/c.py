@@ -698,6 +698,12 @@ obx_query_param_vector_float32 = c_fn_rc('obx_query_param_vector_float32',
 # OBX_C_API obx_err obx_query_param_alias_vector_float32(OBX_query* query, const char* alias, const float* value, size_t element_count);
 # TODO
 
+# OBX_C_API obx_err obx_query_param_alias_string(OBX_query* query, const char* alias, const char* value);
+obx_query_param_alias_string = c_fn_rc('obx_query_param_alias_string', [OBX_query_p, ctypes.c_char_p, ctypes.c_char_p])
+
+# OBX_C_API obx_err obx_query_param_alias_int64s(OBX_query* query, const char* alias, const int64_t values[], size_t count);
+obx_query_param_alias_int64s = c_fn_rc('obx_query_param_alias_int64s', [OBX_query_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int64), ctypes.c_size_t])
+
 # OBX_C_API obx_err obx_qb_order(OBX_query_builder* builder, obx_schema_id property_id, OBXOrderFlags flags);
 obx_qb_order = c_fn_rc('obx_qb_order', [OBX_query_builder_p, obx_schema_id, OBXOrderFlags])
 
