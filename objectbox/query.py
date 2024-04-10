@@ -30,7 +30,7 @@ class Query:
                 # OBX_bytes_array
                 c_bytes_array = c_bytes_array_p.contents
 
-                result = list()
+                result = []
                 for i in range(c_bytes_array.count):
                     # OBX_bytes
                     c_bytes = c_bytes_array.data[i]
@@ -44,7 +44,11 @@ class Query:
         """ Finds a list of object IDs matching query. The result is sorted by ID (ascending order). """
         c_id_array_p = obx_query_find_ids(self._c_query)
         try:
-            return list(c_id_array_p.contents)
+            c_id_array: OBX_id_array = c_id_array_p.contents
+            result = []
+            for i in range(c_id_array.count):
+                result.append(c_id_array.ids[i])
+            return result
         finally:
             obx_id_array_free(c_id_array_p)
 
@@ -57,8 +61,12 @@ class Query:
             c_bytes_score_array: OBX_bytes_score_array = c_bytes_score_array_p.contents
             result = []
             for i in range(c_bytes_score_array.count):
-                # TODO implement
-                pass
+                c_bytes_score: OBX_bytes_score = c_bytes_score_array.bytes_scores[i]
+                data = c_voidp_as_bytes(c_bytes_score.data, c_bytes_score.size)
+                score = c_bytes_score.score
+
+                object_ = self._box._entity.unmarshal(data)
+                result.append((object_, score))
             return result
         finally:
             obx_bytes_score_array_free(c_bytes_score_array_p)
