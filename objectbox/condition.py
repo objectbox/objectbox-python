@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import *
+import numpy as np
 
 
 class _QueryConditionOp(Enum):
@@ -67,7 +68,7 @@ class QueryCondition:
         if isinstance(value, str):
             qb.contains_string(self._property_id, value, case_sensitive)
         else:
-            raise Exception(f"Unsupported type for 'CONTAINS': {type(self_value)}")
+            raise Exception(f"Unsupported type for 'CONTAINS': {type(value)}")
 
     def _apply_starts_with(self, qb: 'QueryBuilder'):
         value = self._args['value']
@@ -133,7 +134,7 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'BETWEEN': {type(a)}")
 
-    def _apply_nearest_neighbor(self, qb: 'QueryCondition'):
+    def _apply_nearest_neighbor(self, qb: 'QueryBuilder'):
         query_vector = self._args['query_vector']
         element_count = self._args['element_count']
 
