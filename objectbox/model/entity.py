@@ -47,8 +47,14 @@ class _Entity(object):
         self.id_property = None
         self.fill_properties()
 
-    def __call__(self, *args):
-        return self.cls(*args)
+    def __call__(self, **properties):
+        """ The constructor of the user Entity class. """
+        object_ = self.cls()
+        for prop_name, prop_val in properties.items():
+            if not hasattr(object_, prop_name):
+                raise Exception(f"Entity {self.name} has no property \"{prop_name}\"")
+            setattr(object_, prop_name, prop_val)
+        return object_
 
     def fill_properties(self):
         # TODO allow subclassing and support entities with __slots__ defined
@@ -235,8 +241,8 @@ class _Entity(object):
         return obj
 
 
-def Entity(id: int = 0, uid: int = 0):
+def Entity(id: int = 0, uid: int = 0) -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
-    def wrapper(cls):
-        return _Entity(cls, id, uid)
+    def wrapper(class_):
+        return _Entity(class_, id, uid)
     return wrapper
