@@ -10,71 +10,48 @@ from tests.model import *
 
 def test_basics():
     ob = load_empty_test_objectbox()
-    box = objectbox.Box(ob, TestEntity)
-    object1 = TestEntity()
-    object1.str = "foo"
-    object1.int64 = 123
-    object2 = TestEntity()
-    object2.str = "bar"
-    object2.int64 = 456
-    id1 = box.put(object1)
-    box.put(object2)
 
-    # String queries
+    box = objectbox.Box(ob, TestEntity)
+    box.put(TestEntity(str="foo", int64=123))
+    box.put(TestEntity(str="bar", int64=456))
+
+    # String query
     str_prop: Property = TestEntity.get_property("str")
 
-    qb = box.query()
-    qb.equals_string(str_prop._id, "bar", True)
-    query = qb.build()
+    query = box.query(str_prop.equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    qb = box.query()
-    qb.not_equals_string(str_prop._id, "bar", True)
-    query = qb.build()
+    query = box.query(str_prop.not_equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    qb = box.query()
-    qb.contains_string(str_prop._id, "ba", True)
-    query = qb.build()
+    query = box.query(str_prop.contains("ba", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    qb = box.query()
-    qb.starts_with_string(str_prop._id, "f", True)
-    query = qb.build()
+    query = box.query(str_prop.starts_with("f", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    qb = box.query()
-    qb.ends_with_string(str_prop._id, "o", True)
-    query = qb.build()
+    query = box.query(str_prop.ends_with("o", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    qb = box.query()
-    qb.greater_than_string(str_prop._id, "bar", True)
-    query = qb.build()
+    query = box.query(str_prop.greater_than("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    qb = box.query()
-    qb.greater_or_equal_string(str_prop._id, "bar", True)
-    query = qb.build()
+    query = box.query(str_prop.greater_or_equal("bar", case_sensitive=True)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    qb = box.query()
-    qb.less_than_string(str_prop._id, "foo", True)
-    query = qb.build()
+    query = box.query(str_prop.less_than("foo", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    qb = box.query()
-    qb.less_or_equal_string(str_prop._id, "foo", True)
-    query = qb.build()
+    query = box.query(str_prop.less_or_equal("foo", case_sensitive=True)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
@@ -82,47 +59,33 @@ def test_basics():
     # Int queries
     int_prop: Property = TestEntity.get_property("int64")
 
-    qb = box.query()
-    qb.equals_int(int_prop._id, 123)
-    query = qb.build()
+    query = box.query(int_prop.equals(123)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
 
-    qb = box.query()
-    qb.not_equals_int(int_prop._id, 123)
-    query = qb.build()
+    query = box.query(int_prop.not_equals(123)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 456
 
-    qb = box.query()
-    qb.greater_than_int(int_prop._id, 123)
-    query = qb.build()
+    query = box.query(int_prop.greater_than(123)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 456
 
-    qb = box.query()
-    qb.greater_or_equal_int(int_prop._id, 123)
-    query = qb.build()
+    query = box.query(int_prop.greater_or_equal(123)).build()
     assert query.count() == 2
     assert query.find()[0].int64 == 123
     assert query.find()[1].int64 == 456
 
-    qb = box.query()
-    qb.less_than_int(int_prop._id, 456)
-    query = qb.build()
+    query = box.query(int_prop.less_than(456)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
 
-    qb = box.query()
-    qb.less_or_equal_int(int_prop._id, 456)
-    query = qb.build()
+    query = box.query(int_prop.less_or_equal(456)).build()
     assert query.count() == 2
     assert query.find()[0].int64 == 123
     assert query.find()[1].int64 == 456
 
-    qb = box.query()
-    qb.between_2ints(int_prop._id, 100, 200)
-    query = qb.build()
+    query = box.query(int_prop.between(100, 200)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
 
@@ -133,21 +96,17 @@ def test_basics():
 
 def test_offset_limit():
     ob = load_empty_test_objectbox()
+
     box = objectbox.Box(ob, TestEntity)
-    object0 = TestEntity()
-    object1 = TestEntity()
-    object1.str = "a"
-    object2 = TestEntity()
-    object2.str = "b"
-    object3 = TestEntity()
-    object3.str = "c"
-    box.put([object0, object1, object2, object3])
+    box.put(TestEntity())
+    box.put(TestEntity(str="a"))
+    box.put(TestEntity(str="b"))
+    box.put(TestEntity(str="c"))
+    assert box.count() == 4
 
-    int_prop: Property = TestEntity.get_property("int64")
+    int_prop = TestEntity.get_property("int64")
 
-    qb = box.query()
-    qb.equals_int(int_prop._id, 0)
-    query = qb.build()
+    query = box.query(int_prop.equals(0)).build()
     assert query.count() == 4
 
     query.offset(2)

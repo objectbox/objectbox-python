@@ -14,7 +14,7 @@
 
 from enum import IntEnum
 
-from objectbox.condition import QueryCondition, _ConditionOp
+from objectbox.condition import QueryCondition, _QueryConditionOp
 from objectbox.c import *
 import flatbuffers.number_types
 import numpy as np
@@ -160,39 +160,50 @@ class Property:
             if isinstance(self._index, Index):  # Generic index
                 self._flags |= self._index.type
 
-    def op(self, op: _ConditionOp, value, case_sensitive: bool = True) -> QueryCondition:
-        return QueryCondition(self._id, op, value, case_sensitive)
-
     def equals(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.eq, value, case_sensitive)
-        
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.EQ, args)
+
     def not_equals(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.notEq, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.NOT_EQ, args)
+
     def contains(self, value: str, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.contains, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.CONTAINS, args)
+
     def starts_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.startsWith, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.STARTS_WITH, args)
+
     def ends_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.endsWith, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.ENDS_WITH, args)
+
     def greater_than(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.gt, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.GT, args)
+
     def greater_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.greaterOrEq, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.GTE, args)
+
     def less_than(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.lt, value, case_sensitive)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.LT, args)
+
     def less_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.lessOrEq, value, case_sensitive)
-    
-    def between(self, value_a, value_b) -> QueryCondition:
-        return QueryCondition(self._id, _ConditionOp.between, value_a, value_b)
-    
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.LTE, args)
+
+    def between(self, a, b) -> QueryCondition:
+        args = {'a': a, 'b': b}
+        return QueryCondition(self._id, _QueryConditionOp.BETWEEN, args)
+
+    def nearest_neighbor(self, query_vector, element_count: int):
+        args = {'query_vector': query_vector, 'element_count': element_count}
+        return QueryCondition(self._id, _QueryConditionOp.NEAREST_NEIGHBOR, args)
+
 
 # ID property (primary key)
 class Id(Property):

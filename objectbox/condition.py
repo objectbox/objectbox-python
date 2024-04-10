@@ -1,95 +1,152 @@
 from enum import Enum
+from typing import *
 
-class _ConditionOp(Enum):
-    eq = 1
-    notEq = 2
-    contains = 3
-    startsWith = 4
-    endsWith = 5
-    gt = 6
-    greaterOrEq = 7
-    lt = 8
-    lessOrEq = 9
-    between = 10
+
+class _QueryConditionOp(Enum):
+    EQ = 1
+    NOT_EQ = 2
+    CONTAINS = 3
+    STARTS_WITH = 4
+    ENDS_WITH = 5
+    GT = 6
+    GTE = 7
+    LT = 8
+    LTE = 9
+    BETWEEN = 10
+    NEAREST_NEIGHBOR = 11
 
 
 class QueryCondition:
-    def __init__(self, property_id: int, op: _ConditionOp, value, value_b = None, case_sensitive: bool = True):
+    def __init__(self, property_id: int, op: _QueryConditionOp, args: Dict[str, Any]):
+        if op not in self._get_op_map():
+            raise Exception(f"Invalid query condition op with ID: {op}")
+
         self._property_id = property_id
         self._op = op
-        self._value = value
-        self._value_b = value_b
-        self._case_sensitive = case_sensitive
+        self._args = args
 
-    def apply(self, builder: 'QueryBuilder'):
-        if self._op == _ConditionOp.eq:
-            if isinstance(self._value, str):
-                builder.equals_string(self._property_id, self._value, self._case_sensitive)
-            elif isinstance(self._value, int):
-                builder.equals_int(self._property_id, self._value)
-            else:
-                raise Exception("Unsupported type for 'eq': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.notEq:
-            if isinstance(self._value, str):
-                builder.not_equals_string(self._property_id, self._value, self._case_sensitive)
-            elif isinstance(self._value, int):
-                builder.not_equals_int(self._property_id, self._value)
-            else:
-                raise Exception("Unsupported type for 'notEq': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.contains:
-            if isinstance(self._value, str):
-                builder.contains_string(self._property_id, self._value, self._case_sensitive)
-            else:
-                raise Exception("Unsupported type for 'contains': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.startsWith:
-            if isinstance(self._value, str):
-                builder.starts_with_string(self._property_id, self._value, self._case_sensitive)
-            else:
-                raise Exception("Unsupported type for 'startsWith': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.endsWith:
-            if isinstance(self._value, str):
-                builder.ends_with_string(self._property_id, self._value, self._case_sensitive)
-            else:
-                raise Exception("Unsupported type for 'endsWith': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.gt:
-            if isinstance(self._value, str):
-                builder.greater_than_string(self._property_id, self._value, self._case_sensitive)
-            elif isinstance(self._value, int):
-                builder.greater_than_int(self._property_id, self._value)
-            else:
-                raise Exception("Unsupported type for 'gt': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.greaterOrEq:
-            if isinstance(self._value, str):
-                builder.greater_or_equal_string(self._property_id, self._value, self._case_sensitive)
-            elif isinstance(self._value, int):
-                builder.greater_or_equal_int(self._property_id, self._value)
-            else:
-                raise Exception("Unsupported type for 'greaterOrEq': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.lt:
-            if isinstance(self._value, str):
-                builder.less_than_string(self._property_id, self._value, self._case_sensitive)
-            elif isinstance(self._value, int):
-                builder.less_than_int(self._property_id, self._value)
-            else:
-                raise Exception("Unsupported type for 'lt': " + str(type(self._value)))
-        
-        elif self._op == _ConditionOp.lessOrEq:
-            if isinstance(self._value, str):
-                builder.less_or_equal_string(self._property_id, self._value, self._case_sensitive)
-            elif isinstance(self._value, int):
-                builder.less_or_equal_int(self._property_id, self._value)
-            else:
-                raise Exception("Unsupported type for 'lessOrEq': " + str(type(self._value)))
-            
-        elif self._op == _ConditionOp.between:
-            if isinstance(self._value, int):
-                builder.between_2ints(self._property_id, self._value, self._value_b)
-            else:
-                raise Exception("Unsupported type for 'between': " + str(type(self._value)))
+    def _get_op_map(self):
+        return {
+            _QueryConditionOp.EQ: self._apply_eq,
+            _QueryConditionOp.NOT_EQ: self._apply_not_eq,
+            _QueryConditionOp.CONTAINS: self._apply_contains,
+            _QueryConditionOp.STARTS_WITH: self._apply_starts_with,
+            _QueryConditionOp.ENDS_WITH: self._apply_ends_with,
+            _QueryConditionOp.GT: self._apply_gt,
+            _QueryConditionOp.GTE: self._apply_gte,
+            _QueryConditionOp.LT: self._apply_lt,
+            _QueryConditionOp.LTE: self._apply_lte,
+            _QueryConditionOp.BETWEEN: self._apply_between,
+            _QueryConditionOp.NEAREST_NEIGHBOR: self._apply_nearest_neighbor
+            # ... new query condition here ... :)
+        }
+
+    def _apply_eq(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.equals_string(self._property_id, value, case_sensitive)
+        elif isinstance(value, int):
+            qb.equals_int(self._property_id, value)
+        else:
+            raise Exception(f"Unsupported type for 'EQ': {type(value)}")
+
+    def _apply_not_eq(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.not_equals_string(self._property_id, value, case_sensitive)
+        elif isinstance(value, int):
+            qb.not_equals_int(self._property_id, value)
+        else:
+            raise Exception(f"Unsupported type for 'NOT_EQ': {type(value)}")
+
+    def _apply_contains(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.contains_string(self._property_id, value, case_sensitive)
+        else:
+            raise Exception(f"Unsupported type for 'CONTAINS': {type(self_value)}")
+
+    def _apply_starts_with(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.starts_with_string(self._property_id, value, case_sensitive)
+        else:
+            raise Exception(f"Unsupported type for 'STARTS_WITH': {type(value)}")
+
+    def _apply_ends_with(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.ends_with_string(self._property_id, value, case_sensitive)
+        else:
+            raise Exception(f"Unsupported type for 'ENDS_WITH': {type(value)}")
+
+    def _apply_gt(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.greater_than_string(self._property_id, value, case_sensitive)
+        elif isinstance(value, int):
+            qb.greater_than_int(self._property_id, value)
+        else:
+            raise Exception(f"Unsupported type for 'GT': {type(value)}")
+
+    def _apply_gte(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.greater_or_equal_string(self._property_id, value, case_sensitive)
+        elif isinstance(value, int):
+            qb.greater_or_equal_int(self._property_id, value)
+        else:
+            raise Exception(f"Unsupported type for 'GTE': {type(value)}")
+
+    def _apply_lt(self, qb: 'QueryCondition'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.less_than_string(self._property_id, value, case_sensitive)
+        elif isinstance(value, int):
+            qb.less_than_int(self._property_id, value)
+        else:
+            raise Exception("Unsupported type for 'LT': " + str(type(value)))
+
+    def _apply_lte(self, qb: 'QueryBuilder'):
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        if isinstance(value, str):
+            qb.less_or_equal_string(self._property_id, value, case_sensitive)
+        elif isinstance(value, int):
+            qb.less_or_equal_int(self._property_id, value)
+        else:
+            raise Exception(f"Unsupported type for 'LTE': {type(value)}")
+
+    def _apply_between(self, qb: 'QueryBuilder'):
+        a = self._args['a']
+        b = self._args['b']
+        if isinstance(a, int):
+            qb.between_2ints(self._property_id, a, b)
+        else:
+            raise Exception(f"Unsupported type for 'BETWEEN': {type(a)}")
+
+    def _apply_nearest_neighbor(self, qb: 'QueryCondition'):
+        query_vector = self._args['query_vector']
+        element_count = self._args['element_count']
+
+        if len(query_vector) == 0:
+            raise Exception("query_vector can't be empty")
+
+        is_float_vector = False
+        is_float_vector |= isinstance(query_vector, np.ndarray) and query_vector.dtype == np.float32
+        is_float_vector |= isinstance(query_vector, list) and type(query_vector[0]) == float
+        if is_float_vector:
+            qb.nearest_neighbors_f32(self._property_id, query_vector, element_count)
+        else:
+            raise Exception(f"Unsupported type for 'NEAREST_NEIGHBOR': {type(query_vector)}")
+
+    def apply(self, qb: 'QueryBuilder'):
+        self._get_op_map()[self._op](qb)
