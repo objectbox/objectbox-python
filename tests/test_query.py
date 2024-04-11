@@ -255,19 +255,8 @@ def test_set_parameter_alias():
     db = load_empty_test_objectbox()
     box = objectbox.Box(db, TestEntity)
 
-    object0 = TestEntity()
-    object0.str = "Foo"
-    object0.int64 = 2
-    object0.int32 = 703
-    object0.int8 = 101
-
-    object1 = TestEntity()
-    object1.str = "FooBar"
-    object1.int64 = 10
-    object1.int32 = 49
-    object1.int8 = 45
-
-    box.put([object0, object1])
+    box.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
+    box.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
 
     str_prop: Property = TestEntity.properties[1]
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -280,3 +269,15 @@ def test_set_parameter_alias():
 
     assert query.find()[0].str == "FooBar"
     assert query.count() == 1
+
+    int_prop: Property = TestEntity.properties[3]
+    qb = box.query(int_prop.greater_than(5).alias("greater_than_filter"))
+
+    query = qb.build()
+    assert query.count() == 1
+    assert query.find()[0].str == "FooBar"
+
+    query.set_parameter_alias_int("greater_than_filter", 1)
+
+    assert query.count() == 2
+

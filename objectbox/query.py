@@ -132,3 +132,6 @@ class Query:
 
     def set_parameter_alias_string(self, alias: str, value: str):
         return obx_query_param_alias_string(self._c_query,c_str(alias), c_str(value))
+
+    def set_parameter_alias_int(self, alias: str, value: int):
+        return obx_query_param_alias_int(self._c_query, c_str(alias), value)
