@@ -252,11 +252,18 @@ def test_set_parameter():
 
 
 def test_set_parameter_alias():
-    db = load_empty_test_objectbox()
+    db = create_test_objectbox()
     box = objectbox.Box(db, TestEntity)
 
     box.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
     box.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
+
+    box_vector = objectbox.Box(db, VectorEntity)
+    box_vector.put(VectorEntity(name="Object 1", vector=[1, 1]))
+    box_vector.put(VectorEntity(name="Object 2", vector=[2, 2]))
+    box_vector.put(VectorEntity(name="Object 3", vector=[3, 3]))
+    box_vector.put(VectorEntity(name="Object 4", vector=[4, 4]))
+    box_vector.put(VectorEntity(name="Object 5", vector=[5, 5]))
 
     str_prop: Property = TestEntity.properties[1]
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -281,3 +288,12 @@ def test_set_parameter_alias():
 
     assert query.count() == 2
 
+    vector_prop: Property = VectorEntity.get_property("vector")
+
+    query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
+    assert query.count() == 3
+    assert query.find_ids() == sorted([3, 4, 2])
+
+    query.set_parameter_alias_vector_f32("nearest_neighbour_filter", [4.9, 4.9])
+    assert query.count() == 3
+    assert query.find_ids() == sorted([5, 4, 3])

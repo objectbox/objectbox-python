@@ -696,7 +696,7 @@ obx_query_param_vector_float32 = c_fn_rc('obx_query_param_vector_float32',
                                           ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_query_param_alias_vector_float32(OBX_query* query, const char* alias, const float* value, size_t element_count);
-# TODO
+obx_query_param_alias_vector_float32 = c_fn_rc('obx_query_param_alias_vector_float32', [OBX_query_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_query_param_alias_string(OBX_query* query, const char* alias, const char* value);
 obx_query_param_alias_string = c_fn_rc('obx_query_param_alias_string', [OBX_query_p, ctypes.c_char_p, ctypes.c_char_p])

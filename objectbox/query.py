@@ -135,3 +135,6 @@ class Query:
 
     def set_parameter_alias_int(self, alias: str, value: int):
         return obx_query_param_alias_int(self._c_query, c_str(alias), value)
+
+    def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]):
+        return obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float), len(value))
