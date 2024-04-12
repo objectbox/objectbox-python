@@ -149,7 +149,16 @@ class Box:
         count = ctypes.c_uint64()
         obx_box_remove_all(self._c_box, ctypes.byref(count))
         return int(count.value)
-    
-    def query(self, condition: QueryCondition) -> QueryBuilder:
-        qb = QueryBuilder(self._ob, self, self._entity, condition)
+
+    def query(self, condition: Optional[QueryCondition] = None) -> QueryBuilder:
+        """ Creates a QueryBuilder for the Entity that is managed by the Box.
+
+        :param condition:
+            If given, applies the given high-level condition to the new QueryBuilder object.
+            Useful for a user-friendly API design; for example:
+                ``box.query(name_property.equals("Johnny")).build()``
+        """
+        qb = QueryBuilder(self._ob, self)
+        if condition is not None:
+            condition.apply(qb)
         return qb

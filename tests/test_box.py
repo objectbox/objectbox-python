@@ -99,10 +99,10 @@ def test_box_bulk():
     ob = load_empty_test_objectbox()
     box = objectbox.Box(ob, TestEntity)
 
-    box.put(TestEntity("first"))
+    box.put(TestEntity(str="first"))
 
-    objects = [TestEntity("second"), TestEntity("third"),
-               TestEntity("fourth"), box.get(1)]
+    objects = [TestEntity(str="second"), TestEntity(str="third"),
+               TestEntity(str="fourth"), box.get(1)]
     box.put(objects)
     assert box.count() == 4
     assert objects[0].id == 2
@@ -185,7 +185,6 @@ def test_datetime():
 
 
 def test_flex():
-
     def test_put_get(object: TestEntity, box: objectbox.Box, property):
         object.flex = property
         id = box.put(object)
@@ -221,7 +220,7 @@ def test_flex():
 
     # Update to dict
     test_put_get(object, box, {"a": 1, "b": 2})
-    
+
     # Update to bool
     test_put_get(object, box, True)
 

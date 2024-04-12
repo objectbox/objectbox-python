@@ -1,9 +1,12 @@
 import objectbox
 import os
+from os import path
 import shutil
 import pytest
-from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex
 import numpy as np
+from typing import *
+from tests.model import *
+
 
 test_dir = 'testdata'
 
@@ -23,15 +26,14 @@ def autocleanup():
 
 def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
     model = objectbox.Model()
-    from objectbox.model import IdUid
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
     model.last_entity_id = IdUid(2, 2)
+    model.last_index_id = IdUid(2, 10002)
 
     return objectbox.Builder().model(model).directory(db_name).build()
 
 def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
-    from objectbox.model import IdUid
     model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
     model.last_entity_id = IdUid(2, 2)
 
@@ -42,13 +44,32 @@ def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
 
 def load_empty_test_flex(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
-    from objectbox.model import IdUid
     model.entity(TestEntityFlex, last_property_id=IdUid(3, 3003))
     model.last_entity_id = IdUid(3, 3)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
 
     return objectbox.Builder().model(model).directory(db_name).build()
+
+
+def create_test_objectbox(db_name: Optional[str] = None, clear_db: bool = True) -> objectbox.ObjectBox:
+    """ Creates an ObjectBox instance with all entities. """
+
+    db_path = test_dir if db_name is None else path.join(test_dir, db_name)
+    print(f"DB path: \"{db_path}\"")
+
+    if clear_db and path.exists(db_path):
+        shutil.rmtree(db_path)
+
+    model = objectbox.Model()
+    model.entity(TestEntity, last_property_id=IdUid(27, 1027))
+    model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
+    model.entity(TestEntityFlex, last_property_id=IdUid(3, 3003))
+    model.entity(VectorEntity, last_property_id=IdUid(3, 4003))
+    model.last_entity_id = IdUid(4, 4)
+    model.last_index_id = IdUid(3, 40001)
+
+    return objectbox.Builder().model(model).directory(db_path).build()
 
 
 def assert_equal_prop(actual, expected, default):
