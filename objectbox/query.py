@@ -46,10 +46,8 @@ class Query:
         c_id_array_p = obx_query_find_ids(self._c_query)
         try:
             c_id_array: OBX_id_array = c_id_array_p.contents
-            result = []
-            for i in range(c_id_array.count):
-                result.append(c_id_array.ids[i])
-            return result
+            ids = ctypes.cast(c_id_array.ids, ctypes.POINTER(ctypes.c_ulong * c_id_array.count))
+            return list(ids.contents)
         finally:
             obx_id_array_free(c_id_array_p)
 
