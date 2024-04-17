@@ -12,16 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import *
+
 
 class Version:
-    def __init__(self, major: int, minor: int, patch: int, label: str = ""):
+    def __init__(self, major: int, minor: int, patch: int,
+                 alpha: Optional[int] = None,
+                 beta: Optional[int] = None):
         self.major = major
         self.minor = minor
         self.patch = patch
-        self.label = label
+        self.alpha = alpha
+        self.beta = beta
 
     def __str__(self):
         result = ".".join(map(str, [self.major, self.minor, self.patch]))
-        if len(self.label) > 0:
-            result += "-" + self.label
+        if self.alpha is not None:
+            result += f"a{self.alpha}"
+        if self.beta is not None:
+            result += f"b{self.beta}"
         return result
