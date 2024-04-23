@@ -45,21 +45,33 @@ class VectorSearchCitiesCmd(Cmd):
         query = qb.build()
         list_cities(query.find())
 
-    def do_city_neighbors(self, city: str):
-        """find five next neighbors to city <name>\nusage: city_neighbors <name>"""
-        qb = self._box.query()
-        qb.equals_string(self._name_prop, city)
-        query = qb.build()
-        cities = query.find()
-        if len(cities) == 1:
-            location = cities[0].location
+    def do_city_neighbors(self, args: str):
+        """find <count> (default: 5) next neighbors to city <name>\nusage: city_neighbors <name>, [,<count>]"""
+        try:
+            args = args.split(',')
+            if len(args) > 2:
+                raise ValueError()
+            city = args[0]
+            if len(city) == 0:
+                raise ValueError()
+            count = 5
+            if len(args) == 2:
+                count = int(args[1])
             qb = self._box.query()
-            qb.nearest_neighbors_f32(self._location_prop, location, 6)
-            qb.not_equals_string(self._name_prop, city)
-            neighbors = qb.build().find_with_scores()
-            list_cities_with_scores(neighbors)
-        else:
-            print(f"no city found named '{city}'")
+            qb.equals_string(self._name_prop, city)
+            query = qb.build()
+            cities = query.find()
+            if len(cities) == 1:
+                location = cities[0].location
+                qb = self._box.query()
+                qb.nearest_neighbors_f32(self._location_prop, location, count+1) # +1 for the city
+                qb.not_equals_string(self._name_prop, city)
+                neighbors = qb.build().find_with_scores()
+                list_cities_with_scores(neighbors)
+            else:
+                print(f"no city found named '{city}'")
+        except ValueError: 
+            print("usage: city_neighbors <name>[,<count>]")
     
     def do_neighbors(self, args):
         """find <count> neighbors to geo-coord <lat> <long>.\nusage: neighbors <count>,<latitude>,<longitude>"""
