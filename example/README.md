@@ -30,14 +30,14 @@ Welcome to the ObjectBox tasks-list app example. Type help or ? for a list of co
 > exit
 ```
 
-## Vector-Search Example: Capitals
+## Vector-Search Example: Cities
 
-This example application starts with a pre-defined set of capitals and their geo coordinates. 
-It allows to search for nearest neighbors by capital (`capital_neighbors`) or by coordinates (`neighbors`) as well as adding more locations (`add`).
+This example application starts with a pre-defined set of capital cities and their geo coordinates. 
+It allows to search for nearest neighbors of a city (`city_neighbors`) or by coordinates (`neighbors`) as well as adding more locations (`add`).
 
 ```
-python -m vectorsearch-capitals
-Welcome to the ObjectBox vectorsearch-capitals example. Type help or ? for a list of commands.
+python -m vectorsearch-cities
+Welcome to the ObjectBox vectorsearch-cities example. Type help or ? for a list of commands.
 > ls
 ID   Name                        Latitude  Longitude
   1  Abuja                           9.08       7.40

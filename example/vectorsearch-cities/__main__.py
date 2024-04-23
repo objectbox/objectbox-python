@@ -17,7 +17,7 @@ def list_cities_with_scores(city_score_tuples):
         print("{:3d}  {:25s}  {:>9.2f}  {:>9.2f}  {:>5.2f}".format(
         city.id, city.name, city.location[0], city.location[1], score))
 
-class VectorSearchCitysCmd(Cmd):
+class VectorSearchCitiesCmd(Cmd):
     prompt = "> "
     def __init__(self, *args):
         Cmd.__init__(self, *args)
@@ -98,5 +98,5 @@ class VectorSearchCitysCmd(Cmd):
 
 
 if __name__ == '__main__':
-    app = VectorSearchCitysCmd()
+    app = VectorSearchCitiesCmd()
     app.cmdloop('Welcome to the ObjectBox vectorsearch-cities example. Type help or ? for a list of commands.')
