@@ -6,7 +6,7 @@ import os
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
-version = "v0.21.0"  # see objectbox/c.py required_version
+version = "v0.21.1-alpha0"  # see objectbox/c.py required_version
 variant = 'objectbox'  # or 'objectbox-sync'
 
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
@@ -49,6 +49,7 @@ def download(rel_path: str):
 
     # Download the file from `url`, save it in a temporary directory and get the path to it (e.g. '/tmp/tmpb48zma')
     source_url = url_for(rel_path);
+    print(f"URL {source_url}")
     tmp_file, headers = urllib.request.urlretrieve(source_url)
 
     # extract the file
