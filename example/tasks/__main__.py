@@ -1,7 +1,7 @@
 from cmd import Cmd
 import objectbox
 import time
-from example.model import *
+from .model import *
 
 
 # objectbox expects date timestamp in milliseconds since UNIX epoch
