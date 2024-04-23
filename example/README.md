@@ -50,7 +50,6 @@ ID   Name                        Latitude  Longitude
  28  Berlin                         52.52      13.40
  29  Bern                           46.95       7.45
 > city_neighbors Berlin
-> city_neighbors Berlin
 ID   Name                        Latitude  Longitude  Score
 147  Prague                         50.08      14.44   7.04
  49  Copenhagen                     55.68      12.57  10.66

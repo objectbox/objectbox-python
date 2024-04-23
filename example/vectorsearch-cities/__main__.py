@@ -46,7 +46,7 @@ class VectorSearchCitiesCmd(Cmd):
         list_cities(query.find())
 
     def do_city_neighbors(self, args: str):
-        """find <count> (default: 5) next neighbors to city <name>\nusage: city_neighbors <name>, [,<count>]"""
+        """find <num> (default: 5) next neighbors to city <name>\nusage: city_neighbors <name> [,<num>]"""
         try:
             args = args.split(',')
             if len(args) > 2:
@@ -54,9 +54,9 @@ class VectorSearchCitiesCmd(Cmd):
             city = args[0]
             if len(city) == 0:
                 raise ValueError()
-            count = 5
+            num = 5
             if len(args) == 2:
-                count = int(args[1])
+                num = int(args[1])
             qb = self._box.query()
             qb.equals_string(self._name_prop, city)
             query = qb.build()
@@ -64,29 +64,29 @@ class VectorSearchCitiesCmd(Cmd):
             if len(cities) == 1:
                 location = cities[0].location
                 qb = self._box.query()
-                qb.nearest_neighbors_f32(self._location_prop, location, count+1) # +1 for the city
+                qb.nearest_neighbors_f32(self._location_prop, location, num+1) # +1 for the city
                 qb.not_equals_string(self._name_prop, city)
                 neighbors = qb.build().find_with_scores()
                 list_cities_with_scores(neighbors)
             else:
                 print(f"no city found named '{city}'")
         except ValueError: 
-            print("usage: city_neighbors <name>[,<count>]")
+            print("usage: city_neighbors <name>[,<num: default 5>]")
     
     def do_neighbors(self, args):
-        """find <count> neighbors to geo-coord <lat> <long>.\nusage: neighbors <count>,<latitude>,<longitude>"""
+        """find <num> neighbors next to geo-coord <lat> <long>.\nusage: neighbors <num>,<latitude>,<longitude>"""
         try:
             args = args.split(',')
             if len(args) != 3:
                 raise ValueError()
-            count = int(args[0])
+            num = int(args[0])
             geocoord = [ float(args[1]), float(args[2]) ]
             qb = self._box.query()
-            qb.nearest_neighbors_f32(self._location_prop, geocoord, count)
+            qb.nearest_neighbors_f32(self._location_prop, geocoord, num)
             neighbors = qb.build().find_with_scores()
             list_cities_with_scores(neighbors)
         except ValueError: 
-            print("usage: neighbors <count>,<latitude>,<longitude>")
+            print("usage: neighbors <num>,<latitude>,<longitude>")
     
     def do_add(self, args: str):
         """add new location\nusage: add <name>,<lat>,<long>"""
