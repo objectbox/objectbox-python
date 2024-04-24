@@ -7,21 +7,7 @@ import numpy as np
 from typing import *
 from tests.model import *
 
-
 test_dir = 'testdata'
-
-
-def remove_test_dir():
-    if os.path.exists(test_dir):
-        shutil.rmtree(test_dir)
-
-
-# cleanup before and after each testcase
-@pytest.fixture(autouse=True)
-def autocleanup():
-    remove_test_dir()
-    yield  # run the test function
-    remove_test_dir()
 
 
 def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
@@ -31,6 +17,7 @@ def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
     model.last_index_id = IdUid(2, 10002)
 
     return objectbox.Builder().model(model).directory(db_name).build()
+
 
 def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
@@ -76,14 +63,17 @@ def assert_equal_prop(actual, expected, default):
     assert actual == expected or (isinstance(
         expected, objectbox.model.Property) and actual == default)
 
+
 def assert_equal_prop_vector(actual, expected, default):
     assert (actual == np.array(expected)).all() or (isinstance(
         expected, objectbox.model.Property) and actual == default)
+
 
 # compare approx values
 def assert_equal_prop_approx(actual, expected, default):
     assert pytest.approx(actual) == expected or (isinstance(
         expected, objectbox.model.Property) and actual == default)
+
 
 def assert_equal(actual: TestEntity, expected: TestEntity):
     """Check that two TestEntity objects have the same property data"""

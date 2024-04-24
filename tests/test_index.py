@@ -3,10 +3,7 @@ from objectbox.model import *
 from objectbox.model.properties import IndexType
 import pytest
 from tests.model import TestEntity
-from tests.common import (
-    autocleanup,
-    load_empty_test_objectbox,
-)
+from tests.common import *
 
 
 # TODO tests disabled because Python indices API changed, now they actually interact with the C API

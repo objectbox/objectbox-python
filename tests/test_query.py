@@ -4,7 +4,7 @@ from objectbox.model import *
 from objectbox.c import *
 from objectbox.query import *
 import pytest
-from tests.common import (load_empty_test_objectbox, create_test_objectbox, autocleanup)
+from tests.common import *
 from tests.model import *
 
 

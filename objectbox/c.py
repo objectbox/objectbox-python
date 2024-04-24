@@ -440,6 +440,9 @@ obx_store_open = c_fn('obx_store_open', OBX_store_p, [OBX_store_options_p])
 # obx_err (OBX_store* store);
 obx_store_close = c_fn_rc('obx_store_close', [OBX_store_p])
 
+# obx_err obx_remove_db_files(const const* directory);
+obx_remove_db_files = c_fn_rc('obx_remove_db_files', [ctypes.c_char_p])  # TODO provide a python wrapper
+
 # OBX_txn* (OBX_store* store);
 obx_txn_write = c_fn('obx_txn_write', OBX_txn_p, [OBX_store_p])
 
