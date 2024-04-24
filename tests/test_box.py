@@ -77,14 +77,17 @@ def test_box_basics():
 
     # remove
     box.remove(object)
-    box.remove(1)
+    
+    # remove should return success  
+    success = box.remove(1)
+    assert success == True
+    success = box.remove(1)
+    assert success == False
 
     # check they're gone
     assert box.count() == 0
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(object.id)
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(1)
+    assert box.get(object.id) == None
+    assert box.get(1) == None
 
     ob.close()
 
@@ -166,14 +169,13 @@ def test_datetime():
     assert pytest.approx(read.date.timestamp()) == object.date.timestamp()
 
     # remove
-    box.remove(object)
+    success = box.remove(object)
+    assert success == True
 
     # check they're gone
     assert box.count() == 0
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(object.id)
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(1)
+    assert box.get(object.id) == None
+    assert box.get(1) == None
 
     ob.close()
 
