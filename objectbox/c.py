@@ -292,6 +292,13 @@ def c_fn(name: str, restype: Optional[type], argtypes):
 
     return func
 
+# creates a global function "name" with the given restype & argtypes, calling C function with the same name.
+# no error checking is done on restype as this is defered to higher-level functions.
+def c_fn_nocheck(name: str, restype: type, argtypes):
+    func = C.__getattr__(name)
+    func.argtypes = argtypes
+    func.restype = restype
+    return func
 
 # like c_fn, but for functions returning obx_err
 def c_fn_rc(name: str, argtypes):
@@ -301,7 +308,6 @@ def c_fn_rc(name: str, argtypes):
     func.restype = obx_err
     func.errcheck = check_obx_err
     return func
-
 
 def c_fn_qb_cond(name: str, argtypes):
     """ Like c_fn, but for functions returning obx_qb_cond (checks obx_qb_cond validity). """
@@ -462,7 +468,7 @@ obx_txn_success = c_fn_rc('obx_txn_success', [OBX_txn_p])
 obx_box = c_fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 
 # obx_err (OBX_box* box, obx_id id, const void** data, size_t* size);
-obx_box_get = c_fn_rc('obx_box_get', [
+obx_box_get = c_fn_nocheck('obx_box_get', obx_err, [
     OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
 # OBX_bytes_array* (OBX_box* box);
@@ -483,7 +489,7 @@ obx_box_put_many = c_fn_rc('obx_box_put_many', [
     OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
 
 # obx_err (OBX_box* box, obx_id id);
-obx_box_remove = c_fn_rc('obx_box_remove', [OBX_box_p, obx_id])
+obx_box_remove = c_fn_nocheck('obx_box_remove', obx_err, [OBX_box_p, obx_id])
 
 # obx_err (OBX_box* box, uint64_t* out_count);
 obx_box_remove_all = c_fn_rc('obx_box_remove_all', [
