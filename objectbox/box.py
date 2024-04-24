@@ -112,11 +112,12 @@ class Box:
         with self._ob.read_tx():
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
-            try: 
-                obx_box_get(self._c_box, id, ctypes.byref(
+            code : obx_err = obx_box_get(self._c_box, id, ctypes.byref(
                     c_data), ctypes.byref(c_size))
-            except NotFoundException:
+            if code == 404:
                 return None
+            elif code != 0:
+                raise CoreException(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
             return self._entity.unmarshal(data)
 
@@ -145,11 +146,12 @@ class Box:
             id = self._entity.get_object_id(id_or_object)
         else:
             id = id_or_object
-        try:
-            obx_box_remove(self._c_box, id)
-            return True
-        except NotFoundException:
+        code : obx_err = obx_box_remove(self._c_box, id)
+        if code == 404:
             return False
+        elif code != 0:
+            raise CoreException(code)
+        return True
 
     def remove_all(self) -> int:
         count = ctypes.c_uint64()
