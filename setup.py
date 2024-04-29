@@ -53,7 +53,7 @@ setuptools.setup(
        'numpy'
     ],
 
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=['exampl*']), 
     package_data={
         'objectbox': [
             # Linux, macOS

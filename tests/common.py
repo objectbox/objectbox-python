@@ -52,9 +52,9 @@ def create_test_objectbox(db_name: Optional[str] = None, clear_db: bool = True) 
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
     model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
     model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
-    model.entity(VectorEntity, last_property_id=IdUid(3, 4003))
+    model.entity(VectorEntity, last_property_id=IdUid(5, 4005))
     model.last_entity_id = IdUid(4, 4)
-    model.last_index_id = IdUid(3, 40001)
+    model.last_index_id = IdUid(5, 40003)
 
     return objectbox.Builder().model(model).directory(db_path).build()
 

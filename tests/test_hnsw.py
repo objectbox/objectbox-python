@@ -15,8 +15,10 @@ def _find_expected_nn(points: np.ndarray, query: np.ndarray, n: int):
     return np.argsort(d)[:n]
 
 
-def _test_random_points(num_points: int, num_query_points: int, seed: Optional[int] = None):
+def _test_random_points(num_points: int, num_query_points: int, seed: Optional[int] = None, distance_type: HnswDistanceType = HnswDistanceType.EUCLIDEAN, min_score: float = 0.5):
     """ Generates random points in a 2d plane; checks the queried NN against the expected. """
+
+    vector_field_name = "vector_"+distance_type.name.lower()
 
     print(f"Test random points; Points: {num_points}, Query points: {num_query_points}, Seed: {seed}")
 
@@ -37,7 +39,7 @@ def _test_random_points(num_points: int, num_query_points: int, seed: Optional[i
     for i in range(points.shape[0]):
         object_ = VectorEntity()
         object_.name = f"point_{i}"
-        object_.vector = points[i]
+        setattr(object_, vector_field_name, points[i])
         objects.append(object_)
     box.put(*objects)
     print(f"DB seeded with {box.count()} random points!")
@@ -58,7 +60,7 @@ def _test_random_points(num_points: int, num_query_points: int, seed: Optional[i
 
         # Run ANN with OBX
         qb = box.query()
-        qb.nearest_neighbors_f32("vector", query_point, k)
+        qb.nearest_neighbors_f32(vector_field_name, query_point, k)
         query = qb.build()
         obx_result = [id_ for id_, score in query.find_ids_with_scores()]  # Ignore score
         assert len(obx_result) == k
@@ -66,42 +68,54 @@ def _test_random_points(num_points: int, num_query_points: int, seed: Optional[i
         # We would like at least half of the expected results, to be returned by the search (in any order)
         # Remember: it's an approximate search!
         search_score = len(np.intersect1d(expected_result, obx_result)) / k
-        assert search_score >= 0.5  # TODO likely could be increased
+        assert search_score >= min_score  # TODO likely could be increased
 
     print(f"Done!")
 
 
 def test_random_points():
-    _test_random_points(num_points=100, num_query_points=10, seed=10)
-    _test_random_points(num_points=100, num_query_points=10, seed=11)
-    _test_random_points(num_points=100, num_query_points=10, seed=12)
-    _test_random_points(num_points=100, num_query_points=10, seed=13)
-    _test_random_points(num_points=100, num_query_points=10, seed=14)
-    _test_random_points(num_points=100, num_query_points=10, seed=15)
+        
+    min_score = 0.5
+    distance_type = HnswDistanceType.EUCLIDEAN  
+    _test_random_points(num_points=100, num_query_points=10, seed=10, distance_type=distance_type, min_score=min_score)
+    _test_random_points(num_points=100, num_query_points=10, seed=11, distance_type=distance_type, min_score=min_score)
+    _test_random_points(num_points=100, num_query_points=10, seed=12, distance_type=distance_type, min_score=min_score)
+    _test_random_points(num_points=100, num_query_points=10, seed=13, distance_type=distance_type, min_score=min_score)
+    _test_random_points(num_points=100, num_query_points=10, seed=14, distance_type=distance_type, min_score=min_score)
+    _test_random_points(num_points=100, num_query_points=10, seed=15, distance_type=distance_type, min_score=min_score)
 
+    # TODO: Cosine and Dot Product may result in 0 score
 
-def test_combined_nn_search():
-    """ Tests NN search combined with regular query conditions, offset and limit. """
-
+def _test_combined_nn_search(distance_type: HnswDistanceType = HnswDistanceType.EUCLIDEAN):
+    
     db = create_test_objectbox()
 
     box = objectbox.Box(db, VectorEntity)
 
-    box.put(VectorEntity(name="Power of red", vector=[1, 1]))
-    box.put(VectorEntity(name="Blueberry", vector=[2, 2]))
-    box.put(VectorEntity(name="Red", vector=[3, 3]))
-    box.put(VectorEntity(name="Blue sea", vector=[4, 4]))
-    box.put(VectorEntity(name="Lightblue", vector=[5, 5]))
-    box.put(VectorEntity(name="Red apple", vector=[6, 6]))
-    box.put(VectorEntity(name="Hundred", vector=[7, 7]))
-    box.put(VectorEntity(name="Tired", vector=[8, 8]))
-    box.put(VectorEntity(name="Power of blue", vector=[9, 9]))
-
+    vector_field_name = "vector_"+distance_type.name.lower()
+   
+    values = [ 
+        ("Power of red", [1, 1]),
+        ("Blueberry", [2, 2]),
+        ("Red", [3, 3]),
+        ("Blue sea", [4, 4]),
+        ("Lightblue", [5, 5]),
+        ("Red apple", [6, 6]),
+        ("Hundred", [7, 7]),
+        ("Tired", [8, 8]),
+        ("Power of blue", [9, 9])
+    ]
+    for value in values:
+        entity = VectorEntity()
+        setattr(entity, "name", value[0])
+        setattr(entity, vector_field_name, value[1])
+        box.put(entity)
+        
     assert box.count() == 9
 
     # Test condition + NN search
     qb = box.query()
-    qb.nearest_neighbors_f32("vector", [4.1, 4.2], 6)
+    qb.nearest_neighbors_f32(vector_field_name, [4.1, 4.2], 6)
     qb.contains_string("name", "red", case_sensitive=False)
     query = qb.build()
     # 4, 5, 3, 6, 2, 7
@@ -121,7 +135,7 @@ def test_combined_nn_search():
 
     # Regular condition + NN search
     qb = box.query()
-    qb.nearest_neighbors_f32("vector", [9.2, 8.9], 7)
+    qb.nearest_neighbors_f32(vector_field_name, [9.2, 8.9], 7)
     qb.starts_with_string("name", "Blue", case_sensitive=True)
     query = qb.build()
 
@@ -131,7 +145,7 @@ def test_combined_nn_search():
 
     # Regular condition + NN search
     qb = box.query()
-    qb.nearest_neighbors_f32("vector", [7.7, 7.7], 8)
+    qb.nearest_neighbors_f32(vector_field_name, [7.7, 7.7], 8)
     qb.contains_string("name", "blue", case_sensitive=False)
     query = qb.build()
     # 8, 7, 9, 6, 5, 4, 3, 2
@@ -157,3 +171,10 @@ def test_combined_nn_search():
     assert len(search_results) == 2
     assert search_results[0] == 4
     assert search_results[1] == 5
+
+
+def test_combined_nn_search():
+    """ Tests NN search combined with regular query conditions, offset and limit. """
+    distance_type = HnswDistanceType.EUCLIDEAN
+    _test_combined_nn_search(distance_type)
+    # TODO: Cosine, DotProduct  diverges see below
