@@ -313,20 +313,23 @@ def test_set_parameter_alias():
     box_vector.put(VectorEntity(name="Object 4", vector=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector=[5, 5]))
 
-    str_prop: Property = TestEntity.properties[1]
-    qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
+    str_prop: Property = TestEntity.get_property("str")
+    int32_prop: Property = TestEntity.get_property("int32")
+    int64_prop: Property = TestEntity.get_property("int64")
 
+    # Test set parameter alias on string
+    qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
     query = qb.build()
+
     assert query.find()[0].str == "Foo"
     assert query.count() == 1
 
     query.set_parameter_alias_string("foo_filter", "FooBar")
-
     assert query.find()[0].str == "FooBar"
     assert query.count() == 1
 
-    int_prop: Property = TestEntity.properties[3]
-    qb = box.query(int_prop.greater_than(5).alias("greater_than_filter"))
+    # Test set parameter alias on int64
+    qb = box.query(int64_prop.greater_than(5).alias("greater_than_filter"))
 
     query = qb.build()
     assert query.count() == 1
@@ -336,6 +339,21 @@ def test_set_parameter_alias():
 
     assert query.count() == 2
 
+    # Test set parameter alias on string/int32
+    qb = box.query(str_prop.equals("Foo").alias("str condition"))
+    int32_prop.greater_than(700).alias("int32 condition").apply(qb)
+    query = qb.build()
+
+    assert query.count() == 1
+    assert query.find()[0].str == "Foo"
+
+    query.set_parameter_alias_string("str condition", "FooBar")  # FooBar int32 isn't higher than 700 (49)
+    assert query.count() == 0
+
+    query.set_parameter_alias_int("int32 condition", 40)
+    assert query.find()[0].str == "FooBar"
+
+    # Test set parameter alias on vector
     vector_prop: Property = VectorEntity.get_property("vector")
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
