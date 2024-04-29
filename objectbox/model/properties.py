@@ -200,9 +200,13 @@ class Property:
         args = {'a': a, 'b': b}
         return QueryCondition(self._id, _QueryConditionOp.BETWEEN, args)
 
-    def nearest_neighbor(self, query_vector, element_count: int):
+    def nearest_neighbor(self, query_vector, element_count: int) -> QueryCondition:
         args = {'query_vector': query_vector, 'element_count': element_count}
         return QueryCondition(self._id, _QueryConditionOp.NEAREST_NEIGHBOR, args)
+
+    def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> QueryCondition:
+        args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
+        return QueryCondition(self._id, _QueryConditionOp.CONTAINS_KEY_VALUE, args)
 
 
 # ID property (primary key)

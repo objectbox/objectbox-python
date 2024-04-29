@@ -107,6 +107,54 @@ def test_basics():
     ob.close()
 
 
+def test_flex_contains_key_value():
+    ob = create_test_objectbox()
+
+    box = objectbox.Box(ob, TestEntityFlex)
+    box.put(TestEntityFlex(flex={"k1": "String", "k2": 2, "k3": "string"}))
+    box.put(TestEntityFlex(flex={"k1": "strinG", "k2": 3, "k3": 10, "k4": [1, "foo", 3]}))
+    box.put(TestEntityFlex(flex={"k1": "buzz", "k2": 3, "k3": [2, 3], "k4": {"k1": "a", "k2": "inner text"}}))
+    box.put(TestEntityFlex(flex={"n1": "string", "n2": -7, "n3": [-10, 10], "n4": [4, 4, 4]}))
+    box.put(TestEntityFlex(flex={"n1": "Apple", "n2": 3, "n3": [2, 3, 5], "n4": {"n1": [1, 2, "bar"]}}))
+
+    assert box.count() == 5
+
+    # Search case-sensitive = False
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("k1", "string", False)).build()
+    results = query.find()
+    assert len(results) == 2
+    assert results[0].flex["k1"] == "String"
+    assert results[0].flex["k2"] == 2
+    assert results[0].flex["k3"] == "string"
+    assert results[1].flex["k1"] == "strinG"
+    assert results[1].flex["k2"] == 3
+    assert results[1].flex["k3"] == 10
+    assert results[1].flex["k4"] == [1, "foo", 3]
+
+    # Search case-sensitive = True
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("n1", "string", True)).build()
+    results = query.find()
+    assert len(results) == 1
+    assert results[0].flex["n1"] == "string"
+    assert results[0].flex["n2"] == -7
+    assert results[0].flex["n3"] == [-10, 10]
+    assert results[0].flex["n4"] == [4, 4, 4]
+
+    # TODO Search using nested key (not supported yet)
+
+    # No match (key)
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("missing key", "string", True)).build()
+    assert len(query.find()) == 0
+
+    # No match (value)
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("k1", "missing value", True)).build()
+    assert len(query.find()) == 0
+
+
 def test_offset_limit():
     ob = load_empty_test_objectbox()
 
@@ -265,20 +313,23 @@ def test_set_parameter_alias():
     box_vector.put(VectorEntity(name="Object 4", vector=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector=[5, 5]))
 
-    str_prop: Property = TestEntity.properties[1]
-    qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
+    str_prop: Property = TestEntity.get_property("str")
+    int32_prop: Property = TestEntity.get_property("int32")
+    int64_prop: Property = TestEntity.get_property("int64")
 
+    # Test set parameter alias on string
+    qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
     query = qb.build()
+
     assert query.find()[0].str == "Foo"
     assert query.count() == 1
 
     query.set_parameter_alias_string("foo_filter", "FooBar")
-
     assert query.find()[0].str == "FooBar"
     assert query.count() == 1
 
-    int_prop: Property = TestEntity.properties[3]
-    qb = box.query(int_prop.greater_than(5).alias("greater_than_filter"))
+    # Test set parameter alias on int64
+    qb = box.query(int64_prop.greater_than(5).alias("greater_than_filter"))
 
     query = qb.build()
     assert query.count() == 1
@@ -288,6 +339,21 @@ def test_set_parameter_alias():
 
     assert query.count() == 2
 
+    # Test set parameter alias on string/int32
+    qb = box.query(str_prop.equals("Foo").alias("str condition"))
+    int32_prop.greater_than(700).alias("int32 condition").apply(qb)
+    query = qb.build()
+
+    assert query.count() == 1
+    assert query.find()[0].str == "Foo"
+
+    query.set_parameter_alias_string("str condition", "FooBar")  # FooBar int32 isn't higher than 700 (49)
+    assert query.count() == 0
+
+    query.set_parameter_alias_int("int32 condition", 40)
+    assert query.find()[0].str == "FooBar"
+
+    # Test set parameter alias on vector
     vector_prop: Property = VectorEntity.get_property("vector")
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()

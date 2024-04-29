@@ -50,8 +50,7 @@ class TestEntityDatetime:
 @Entity(id=3, uid=3)
 class TestEntityFlex:
     id = Id(id=1, uid=3001)
-    flex_dict = Property(Dict[str, Any], type=PropertyType.flex, id=2, uid=3002)
-    flex_int = Property(int, type=PropertyType.flex, id=3, uid=3003)
+    flex = Property(Any, type=PropertyType.flex, id=2, uid=3002)
 
 
 @Entity(id=4, uid=4)

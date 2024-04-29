@@ -77,7 +77,7 @@ def test_box_basics():
 
     # remove
     box.remove(object)
-    
+
     # remove should return success  
     success = box.remove(1)
     assert success == True
@@ -229,22 +229,33 @@ def test_flex():
     ob.close()
 
 
-def test_flex_dict():
-    ob = load_empty_test_flex()
+def test_flex_values():
+    ob = create_test_objectbox()
+
     box = objectbox.Box(ob, TestEntityFlex)
-    object = TestEntityFlex()
 
-    # Put an empty object
-    id = box.put(object)
-    assert id == object.id
-    read = box.get(object.id)
-    assert read.flex_dict == None
-    assert read.flex_int == None
+    # Test empty object
+    obj_id = box.put(TestEntityFlex())
+    read_obj = box.get(obj_id)
+    assert read_obj.flex is None
 
-    object.flex_dict = {"a": 1, "b": 2}
-    object.flex_int = 25
-    id = box.put(object)
-    assert id == object.id
-    read = box.get(object.id)
-    assert read.flex_dict == object.flex_dict
-    assert read.flex_int == object.flex_int
+    # Test int
+    obj_id = box.put(TestEntityFlex(flex=23))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == 23
+
+    # Test string
+    obj_id = box.put(TestEntityFlex(flex="hello"))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == "hello"
+
+    # Test mixed list
+    obj_id = box.put(TestEntityFlex(flex=[4, 5, 1, "foo", 23, "bar"]))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == [4, 5, 1, "foo", 23, "bar"]
+
+    # Test dictionary
+    dict_ = {"a": 1, "b": {"list": [1, 2, 3], "int": 5}}
+    obj_id = box.put(TestEntityFlex(flex=dict_))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == dict_
