@@ -20,7 +20,6 @@ import flatbuffers.number_types
 import numpy as np
 from dataclasses import dataclass
 
-
 class PropertyType(IntEnum):
     bool = OBXPropertyType_Bool
     byte = OBXPropertyType_Byte
@@ -101,6 +100,26 @@ class HnswDistanceType(IntEnum):
     DOT_PRODUCT = OBXHnswDistanceType_DOT_PRODUCT
     DOT_PRODUCT_NON_NORMALIZED = OBXHnswDistanceType_DOT_PRODUCT_NON_NORMALIZED
 
+HnswDistanceType.UNKNOWN.__doc__ = "Not a real type, just best practice (e.g. forward compatibility)"
+HnswDistanceType.EUCLIDEAN.__doc__ = "The default; typically 'euclidean squared' internally."
+HnswDistanceType.COSINE.__doc__ = """
+Cosine similarity compares two vectors irrespective of their magnitude (compares the angle of two vectors).
+Often used for document or semantic similarity.
+Value range: 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
+"""
+HnswDistanceType.DOT_PRODUCT.__doc__ = """
+For normalized vectors (vector length == 1.0), the dot product is equivalent to the cosine similarity.
+Because of this, the dot product is often preferred as it performs better.
+Value range (normalized vectors): 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
+"""
+HnswDistanceType.DOT_PRODUCT_NON_NORMALIZED.__doc__ = """
+A custom dot product similarity measure that does not require the vectors to be normalized.
+Note: this is no replacement for cosine similarity (like DotProduct for normalized vectors is).
+The non-linear conversion provides a high precision over the entire float range (for the raw dot product).
+The higher the dot product, the lower the distance is (the nearer the vectors are).
+The more negative the dot product, the higher the distance is (the farther the vectors are).
+Value range: 0.0 - 2.0 (nonlinear; 0.0: nearest, 1.0: orthogonal, 2.0: farthest)
+"""
 
 @dataclass
 class HnswIndex:
