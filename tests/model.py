@@ -57,7 +57,7 @@ class TestEntityFlex:
 class VectorEntity:
     id = Id(id=1, uid=4001)
     name = Property(str, type=PropertyType.string, id=2, uid=4002)
-    vector = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=4003,
+    vector_euclidean = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=4003,
                       index=HnswIndex(
                           id=3, uid=40001,
                           dimensions=2, distance_type=HnswDistanceType.EUCLIDEAN)
