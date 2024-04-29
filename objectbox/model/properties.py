@@ -95,8 +95,11 @@ class HnswFlags(IntEnum):
 
 
 class HnswDistanceType(IntEnum):
-    UNKNOWN = OBXHnswDistanceType_UNKNOWN,
+    UNKNOWN = OBXHnswDistanceType_UNKNOWN
     EUCLIDEAN = OBXHnswDistanceType_EUCLIDEAN
+    COSINE = OBXHnswDistanceType_COSINE
+    DOT_PRODUCT = OBXHnswDistanceType_DOT_PRODUCT
+    DOT_PRODUCT_NON_NORMALIZED = OBXHnswDistanceType_DOT_PRODUCT_NON_NORMALIZED
 
 
 @dataclass

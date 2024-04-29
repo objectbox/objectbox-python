@@ -62,3 +62,19 @@ class VectorEntity:
                           id=3, uid=40001,
                           dimensions=2, distance_type=HnswDistanceType.EUCLIDEAN)
                       )
+    vector_cosine = Property(np.ndarray, type=PropertyType.floatVector, id=4, uid=4004,
+                      index=HnswIndex(
+                          id=4, uid=40002,
+                          dimensions=2, distance_type=HnswDistanceType.COSINE)
+                      )
+    vector_dot_product = Property(np.ndarray, type=PropertyType.floatVector, id=5, uid=4005,
+                      index=HnswIndex(
+                          id=5, uid=40003,
+                          dimensions=2, distance_type=HnswDistanceType.DOT_PRODUCT)
+                      )
+    #vector_dot_product_non_normalized = Property(np.ndarray, type=PropertyType.floatVector, id=6, uid=4006,
+    #                  index=HnswIndex(
+    #                      id=6, uid=40004,
+    #                      dimensions=2, distance_type=HnswDistanceType.DOT_PRODUCT_NON_NORMALIZED)
+    #                  )
+    
