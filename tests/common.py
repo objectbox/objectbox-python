@@ -31,7 +31,7 @@ def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
 
 def load_empty_test_flex(name: str = "") -> objectbox.ObjectBox:
     model = objectbox.Model()
-    model.entity(TestEntityFlex, last_property_id=IdUid(3, 3003))
+    model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
     model.last_entity_id = IdUid(3, 3)
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
@@ -51,7 +51,7 @@ def create_test_objectbox(db_name: Optional[str] = None, clear_db: bool = True) 
     model = objectbox.Model()
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
     model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
-    model.entity(TestEntityFlex, last_property_id=IdUid(3, 3003))
+    model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
     model.entity(VectorEntity, last_property_id=IdUid(3, 4003))
     model.last_entity_id = IdUid(4, 4)
     model.last_index_id = IdUid(3, 40001)

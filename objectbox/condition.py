@@ -15,6 +15,7 @@ class _QueryConditionOp(Enum):
     LTE = 9
     BETWEEN = 10
     NEAREST_NEIGHBOR = 11
+    CONTAINS_KEY_VALUE = 12
 
 
 class QueryCondition:
@@ -43,7 +44,8 @@ class QueryCondition:
             _QueryConditionOp.LT: self._apply_lt,
             _QueryConditionOp.LTE: self._apply_lte,
             _QueryConditionOp.BETWEEN: self._apply_between,
-            _QueryConditionOp.NEAREST_NEIGHBOR: self._apply_nearest_neighbor
+            _QueryConditionOp.NEAREST_NEIGHBOR: self._apply_nearest_neighbor,
+            _QueryConditionOp.CONTAINS_KEY_VALUE: self._contains_key_value
             # ... new query condition here ... :)
         }
 
@@ -57,9 +59,6 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'EQ': {type(value)}")
 
-        if self._alias is not None:
-            qb.alias(self._alias)
-
     def _apply_not_eq(self, qb: 'QueryBuilder'):
         value = self._args['value']
         case_sensitive = self._args['case_sensitive']
@@ -70,9 +69,6 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'NOT_EQ': {type(value)}")
 
-        if self._alias is not None:
-            qb.alias(self._alias)
-
     def _apply_contains(self, qb: 'QueryBuilder'):
         value = self._args['value']
         case_sensitive = self._args['case_sensitive']
@@ -80,9 +76,6 @@ class QueryCondition:
             qb.contains_string(self._property_id, value, case_sensitive)
         else:
             raise Exception(f"Unsupported type for 'CONTAINS': {type(value)}")
-
-        if self._alias is not None:
-            qb.alias(self._alias)
 
     def _apply_starts_with(self, qb: 'QueryBuilder'):
         value = self._args['value']
@@ -92,9 +85,6 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'STARTS_WITH': {type(value)}")
 
-        if self._alias is not None:
-            qb.alias(self._alias)
-
     def _apply_ends_with(self, qb: 'QueryBuilder'):
         value = self._args['value']
         case_sensitive = self._args['case_sensitive']
@@ -102,9 +92,6 @@ class QueryCondition:
             qb.ends_with_string(self._property_id, value, case_sensitive)
         else:
             raise Exception(f"Unsupported type for 'ENDS_WITH': {type(value)}")
-
-        if self._alias is not None:
-            qb.alias(self._alias)
 
     def _apply_gt(self, qb: 'QueryBuilder'):
         value = self._args['value']
@@ -116,9 +103,6 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'GT': {type(value)}")
 
-        if self._alias is not None:
-            qb.alias(self._alias)
-
     def _apply_gte(self, qb: 'QueryBuilder'):
         value = self._args['value']
         case_sensitive = self._args['case_sensitive']
@@ -128,9 +112,6 @@ class QueryCondition:
             qb.greater_or_equal_int(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GTE': {type(value)}")
-
-        if self._alias is not None:
-            qb.alias(self._alias)
 
     def _apply_lt(self, qb: 'QueryCondition'):
         value = self._args['value']
@@ -142,9 +123,6 @@ class QueryCondition:
         else:
             raise Exception("Unsupported type for 'LT': " + str(type(value)))
 
-        if self._alias is not None:
-            qb.alias(self._alias)
-
     def _apply_lte(self, qb: 'QueryBuilder'):
         value = self._args['value']
         case_sensitive = self._args['case_sensitive']
@@ -155,9 +133,6 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'LTE': {type(value)}")
 
-        if self._alias is not None:
-            qb.alias(self._alias)
-
     def _apply_between(self, qb: 'QueryBuilder'):
         a = self._args['a']
         b = self._args['b']
@@ -165,9 +140,6 @@ class QueryCondition:
             qb.between_2ints(self._property_id, a, b)
         else:
             raise Exception(f"Unsupported type for 'BETWEEN': {type(a)}")
-
-        if self._alias is not None:
-            qb.alias(self._alias)
 
     def _apply_nearest_neighbor(self, qb: 'QueryBuilder'):
         query_vector = self._args['query_vector']
@@ -184,8 +156,15 @@ class QueryCondition:
         else:
             raise Exception(f"Unsupported type for 'NEAREST_NEIGHBOR': {type(query_vector)}")
 
-        if self._alias is not None:
-            qb.alias(self._alias)
+    def _contains_key_value(self, qb: 'QueryBuilder'):
+        key = self._args['key']
+        value = self._args['value']
+        case_sensitive = self._args['case_sensitive']
+        qb.contains_key_value(self._property_id, key, value, case_sensitive)
 
     def apply(self, qb: 'QueryBuilder'):
+        """ Applies the stored condition to the supplied query builder. """
         self._get_op_map()[self._op](qb)
+
+        if self._alias is not None:
+            qb.alias(self._alias)

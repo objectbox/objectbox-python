@@ -117,6 +117,18 @@ class QueryBuilder:
         cond = obx_qb_nearest_neighbors_f32(self._c_builder, prop_id, c_query_vector, element_count)
         return cond
 
+    def contains_key_value(self, prop: Union[int, str, Property], key: str, value: str,
+                           case_sensitive: bool = True) -> obx_qb_cond:
+        """ Checks whether the given Flex property, interpreted as a dictionary and indexed at key, has a value
+        corresponding to the given value.
+
+        :param case_sensitive:
+            If false, ignore case when matching value
+        """
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_contains_key_value_string(self._c_builder, prop_id, c_str(key), c_str(value), case_sensitive)
+        return cond
+
     def any(self, conditions: List[obx_qb_cond]) -> obx_qb_cond:
         c_conditions = c_array(conditions, obx_qb_cond)
         cond = obx_qb_any(self._c_builder, c_conditions, len(conditions))

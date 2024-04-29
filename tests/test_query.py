@@ -107,6 +107,54 @@ def test_basics():
     ob.close()
 
 
+def test_flex_contains_key_value():
+    ob = create_test_objectbox()
+
+    box = objectbox.Box(ob, TestEntityFlex)
+    box.put(TestEntityFlex(flex={"k1": "String", "k2": 2, "k3": "string"}))
+    box.put(TestEntityFlex(flex={"k1": "strinG", "k2": 3, "k3": 10, "k4": [1, "foo", 3]}))
+    box.put(TestEntityFlex(flex={"k1": "buzz", "k2": 3, "k3": [2, 3], "k4": {"k1": "a", "k2": "inner text"}}))
+    box.put(TestEntityFlex(flex={"n1": "string", "n2": -7, "n3": [-10, 10], "n4": [4, 4, 4]}))
+    box.put(TestEntityFlex(flex={"n1": "Apple", "n2": 3, "n3": [2, 3, 5], "n4": {"n1": [1, 2, "bar"]}}))
+
+    assert box.count() == 5
+
+    # Search case-sensitive = False
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("k1", "string", False)).build()
+    results = query.find()
+    assert len(results) == 2
+    assert results[0].flex["k1"] == "String"
+    assert results[0].flex["k2"] == 2
+    assert results[0].flex["k3"] == "string"
+    assert results[1].flex["k1"] == "strinG"
+    assert results[1].flex["k2"] == 3
+    assert results[1].flex["k3"] == 10
+    assert results[1].flex["k4"] == [1, "foo", 3]
+
+    # Search case-sensitive = True
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("n1", "string", True)).build()
+    results = query.find()
+    assert len(results) == 1
+    assert results[0].flex["n1"] == "string"
+    assert results[0].flex["n2"] == -7
+    assert results[0].flex["n3"] == [-10, 10]
+    assert results[0].flex["n4"] == [4, 4, 4]
+
+    # TODO Search using nested key (not supported yet)
+
+    # No match (key)
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("missing key", "string", True)).build()
+    assert len(query.find()) == 0
+
+    # No match (value)
+    flex: Property = TestEntityFlex.get_property("flex")
+    query = box.query(flex.contains_key_value("k1", "missing value", True)).build()
+    assert len(query.find()) == 0
+
+
 def test_offset_limit():
     ob = load_empty_test_objectbox()
 
