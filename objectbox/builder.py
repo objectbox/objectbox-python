@@ -16,15 +16,21 @@
 from objectbox.c import *
 from objectbox.model import Model
 from objectbox.objectbox import ObjectBox
+from objectbox.store_options import StoreOptions
 
 
 class Builder:
     def __init__(self):
         self._model = Model()
-        self._directory = ''
+        self._directory = None
+        self._max_db_size_in_kb = None
 
     def directory(self, path: str) -> 'Builder':
         self._directory = path
+        return self
+
+    def max_db_size_in_kb(self, size_in_kb: int) -> 'Builder':
+        self._max_db_size_in_kb = size_in_kb
         return self
 
     def model(self, model: Model) -> 'Builder':
@@ -33,16 +39,15 @@ class Builder:
         return self
 
     def build(self) -> 'ObjectBox':
-        c_options = obx_opt()
-
+        options = StoreOptions()
         try:
-            if len(self._directory) > 0:
-                obx_opt_directory(c_options, c_str(self._directory))
-
-            obx_opt_model(c_options, self._model._c_model)
+            if self._directory:
+                options.directory(self._directory)
+            if self._max_db_size_in_kb:
+                options.max_db_size_in_kb(self._max_db_size_in_kb)
+            options.model(self._model)
         except CoreException:
-            obx_opt_free(c_options)
+            options._free()
             raise
-
-        c_store = obx_store_open(c_options)
+        c_store = obx_store_open(options._c_handle)
         return ObjectBox(c_store)
