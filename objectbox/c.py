@@ -76,9 +76,13 @@ OBXPropertyType = ctypes.c_int
 OBXPropertyFlags = ctypes.c_int
 OBXDebugFlags = ctypes.c_int
 OBXPutMode = ctypes.c_int
+OBXPutPaddingMode = ctypes.c_int
 OBXOrderFlags = ctypes.c_int
 OBXHnswFlags = ctypes.c_int
 OBXHnswDistanceType = ctypes.c_int
+OBXValidateOnOpenPagesFlags = ctypes.c_int
+OBXValidateOnOpenKvFlags = ctypes.c_int
+OBXBackupRestoreFlags = ctypes.c_int
 
 
 class OBX_model(ctypes.Structure):
@@ -292,6 +296,7 @@ def c_fn(name: str, restype: Optional[type], argtypes):
 
     return func
 
+
 # creates a global function "name" with the given restype & argtypes, calling C function with the same name.
 # no error checking is done on restype as this is defered to higher-level functions.
 def c_fn_nocheck(name: str, restype: type, argtypes):
@@ -299,6 +304,7 @@ def c_fn_nocheck(name: str, restype: type, argtypes):
     func.argtypes = argtypes
     func.restype = restype
     return func
+
 
 # like c_fn, but for functions returning obx_err
 def c_fn_rc(name: str, argtypes):
@@ -308,6 +314,7 @@ def c_fn_rc(name: str, argtypes):
     func.restype = obx_err
     func.errcheck = check_obx_err
     return func
+
 
 def c_fn_qb_cond(name: str, argtypes):
     """ Like c_fn, but for functions returning obx_qb_cond (checks obx_qb_cond validity). """
@@ -417,28 +424,119 @@ obx_model_entity_last_property_id = c_fn_rc('obx_model_entity_last_property_id',
 # OBX_store_options* ();
 obx_opt = c_fn('obx_opt', OBX_store_options_p, [])
 
-# obx_err (OBX_store_options* opt, const char* dir);
-obx_opt_directory = c_fn_rc('obx_opt_directory', [
-    OBX_store_options_p, ctypes.c_char_p])
+# OBX_C_API obx_err obx_opt_directory(OBX_store_options* opt, const char* dir);
+obx_opt_directory = c_fn_rc('obx_opt_directory', [OBX_store_options_p, ctypes.c_char_p])
 
-# void (OBX_store_options* opt, size_t size_in_kb);
-obx_opt_max_db_size_in_kb = c_fn('obx_opt_max_db_size_in_kb', None, [
-    OBX_store_options_p, ctypes.c_size_t])
+# OBX_C_API void obx_opt_max_db_size_in_kb(OBX_store_options* opt, uint64_t size_in_kb);
+obx_opt_max_db_size_in_kb = c_fn('obx_opt_max_db_size_in_kb', None, [OBX_store_options_p, ctypes.c_uint64])
 
-# void (OBX_store_options* opt, int file_mode);
-obx_opt_file_mode = c_fn('obx_opt_file_mode', None, [
-    OBX_store_options_p, ctypes.c_uint])
+# OBX_C_API void obx_opt_max_data_size_in_kb(OBX_store_options* opt, uint64_t size_in_kb);
+obx_opt_max_data_size_in_kb = c_fn('obx_opt_max_data_size_in_kb', None, [OBX_store_options_p, ctypes.c_uint64])
 
-# void (OBX_store_options* opt, int max_readers);
-obx_opt_max_readers = c_fn('obx_opt_max_readers', None, [
-    OBX_store_options_p, ctypes.c_uint])
+# OBX_C_API void obx_opt_file_mode(OBX_store_options* opt, unsigned int file_mode);
+obx_opt_file_mode = c_fn('obx_opt_file_mode', None, [OBX_store_options_p, ctypes.c_uint32])
 
-# obx_err (OBX_store_options* opt, OBX_model* model);
-obx_opt_model = c_fn_rc('obx_opt_model', [
-    OBX_store_options_p, OBX_model_p])
+# OBX_C_API void obx_opt_max_readers(OBX_store_options* opt, unsigned int max_readers);
+obx_opt_max_readers = c_fn('obx_opt_max_readers', None, [OBX_store_options_p, ctypes.c_uint32])
 
-# void (OBX_store_options* opt);
-obx_opt_free = c_fn('obx_opt_free', None, [OBX_store_options_p])
+# OBX_C_API void obx_opt_no_reader_thread_locals(OBX_store_options* opt, bool flag);
+obx_opt_no_reader_thread_locals = c_fn('obx_opt_no_reader_thread_locals', None, [OBX_store_options_p, ctypes.c_bool])
+
+# OBX_C_API obx_err obx_opt_model(OBX_store_options* opt, OBX_model* model);
+obx_opt_model = c_fn_rc('obx_opt_model', [OBX_store_options_p, OBX_model_p])
+
+# OBX_C_API obx_err obx_opt_model_bytes(OBX_store_options* opt, const void* bytes, size_t size);
+obx_opt_model_bytes = c_fn_rc('obx_opt_model_bytes', [OBX_store_options_p, ctypes.c_void_p, ctypes.c_size_t])
+
+# OBX_C_API obx_err obx_opt_model_bytes_direct(OBX_store_options* opt, const void* bytes, size_t size);
+obx_opt_model_bytes_direct = c_fn_rc('obx_opt_model_bytes_direct', [OBX_store_options_p, ctypes.c_void_p, ctypes.c_size_t])
+
+# OBX_C_API void obx_opt_validate_on_open_pages(OBX_store_options* opt, size_t page_limit, uint32_t flags);
+obx_opt_validate_on_open_pages = c_fn('obx_opt_validate_on_open_pages', None, [OBX_store_options_p, ctypes.c_size_t, OBXValidateOnOpenPagesFlags])
+
+# OBX_C_API void obx_opt_validate_on_open_kv(OBX_store_options* opt, uint32_t flags);
+obx_opt_validate_on_open_kv = c_fn('obx_opt_validate_on_open_kv', None, [OBX_store_options_p, OBXValidateOnOpenKvFlags])
+
+# OBX_C_API void obx_opt_put_padding_mode(OBX_store_options* opt, OBXPutPaddingMode mode);
+obx_opt_put_padding_mode = c_fn('obx_opt_put_padding_mode', None, [OBX_store_options_p, OBXPutPaddingMode])
+
+# OBX_C_API void obx_opt_read_schema(OBX_store_options* opt, bool value);
+obx_opt_read_schema = c_fn('obx_opt_read_schema', None, [OBX_store_options_p, ctypes.c_bool])
+
+# OBX_C_API void obx_opt_use_previous_commit(OBX_store_options* opt, bool value);
+obx_opt_use_previous_commit = c_fn('obx_opt_use_previous_commit', None, [OBX_store_options_p, ctypes.c_bool])
+
+# OBX_C_API void obx_opt_read_only(OBX_store_options* opt, bool value);
+obx_opt_read_only = c_fn('obx_opt_read_only', None, [OBX_store_options_p, ctypes.c_bool])
+
+# OBX_C_API void obx_opt_debug_flags(OBX_store_options* opt, uint32_t flags);
+obx_opt_debug_flags = c_fn('obx_opt_debug_flags', None, [OBX_store_options_p, OBXDebugFlags])
+
+# OBX_C_API void obx_opt_add_debug_flags(OBX_store_options* opt, uint32_t flags);
+obx_opt_add_debug_flags = c_fn('obx_opt_add_debug_flags', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_max_queue_length(OBX_store_options* opt, size_t value);
+obx_opt_async_max_queue_length = c_fn('obx_opt_async_max_queue_length', None, [OBX_store_options_p, ctypes.c_size_t])
+
+# OBX_C_API void obx_opt_async_throttle_at_queue_length(OBX_store_options* opt, size_t value);
+obx_opt_async_throttle_at_queue_length = c_fn('obx_opt_async_throttle_at_queue_length', None, [OBX_store_options_p, ctypes.c_size_t])
+
+# OBX_C_API void obx_opt_async_throttle_micros(OBX_store_options* opt, uint32_t value);
+obx_opt_async_throttle_micros = c_fn('obx_opt_async_throttle_micros', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_max_in_tx_duration(OBX_store_options* opt, uint32_t micros);
+obx_opt_async_max_in_tx_duration = c_fn('obx_opt_async_max_in_tx_duration', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_max_in_tx_operations(OBX_store_options* opt, uint32_t value);
+obx_opt_async_max_in_tx_operations = c_fn('obx_opt_async_max_in_tx_operations', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_pre_txn_delay(OBX_store_options* opt, uint32_t delay_micros);
+obx_opt_async_pre_txn_delay = c_fn('obx_opt_async_pre_txn_delay', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_pre_txn_delay4(OBX_store_options* opt, uint32_t delay_micros, uint32_t delay2_micros, size_t min_queue_length_for_delay2);
+obx_opt_async_pre_txn_delay4 = c_fn('obx_opt_async_pre_txn_delay4', None, [OBX_store_options_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_size_t])
+
+# OBX_C_API void obx_opt_async_post_txn_delay(OBX_store_options* opt, uint32_t delay_micros);
+obx_opt_async_post_txn_delay = c_fn('obx_opt_async_post_txn_delay', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_post_txn_delay5(OBX_store_options* opt, uint32_t delay_micros, uint32_t delay2_micros, size_t min_queue_length_for_delay2, bool subtract_processing_time);
+obx_opt_async_post_txn_delay5 = c_fn('obx_opt_async_post_txn_delay5', None, [OBX_store_options_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_size_t, ctypes.c_bool])
+
+# OBX_C_API void obx_opt_async_minor_refill_threshold(OBX_store_options* opt, size_t queue_length);
+obx_opt_async_minor_refill_threshold = c_fn('obx_opt_async_minor_refill_threshold', None, [OBX_store_options_p, ctypes.c_size_t])
+
+# OBX_C_API void obx_opt_async_minor_refill_max_count(OBX_store_options* opt, uint32_t value);
+obx_opt_async_minor_refill_max_count = c_fn('obx_opt_async_minor_refill_max_count', None, [OBX_store_options_p, ctypes.c_uint32])
+
+# OBX_C_API void obx_opt_async_max_tx_pool_size(OBX_store_options* opt, size_t value);
+obx_opt_async_max_tx_pool_size = c_fn('obx_opt_async_max_tx_pool_size', None, [OBX_store_options_p, ctypes.c_size_t])
+
+# OBX_C_API void obx_opt_async_object_bytes_max_cache_size(OBX_store_options* opt, uint64_t value);
+obx_opt_async_object_bytes_max_cache_size = c_fn('obx_opt_async_object_bytes_max_cache_size', None, [OBX_store_options_p, ctypes.c_uint64])
+
+# OBX_C_API void obx_opt_async_object_bytes_max_size_to_cache(OBX_store_options* opt, uint64_t value);
+obx_opt_async_object_bytes_max_size_to_cache = c_fn('obx_opt_async_object_bytes_max_size_to_cache', None, [OBX_store_options_p, ctypes.c_uint64])
+
+# OBX_C_API void obx_opt_log_callback(OBX_store_options* opt, obx_log_callback* callback, void* user_data);
+# obx_opt_log_callback = c_fn('obx_opt_log_callback', None, [OBX_store_options_p, ...]) TODO
+
+# OBX_C_API void obx_opt_backup_restore(OBX_store_options* opt, const char* backup_file, uint32_t flags);
+obx_opt_backup_restore = c_fn('obx_opt_backup_restore', None, [OBX_store_options_p, ctypes.c_char_p, OBXBackupRestoreFlags])
+
+# OBX_C_API const char* obx_opt_get_directory(OBX_store_options* opt);
+obx_opt_get_directory = c_fn('obx_opt_get_directory', ctypes.c_char_p, [OBX_store_options_p])
+
+# OBX_C_API uint64_t obx_opt_get_max_db_size_in_kb(OBX_store_options* opt);
+obx_opt_get_max_db_size_in_kb = c_fn('obx_opt_get_max_db_size_in_kb', ctypes.c_uint64, [OBX_store_options_p])
+
+# OBX_C_API uint64_t obx_opt_get_max_data_size_in_kb(OBX_store_options* opt);
+obx_opt_get_max_data_size_in_kb = c_fn('obx_opt_get_max_data_size_in_kb', ctypes.c_uint64, [OBX_store_options_p])
+
+# OBX_C_API uint32_t obx_opt_get_debug_flags(OBX_store_options* opt);
+obx_opt_get_debug_flags = c_fn('obx_opt_get_debug_flags', ctypes.c_uint32, [OBX_store_options_p])
+
+# OBX_C_API void obx_opt_free(OBX_store_options* opt);
+obx_opt_free = c_fn('obx_opt_free', None, [])
 
 # OBX_store* (const OBX_store_options* options);
 obx_store_open = c_fn('obx_store_open', OBX_store_p, [OBX_store_options_p])
@@ -705,7 +803,9 @@ obx_query_param_vector_float32 = c_fn_rc('obx_query_param_vector_float32',
                                           ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_query_param_alias_vector_float32(OBX_query* query, const char* alias, const float* value, size_t element_count);
-obx_query_param_alias_vector_float32 = c_fn_rc('obx_query_param_alias_vector_float32', [OBX_query_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
+obx_query_param_alias_vector_float32 = c_fn_rc('obx_query_param_alias_vector_float32',
+                                               [OBX_query_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_float),
+                                                ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_query_param_alias_string(OBX_query* query, const char* alias, const char* value);
 obx_query_param_alias_string = c_fn_rc('obx_query_param_alias_string', [OBX_query_p, ctypes.c_char_p, ctypes.c_char_p])
@@ -838,6 +938,11 @@ OBXDebugFlags_LOG_TRANSACTIONS_WRITE = 2
 OBXDebugFlags_LOG_QUERIES = 4
 OBXDebugFlags_LOG_QUERY_PARAMETERS = 8
 OBXDebugFlags_LOG_ASYNC_QUEUE = 16
+OBXDebugFlags_LOG_CACHE_HITS = 32
+OBXDebugFlags_LOG_CACHE_ALL = 64
+OBXDebugFlags_LOG_TREE = 128
+OBXDebugFlags_LOG_EXCEPTION_STACK_TRACE = 256
+OBXDebugFlags_RUN_THREADING_SELF_TEST = 512
 
 # Standard put ("insert or update")
 OBXPutMode_PUT = 1
@@ -880,3 +985,15 @@ OBXHnswDistanceType_EUCLIDEAN = 1
 OBXHnswDistanceType_COSINE = 2
 OBXHnswDistanceType_DOT_PRODUCT = 3
 OBXHnswDistanceType_DOT_PRODUCT_NON_NORMALIZED = 10
+
+OBXPutPaddingMode_PaddingAutomatic = 1
+OBXPutPaddingMode_PaddingAllowedByBuffer = 2
+OBXPutPaddingMode_PaddingByCaller = 3
+
+OBXValidateOnOpenPagesFlags_None = 0
+OBXValidateOnOpenPagesFlags_VisitLeafPages = 1
+
+OBXValidateOnOpenKvFlags_None = 0
+
+OBXBackupRestoreFlags_None = 0
+OBXBackupRestoreFlags_OverwriteExistingData = 1
