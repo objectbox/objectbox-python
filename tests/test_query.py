@@ -340,9 +340,10 @@ def test_set_parameter_alias():
     assert query.count() == 2
 
     # Test set parameter alias on string/int32
-    qb = box.query(str_prop.equals("Foo").alias("str condition"))
-    int32_prop.greater_than(700).alias("int32 condition").apply(qb)
-    query = qb.build()
+    query = box.query(
+        str_prop.equals("Foo").alias("str condition")
+        .and_(int32_prop.greater_than(700).alias("int32 condition"))
+    ).build()
 
     assert query.count() == 1
     assert query.find()[0].str == "Foo"
