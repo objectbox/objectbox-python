@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from enum import IntEnum
-
-from objectbox.condition import QueryCondition, _QueryConditionOp
-from objectbox.c import *
 import flatbuffers.number_types
 import numpy as np
 from dataclasses import dataclass
+
+from objectbox.c import *
+from objectbox.condition import PropertyQueryCondition, PropertyQueryConditionOp
+
 
 class PropertyType(IntEnum):
     bool = OBXPropertyType_Bool
@@ -182,53 +183,53 @@ class Property:
             if isinstance(self._index, Index):  # Generic index
                 self._flags |= self._index.type
 
-    def equals(self, value, case_sensitive: bool = True) -> QueryCondition:
+    def equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.EQ, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
 
-    def not_equals(self, value, case_sensitive: bool = True) -> QueryCondition:
+    def not_equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.NOT_EQ, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
 
-    def contains(self, value: str, case_sensitive: bool = True) -> QueryCondition:
+    def contains(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.CONTAINS, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS, args)
 
-    def starts_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
+    def starts_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.STARTS_WITH, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.STARTS_WITH, args)
 
-    def ends_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
+    def ends_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.ENDS_WITH, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.ENDS_WITH, args)
 
-    def greater_than(self, value, case_sensitive: bool = True) -> QueryCondition:
+    def greater_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.GT, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
 
-    def greater_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
+    def greater_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.GTE, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
 
-    def less_than(self, value, case_sensitive: bool = True) -> QueryCondition:
+    def less_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.LT, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
 
-    def less_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
+    def less_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.LTE, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
 
-    def between(self, a, b) -> QueryCondition:
+    def between(self, a, b) -> PropertyQueryCondition:
         args = {'a': a, 'b': b}
-        return QueryCondition(self._id, _QueryConditionOp.BETWEEN, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.BETWEEN, args)
 
-    def nearest_neighbor(self, query_vector, element_count: int) -> QueryCondition:
+    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
         args = {'query_vector': query_vector, 'element_count': element_count}
-        return QueryCondition(self._id, _QueryConditionOp.NEAREST_NEIGHBOR, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
 
-    def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> QueryCondition:
+    def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
-        return QueryCondition(self._id, _QueryConditionOp.CONTAINS_KEY_VALUE, args)
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)
 
 
 # ID property (primary key)

@@ -340,9 +340,10 @@ def test_set_parameter_alias():
     assert query.count() == 2
 
     # Test set parameter alias on string/int32
-    qb = box.query(str_prop.equals("Foo").alias("str condition"))
-    int32_prop.greater_than(700).alias("int32 condition").apply(qb)
-    query = qb.build()
+    query = box.query(
+        str_prop.equals("Foo").alias("str condition")
+        .and_(int32_prop.greater_than(700).alias("int32 condition"))
+    ).build()
 
     assert query.count() == 1
     assert query.find()[0].str == "Foo"
@@ -353,6 +354,13 @@ def test_set_parameter_alias():
     query.set_parameter_alias_int("int32 condition", 40)
     assert query.find()[0].str == "FooBar"
 
+    # Test with &
+    query = box.query(
+        str_prop.equals("Foo").alias("str condition")
+        & int32_prop.greater_than(700).alias("int32 condition")
+    ).build()
+    assert query.count() == 1
+    
     # Test set parameter alias on vector
     vector_prop: Property = VectorEntity.get_property("vector_euclidean")
 
@@ -363,3 +371,67 @@ def test_set_parameter_alias():
     query.set_parameter_alias_vector_f32("nearest_neighbour_filter", [4.9, 4.9])
     assert query.count() == 3
     assert query.find_ids() == sorted([5, 4, 3])
+
+
+def test_set_parameter_alias_advanced():
+    """ Tests set_parameter_alias in a complex scenario (i.e. multiple query conditions/logical aggregations). """
+    db = create_test_objectbox()
+
+    # Setup 1
+    box = objectbox.Box(db, TestEntity)
+    box.put(TestEntity(str="Apple", bool=False, int64=47, int32=70))
+    box.put(TestEntity(str="applE", bool=True, int64=253, int32=798))
+    box.put(TestEntity(str="APPLE", bool=False, int64=3456, int32=123))
+    box.put(TestEntity(str="Orange", bool=False, int64=2345, int32=53))
+    box.put(TestEntity(str="orange", bool=True, int64=546, int32=5678))
+    box.put(TestEntity(str="ORANGE", bool=True, int64=78, int32=798))
+    box.put(TestEntity(str="oRANGE", bool=True, int64=89, int32=1234))
+    box.put(TestEntity(str="Zucchini", bool=False, int64=1234, int32=9))
+    assert box.count() == 8
+
+    str_prop = TestEntity.get_property("str")
+    bool_prop = TestEntity.get_property("bool")
+    int32_prop = TestEntity.get_property("int32")
+    int64_prop = TestEntity.get_property("int64")
+
+    query = box.query(
+        str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
+        .and_(bool_prop.equals(False).alias("bool_filter"))
+        .and_(
+            int64_prop.greater_than(0).alias("int64_filter")
+            .or_(int32_prop.less_than(100).alias("int32_filter"))
+        )
+    ).build()
+    assert len(query.find_ids()) == 0
+ 
+    # Test & and | without alias
+    query = box.query(
+        str_prop.equals("applE")
+        | str_prop.equals("orange", case_sensitive=False) & bool_prop.equals(False)
+    ).build()
+    assert len(query.find_ids()) == 2
+   
+    # Test using & and | ops
+    query = box.query(
+        str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
+        & bool_prop.equals(False).alias("bool_filter")
+        & (
+            int64_prop.greater_than(0).alias("int64_filter")
+            | int32_prop.less_than(100).alias("int32_filter")
+        )
+    ).build()
+    assert len(query.find_ids()) == 0
+
+    # TODO currently we don't support set_parameter_* for int32/bool/other types...
+
+    query.set_parameter_alias_string("str_filter", "Apple")
+    query.set_parameter_alias_int("int64_filter", 300)
+    assert len(query.find_ids()) == 2  # Apple, APPLE
+
+    query.set_parameter_alias_string("str_filter", "orange")
+    query.set_parameter_alias_int("int64_filter", 1000)
+    assert len(query.find_ids()) == 1  # Orange
+
+    query.set_parameter_alias_string("str_filter", "Zucchini")
+    assert len(query.find_ids()) == 1  # Zucchini
+
