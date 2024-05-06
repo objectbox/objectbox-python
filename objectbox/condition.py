@@ -12,9 +12,11 @@ if TYPE_CHECKING:
 class QueryCondition:
     def and_(self, other: QueryCondition) -> QueryCondition:
         return LogicQueryCondition(self, other, LogicQueryConditionOp.AND)
+    __and__ = and_
 
     def or_(self, other: QueryCondition) -> QueryCondition:
         return LogicQueryCondition(self, other, LogicQueryConditionOp.OR)
+    __or__ = or_
 
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         """ Applies the QueryCondition to the supplied QueryBuilder.

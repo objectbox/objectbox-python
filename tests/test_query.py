@@ -354,6 +354,13 @@ def test_set_parameter_alias():
     query.set_parameter_alias_int("int32 condition", 40)
     assert query.find()[0].str == "FooBar"
 
+    # Test with &
+    query = box.query(
+        str_prop.equals("Foo").alias("str condition")
+        & int32_prop.greater_than(700).alias("int32 condition")
+    ).build()
+    assert query.count() == 1
+    
     # Test set parameter alias on vector
     vector_prop: Property = VectorEntity.get_property("vector_euclidean")
 
@@ -393,6 +400,17 @@ def test_set_parameter_alias_advanced():
         .and_(
             int64_prop.greater_than(0).alias("int64_filter")
             .or_(int32_prop.less_than(100).alias("int32_filter"))
+        )
+    ).build()
+    assert len(query.find_ids()) == 0
+   
+    # Test using & and | ops
+    query = box.query(
+        str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
+        & bool_prop.equals(False).alias("bool_filter")
+        & (
+            int64_prop.greater_than(0).alias("int64_filter")
+            | int32_prop.less_than(100).alias("int32_filter")
         )
     ).build()
     assert len(query.find_ids()) == 0
