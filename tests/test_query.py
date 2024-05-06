@@ -403,6 +403,13 @@ def test_set_parameter_alias_advanced():
         )
     ).build()
     assert len(query.find_ids()) == 0
+ 
+    # Test & and | without alias
+    query = box.query(
+        str_prop.equals("applE")
+        | str_prop.equals("orange", case_sensitive=False) & bool_prop.equals(False)
+    ).build()
+    assert len(query.find_ids()) == 2
    
     # Test using & and | ops
     query = box.query(
