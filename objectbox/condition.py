@@ -74,12 +74,33 @@ class PropertyQueryConditionOp(Enum):
 class PropertyQueryCondition(QueryCondition):
     """ A QueryCondition describing an operation to be applied on a property (e.g. name == "John", age == 24) """
 
+    _OP_MAP: Dict[PropertyQueryConditionOp, str] = {
+        PropertyQueryConditionOp.EQ: "_apply_eq",
+        PropertyQueryConditionOp.NOT_EQ: "_apply_not_eq",
+        PropertyQueryConditionOp.CONTAINS: "_apply_contains",
+        PropertyQueryConditionOp.STARTS_WITH: "_apply_starts_with",
+        PropertyQueryConditionOp.ENDS_WITH: "_apply_ends_with",
+        PropertyQueryConditionOp.GT: "_apply_gt",
+        PropertyQueryConditionOp.GTE: "_apply_gte",
+        PropertyQueryConditionOp.LT: "_apply_lt",
+        PropertyQueryConditionOp.LTE: "_apply_lte",
+        PropertyQueryConditionOp.BETWEEN: "_apply_between",
+        PropertyQueryConditionOp.NEAREST_NEIGHBOR: "_apply_nearest_neighbor",
+        PropertyQueryConditionOp.CONTAINS_KEY_VALUE: "_contains_key_value"
+        # ... new property query conditions here ... :)
+    }
+
     def __init__(self, property_id: int, op: PropertyQueryConditionOp, args: Dict[str, Any]):
-        if op not in self._get_op_map():
-            raise Exception(f"Invalid query condition op with ID: {op}")
+        if op not in self._OP_MAP:
+            raise Exception(f"Invalid PropertyQueryConditionOp: {op}")
+        op_func_name = self._OP_MAP[op]
+        if not hasattr(self, op_func_name):
+            raise Exception(f"Missing PropertyQueryCondition op function: {op_func_name} (op: {op})")
+        op_func = getattr(self, op_func_name)
 
         self._property_id = property_id
         self._op = op
+        self._op_func = op_func
         self._args = args
         self._alias = None
 
@@ -87,23 +108,6 @@ class PropertyQueryCondition(QueryCondition):
         """ Sets an alias for this condition that can later be used with Query's set_parameter_* methods. """
         self._alias = value
         return self
-
-    def _get_op_map(self):
-        return {
-            PropertyQueryConditionOp.EQ: self._apply_eq,
-            PropertyQueryConditionOp.NOT_EQ: self._apply_not_eq,
-            PropertyQueryConditionOp.CONTAINS: self._apply_contains,
-            PropertyQueryConditionOp.STARTS_WITH: self._apply_starts_with,
-            PropertyQueryConditionOp.ENDS_WITH: self._apply_ends_with,
-            PropertyQueryConditionOp.GT: self._apply_gt,
-            PropertyQueryConditionOp.GTE: self._apply_gte,
-            PropertyQueryConditionOp.LT: self._apply_lt,
-            PropertyQueryConditionOp.LTE: self._apply_lte,
-            PropertyQueryConditionOp.BETWEEN: self._apply_between,
-            PropertyQueryConditionOp.NEAREST_NEIGHBOR: self._apply_nearest_neighbor,
-            PropertyQueryConditionOp.CONTAINS_KEY_VALUE: self._contains_key_value
-            # ... new property query condition here ... :)
-        }
 
     def _apply_eq(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -219,7 +223,7 @@ class PropertyQueryCondition(QueryCondition):
         return qb.contains_key_value(self._property_id, key, value, case_sensitive)
 
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
-        c_cond = self._get_op_map()[self._op](qb)
+        c_cond = self._op_func(qb)
         if self._alias is not None:
             qb.alias(self._alias)
         return c_cond
