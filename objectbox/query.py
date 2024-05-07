@@ -20,11 +20,11 @@ class Query:
         self._c_query = c_query
         self._box = box
         self._entity = self._box._entity
-        self._ob = box._ob
+        self._store = box._store
 
     def find(self) -> list:
         """ Finds a list of objects matching query. """
-        with self._ob.read_tx():
+        with self._store.read_tx():
             # OBX_bytes_array*
             c_bytes_array_p = obx_query_find(self._c_query)
             try:

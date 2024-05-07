@@ -10,7 +10,7 @@ from tests.model import *
 test_dir = 'testdata'
 
 
-def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
+def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.Store:
     model = objectbox.Model()
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
     model.last_entity_id = IdUid(2, 2)
@@ -19,7 +19,7 @@ def load_empty_test_objectbox(db_name: str = test_dir) -> objectbox.ObjectBox:
     return objectbox.Builder().model(model).directory(db_name).build()
 
 
-def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
+def load_empty_test_datetime(name: str = "") -> objectbox.Store:
     model = objectbox.Model()
     model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
     model.last_entity_id = IdUid(2, 2)
@@ -29,7 +29,7 @@ def load_empty_test_datetime(name: str = "") -> objectbox.ObjectBox:
     return objectbox.Builder().model(model).directory(db_name).build()
 
 
-def load_empty_test_flex(name: str = "") -> objectbox.ObjectBox:
+def load_empty_test_flex(name: str = "") -> objectbox.Store:
     model = objectbox.Model()
     model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
     model.last_entity_id = IdUid(3, 3)
@@ -39,8 +39,8 @@ def load_empty_test_flex(name: str = "") -> objectbox.ObjectBox:
     return objectbox.Builder().model(model).directory(db_name).build()
 
 
-def create_test_objectbox(db_name: Optional[str] = None, clear_db: bool = True) -> objectbox.ObjectBox:
-    """ Creates an ObjectBox instance with all entities. """
+def create_test_objectbox(db_name: Optional[str] = None, clear_db: bool = True) -> objectbox.Store:
+    """ Creates a Store instance with all entities. """
 
     db_path = test_dir if db_name is None else path.join(test_dir, db_name)
     print(f"DB path: \"{db_path}\"")

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,25 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from objectbox.c import *
-from contextlib import contextmanager
+import objectbox.transaction
 
 
-@contextmanager
-def read(store: 'Store'):
-    tx = obx_txn_read(store._c_store)
-    try:
-        yield
-    finally:
-        obx_txn_close(tx)
+class Store:
+    def __init__(self, c_store: OBX_store_p):
+        self._c_store = c_store
 
+    def __del__(self):
+        self.close()
 
-@contextmanager
-def write(store: 'Store'):
-    tx = obx_txn_write(store._c_store)
-    try:
-        yield
-        obx_txn_success(tx)
-    except:
-        obx_txn_close(tx)
-        raise
+    def read_tx(self):
+        return objectbox.transaction.read(self)
+
+    def write_tx(self):
+        return objectbox.transaction.write(self)
+
+    def close(self):
+        c_store_to_close = self._c_store
+        if c_store_to_close:
+            self._c_store = None
+            obx_store_close(c_store_to_close)

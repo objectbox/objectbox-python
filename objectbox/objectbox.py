@@ -13,25 +13,11 @@
 # limitations under the License.
 
 
-from objectbox.c import *
-import objectbox.transaction
+import objectbox.store
+from warnings import warn
 
-
-class ObjectBox:
-    def __init__(self, c_store: OBX_store_p):
-        self._c_store = c_store
-
-    def __del__(self):
-        self.close()
-
-    def read_tx(self):
-        return objectbox.transaction.read(self)
-
-    def write_tx(self):
-        return objectbox.transaction.write(self)
-
-    def close(self):
-        c_store_to_close = self._c_store
-        if c_store_to_close:
-            self._c_store = None
-            obx_store_close(c_store_to_close)
+class ObjectBox(objectbox.store.Store):
+    def __init__(self, *args, **kwargs):
+        """This throws a deprecation warning on initialization."""
+        warn(f'{self.__class__.__name__} will be deprecated, use Store from objectbox.store.', DeprecationWarning, stacklevel=2)
+        super().__init__(*args, **kwargs)
