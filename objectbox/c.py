@@ -84,6 +84,15 @@ OBXVectorDistanceType = ctypes.c_int
 OBXValidateOnOpenPagesFlags = ctypes.c_int
 OBXValidateOnOpenKvFlags = ctypes.c_int
 OBXBackupRestoreFlags = ctypes.c_int
+OBXLogLevel = ctypes.c_int
+
+from enum import IntEnum
+class LogLevel(IntEnum):
+    Verbose = 10
+    Debug   = 20
+    Info    = 30
+    Warn    = 40
+    Error   = 50
 
 class DebugFlags(IntEnum):
     """Debug flags"""
@@ -563,8 +572,11 @@ obx_opt_async_object_bytes_max_cache_size = c_fn('obx_opt_async_object_bytes_max
 # OBX_C_API void obx_opt_async_object_bytes_max_size_to_cache(OBX_store_options* opt, uint64_t value);
 obx_opt_async_object_bytes_max_size_to_cache = c_fn('obx_opt_async_object_bytes_max_size_to_cache', None, [OBX_store_options_p, ctypes.c_uint64])
 
+#typedef void obx_log_callback(OBXLogLevel log_level, const char* message, size_t message_size, void* user_data);
+obx_log_callback_fn = ctypes.CFUNCTYPE(None, OBXLogLevel, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_voidp)
+
 # OBX_C_API void obx_opt_log_callback(OBX_store_options* opt, obx_log_callback* callback, void* user_data);
-# obx_opt_log_callback = c_fn('obx_opt_log_callback', None, [OBX_store_options_p, ...]) TODO
+obx_opt_log_callback = c_fn('obx_opt_log_callback', None, [OBX_store_options_p, obx_log_callback_fn, ctypes.c_voidp])
 
 # OBX_C_API void obx_opt_backup_restore(OBX_store_options* opt, const char* backup_file, uint32_t flags);
 obx_opt_backup_restore = c_fn('obx_opt_backup_restore', None, [OBX_store_options_p, ctypes.c_char_p, OBXBackupRestoreFlags])
