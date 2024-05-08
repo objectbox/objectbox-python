@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 
 from objectbox.c import *
 from objectbox.model import Model
-from objectbox.objectbox import ObjectBox
+from objectbox.store import Store
 from objectbox.store_options import StoreOptions
 
 
@@ -38,7 +38,7 @@ class Builder:
         self._model._finish()
         return self
 
-    def build(self) -> 'ObjectBox':
+    def build(self) -> 'Store':
         options = StoreOptions()
         try:
             if self._directory:
@@ -50,4 +50,4 @@ class Builder:
             options._free()
             raise
         c_store = obx_store_open(options._c_handle)
-        return ObjectBox(c_store)
+        return Store(c_store)

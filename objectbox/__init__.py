@@ -1,4 +1,4 @@
-# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 from objectbox.box import Box
 from objectbox.builder import Builder
 from objectbox.model import Model
+from objectbox.store import Store
 from objectbox.objectbox import ObjectBox
 from objectbox.c import NotFoundException, version_core
 from objectbox.version import Version
@@ -24,6 +25,7 @@ __all__ = [
     'Box',
     'Builder',
     'Model',
+    'Store',
     'ObjectBox',
     'NotFoundException',
     'version',

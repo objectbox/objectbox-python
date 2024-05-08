@@ -1,4 +1,4 @@
-# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ class Query:
         self._c_query = c_query
         self._box = box
         self._entity = self._box._entity
-        self._ob = box._ob
+        self._store = box._store
 
     def find(self) -> list:
         """ Finds a list of objects matching query. """
-        with self._ob.read_tx():
+        with self._store.read_tx():
             # OBX_bytes_array*
             c_bytes_array_p = obx_query_find(self._c_query)
             try:

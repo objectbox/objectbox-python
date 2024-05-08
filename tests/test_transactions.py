@@ -4,7 +4,7 @@ from tests.common import *
 
 
 def test_transactions():
-    ob = load_empty_test_objectbox()
+    ob = load_empty_test_default_store()
     box = objectbox.Box(ob, TestEntity)
 
     assert box.is_empty()

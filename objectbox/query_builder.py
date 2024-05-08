@@ -4,16 +4,16 @@ from typing import *
 
 from objectbox.c import *
 from objectbox.model.properties import Property
-from objectbox.objectbox import ObjectBox
+from objectbox.store import Store
 from objectbox.query import Query
 from objectbox.utils import check_float_vector
 
 
 class QueryBuilder:
-    def __init__(self, ob: ObjectBox, box: 'Box'):
+    def __init__(self, store: Store, box: 'Box'):
         self._box = box
         self._entity = box._entity
-        self._c_builder = obx_query_builder(ob._c_store, box._entity.id)
+        self._c_builder = obx_query_builder(store._c_store, box._entity.id)
 
     def close(self) -> int:
         return obx_qb_close(self._c_builder)
