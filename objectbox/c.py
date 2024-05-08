@@ -79,7 +79,7 @@ OBXPutMode = ctypes.c_int
 OBXPutPaddingMode = ctypes.c_int
 OBXOrderFlags = ctypes.c_int
 OBXHnswFlags = ctypes.c_int
-OBXHnswDistanceType = ctypes.c_int
+OBXVectorDistanceType = ctypes.c_int
 OBXValidateOnOpenPagesFlags = ctypes.c_int
 OBXValidateOnOpenKvFlags = ctypes.c_int
 OBXBackupRestoreFlags = ctypes.c_int
@@ -393,9 +393,8 @@ obx_model_property_index_hnsw_indexing_search_count = \
 obx_model_property_index_hnsw_flags = \
     c_fn_rc('obx_model_property_index_hnsw_flags', [OBX_model_p, OBXHnswFlags])
 
-# obx_err obx_model_property_index_hnsw_distance_type(OBX_model* model, OBXHnswDistanceType value)
-obx_model_property_index_hnsw_distance_type = \
-    c_fn_rc('obx_model_property_index_hnsw_distance_type', [OBX_model_p, OBXHnswDistanceType])
+# obx_err obx_model_property_index_hnsw_distance_type(OBX_model* model, OBXVectorDistanceType value)
+obx_model_property_index_hnsw_distance_type = c_fn_rc('obx_model_property_index_hnsw_distance_type', [OBX_model_p, OBXVectorDistanceType])
 
 # obx_err obx_model_property_index_hnsw_reparation_backlink_probability(OBX_model* model, float value)
 obx_model_property_index_hnsw_reparation_backlink_probability = \
@@ -980,11 +979,11 @@ OBXHnswFlags_DEBUG_LOGS_DETAILED = 2
 OBXHnswFlags_VECTOR_CACHE_SIMD_PADDING_OFF = 4
 OBXHnswFlags_REPARATION_LIMIT_CANDIDATES = 8
 
-OBXHnswDistanceType_UNKNOWN = 0
-OBXHnswDistanceType_EUCLIDEAN = 1
-OBXHnswDistanceType_COSINE = 2
-OBXHnswDistanceType_DOT_PRODUCT = 3
-OBXHnswDistanceType_DOT_PRODUCT_NON_NORMALIZED = 10
+OBXVectorDistanceType_UNKNOWN = 0
+OBXVectorDistanceType_EUCLIDEAN = 1
+OBXVectorDistanceType_COSINE = 2
+OBXVectorDistanceType_DOT_PRODUCT = 3
+OBXVectorDistanceType_DOT_PRODUCT_NON_NORMALIZED = 10
 
 OBXPutPaddingMode_PaddingAutomatic = 1
 OBXPutPaddingMode_PaddingAllowedByBuffer = 2
