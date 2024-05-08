@@ -360,6 +360,12 @@ def c_array_pointer(py_list: Union[List[Any], np.ndarray], c_type):
     return ctypes.cast(c_array(py_list, c_type), ctypes.POINTER(c_type))
 
 
+# OBX_C_API float obx_vector_distance_float32(OBXVectorDistanceType type, const float* vector1, const float* vector2, size_t dimension);
+obx_vector_distance_float32 = c_fn("obx_vector_distance_float32", ctypes.c_float, [OBXVectorDistanceType, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
+
+# OBX_C_API float obx_vector_distance_to_relevance(OBXVectorDistanceType type, float distance);
+obx_vector_distance_to_relevance = c_fn("obx_vector_distance_to_relevance", ctypes.c_float, [OBXVectorDistanceType, ctypes.c_float])
+
 # OBX_model* (void);
 obx_model = c_fn('obx_model', OBX_model_p, [])
 
