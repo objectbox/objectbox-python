@@ -17,37 +17,25 @@ from objectbox.c import *
 from objectbox.model import Model
 from objectbox.store import Store
 from objectbox.store_options import StoreOptions
-
+from warnings import warn
 
 class Builder:
     def __init__(self):
-        self._model = Model()
-        self._directory = None
-        self._max_db_size_in_kb = None
+        """This throws a deprecation warning on initialization."""
+        warn(f'Using {self.__class__.__name__} is deprecated, please use Store(model=, directory= ...) from objectbox.store.', DeprecationWarning, stacklevel=2)
+        self._kwargs = { }
 
     def directory(self, path: str) -> 'Builder':
-        self._directory = path
+        self._kwargs['directory'] = path
         return self
 
     def max_db_size_in_kb(self, size_in_kb: int) -> 'Builder':
-        self._max_db_size_in_kb = size_in_kb
+        self._kwargs['max_db_size_in_kb'] = size_in_kb
         return self
 
     def model(self, model: Model) -> 'Builder':
-        self._model = model
-        self._model._finish()
+        self._kwargs['model'] = model
         return self
 
     def build(self) -> 'Store':
-        options = StoreOptions()
-        try:
-            if self._directory:
-                options.directory(self._directory)
-            if self._max_db_size_in_kb:
-                options.max_db_size_in_kb(self._max_db_size_in_kb)
-            options.model(self._model)
-        except CoreException:
-            options._free()
-            raise
-        c_store = obx_store_open(options._c_handle)
-        return Store(c_store)
+        return Store(**self._kwargs)

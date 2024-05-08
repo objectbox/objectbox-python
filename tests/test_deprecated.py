@@ -12,3 +12,7 @@ def test_deprecated_ObjectBox():
     with pytest.deprecated_call():
         ob = objectbox.objectbox.ObjectBox(c_store) 
     
+def test_deprecated_Builder():
+    model = tests.common.create_default_model()
+    with pytest.deprecated_call():
+        ob = objectbox.Builder().model(model).directory(tests.common.test_dir).build()
