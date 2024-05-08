@@ -15,7 +15,12 @@ def _find_expected_nn(points: np.ndarray, query: np.ndarray, n: int):
     return np.argsort(d)[:n]
 
 
-def _test_random_points(num_points: int, num_query_points: int, seed: Optional[int] = None, distance_type: HnswDistanceType = HnswDistanceType.EUCLIDEAN, min_score: float = 0.5):
+def _test_random_points(
+        num_points: int,
+        num_query_points: int,
+        seed: Optional[int] = None,
+        distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN,
+        min_score: float = 0.5):
     """ Generates random points in a 2d plane; checks the queried NN against the expected. """
 
     vector_field_name = "vector_"+distance_type.name.lower()
@@ -76,7 +81,7 @@ def _test_random_points(num_points: int, num_query_points: int, seed: Optional[i
 def test_random_points():
         
     min_score = 0.5
-    distance_type = HnswDistanceType.EUCLIDEAN  
+    distance_type = VectorDistanceType.EUCLIDEAN
     _test_random_points(num_points=100, num_query_points=10, seed=10, distance_type=distance_type, min_score=min_score)
     _test_random_points(num_points=100, num_query_points=10, seed=11, distance_type=distance_type, min_score=min_score)
     _test_random_points(num_points=100, num_query_points=10, seed=12, distance_type=distance_type, min_score=min_score)
@@ -86,8 +91,9 @@ def test_random_points():
 
     # TODO: Cosine and Dot Product may result in 0 score
 
-def _test_combined_nn_search(distance_type: HnswDistanceType = HnswDistanceType.EUCLIDEAN):
-    
+
+def _test_combined_nn_search(distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN):
+
     db = create_test_objectbox()
 
     box = objectbox.Box(db, VectorEntity)
@@ -175,6 +181,6 @@ def _test_combined_nn_search(distance_type: HnswDistanceType = HnswDistanceType.
 
 def test_combined_nn_search():
     """ Tests NN search combined with regular query conditions, offset and limit. """
-    distance_type = HnswDistanceType.EUCLIDEAN
+    distance_type = VectorDistanceType.EUCLIDEAN
     _test_combined_nn_search(distance_type)
     # TODO: Cosine, DotProduct  diverges see below

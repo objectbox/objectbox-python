@@ -58,23 +58,22 @@ class VectorEntity:
     id = Id(id=1, uid=4001)
     name = Property(str, type=PropertyType.string, id=2, uid=4002)
     vector_euclidean = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=4003,
-                      index=HnswIndex(
-                          id=3, uid=40001,
-                          dimensions=2, distance_type=HnswDistanceType.EUCLIDEAN)
-                      )
+                                index=HnswIndex(
+                                    id=3, uid=40001,
+                                    dimensions=2, distance_type=VectorDistanceType.EUCLIDEAN)
+                                )
     vector_cosine = Property(np.ndarray, type=PropertyType.floatVector, id=4, uid=4004,
-                      index=HnswIndex(
-                          id=4, uid=40002,
-                          dimensions=2, distance_type=HnswDistanceType.COSINE)
-                      )
+                             index=HnswIndex(
+                                 id=4, uid=40002,
+                                 dimensions=2, distance_type=VectorDistanceType.COSINE)
+                             )
     vector_dot_product = Property(np.ndarray, type=PropertyType.floatVector, id=5, uid=4005,
-                      index=HnswIndex(
-                          id=5, uid=40003,
-                          dimensions=2, distance_type=HnswDistanceType.DOT_PRODUCT)
-                      )
-    #vector_dot_product_non_normalized = Property(np.ndarray, type=PropertyType.floatVector, id=6, uid=4006,
+                                  index=HnswIndex(
+                                      id=5, uid=40003,
+                                      dimensions=2, distance_type=VectorDistanceType.DOT_PRODUCT)
+                                  )
+    # vector_dot_product_non_normalized = Property(np.ndarray, type=PropertyType.floatVector, id=6, uid=4006,
     #                  index=HnswIndex(
     #                      id=6, uid=40004,
-    #                      dimensions=2, distance_type=HnswDistanceType.DOT_PRODUCT_NON_NORMALIZED)
+    #                      dimensions=2, distance_type=VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED)
     #                  )
-    

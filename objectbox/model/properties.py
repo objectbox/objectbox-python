@@ -94,26 +94,26 @@ class HnswFlags(IntEnum):
     REPARATION_LIMIT_CANDIDATES = 8
 
 
-class HnswDistanceType(IntEnum):
-    UNKNOWN = OBXHnswDistanceType_UNKNOWN
-    EUCLIDEAN = OBXHnswDistanceType_EUCLIDEAN
-    COSINE = OBXHnswDistanceType_COSINE
-    DOT_PRODUCT = OBXHnswDistanceType_DOT_PRODUCT
-    DOT_PRODUCT_NON_NORMALIZED = OBXHnswDistanceType_DOT_PRODUCT_NON_NORMALIZED
+class VectorDistanceType(IntEnum):
+    UNKNOWN = OBXVectorDistanceType_UNKNOWN
+    EUCLIDEAN = OBXVectorDistanceType_EUCLIDEAN
+    COSINE = OBXVectorDistanceType_COSINE
+    DOT_PRODUCT = OBXVectorDistanceType_DOT_PRODUCT
+    DOT_PRODUCT_NON_NORMALIZED = OBXVectorDistanceType_DOT_PRODUCT_NON_NORMALIZED
 
-HnswDistanceType.UNKNOWN.__doc__ = "Not a real type, just best practice (e.g. forward compatibility)"
-HnswDistanceType.EUCLIDEAN.__doc__ = "The default; typically 'euclidean squared' internally."
-HnswDistanceType.COSINE.__doc__ = """
+VectorDistanceType.UNKNOWN.__doc__ = "Not a real type, just best practice (e.g. forward compatibility)"
+VectorDistanceType.EUCLIDEAN.__doc__ = "The default; typically 'euclidean squared' internally."
+VectorDistanceType.COSINE.__doc__ = """
 Cosine similarity compares two vectors irrespective of their magnitude (compares the angle of two vectors).
 Often used for document or semantic similarity.
 Value range: 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
 """
-HnswDistanceType.DOT_PRODUCT.__doc__ = """
+VectorDistanceType.DOT_PRODUCT.__doc__ = """
 For normalized vectors (vector length == 1.0), the dot product is equivalent to the cosine similarity.
 Because of this, the dot product is often preferred as it performs better.
 Value range (normalized vectors): 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
 """
-HnswDistanceType.DOT_PRODUCT_NON_NORMALIZED.__doc__ = """
+VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED.__doc__ = """
 A custom dot product similarity measure that does not require the vectors to be normalized.
 Note: this is no replacement for cosine similarity (like DotProduct for normalized vectors is).
 The non-linear conversion provides a high precision over the entire float range (for the raw dot product).
@@ -130,7 +130,7 @@ class HnswIndex:
     neighbors_per_node: Optional[int] = None
     indexing_search_count: Optional[int] = None
     flags: HnswFlags = HnswFlags.NONE
-    distance_type: HnswDistanceType = HnswDistanceType.EUCLIDEAN
+    distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN
     reparation_backlink_probability: Optional[float] = None
     vector_cache_hint_size_kb: Optional[float] = None
 

@@ -2,10 +2,11 @@ import ctypes
 import numpy as np
 from typing import *
 
+from objectbox.c import *
 from objectbox.model.properties import Property
 from objectbox.objectbox import ObjectBox
 from objectbox.query import Query
-from objectbox.c import *
+from objectbox.utils import check_float_vector
 
 
 class QueryBuilder:
@@ -108,10 +109,11 @@ class QueryBuilder:
         cond = obx_qb_between_2ints(self._c_builder, prop_id, value_a, value_b)
         return cond
 
-    def nearest_neighbors_f32(self, prop: Union[int, str, Property], query_vector: Union[np.ndarray, List[float]],
+    def nearest_neighbors_f32(self,
+                              prop: Union[int, str, Property],
+                              query_vector: Union[np.ndarray, List[float]],
                               element_count: int):
-        if isinstance(query_vector, np.ndarray) and query_vector.dtype != np.float32:
-            raise Exception(f"query_vector dtype is expected to be np.float32, got: {query_vector.dtype}")
+        check_float_vector(query_vector, "query_vector")
         prop_id = self._entity.get_property_id(prop)
         c_query_vector = c_array(query_vector, ctypes.c_float)
         cond = obx_qb_nearest_neighbors_f32(self._c_builder, prop_id, c_query_vector, element_count)
