@@ -15,8 +15,8 @@ def format_date(timestamp_ms: int) -> str:
 
 class TasklistCmd(Cmd):
     prompt = "> "
-    _ob = objectbox.Builder().model(get_objectbox_model()).directory("tasklist-db").build()
-    _box = objectbox.Box(_ob, Task)
+    _store = objectbox.Store(model=get_objectbox_model(), directory="tasklist-db")
+    _box = objectbox.Box(_store, Task)
 
     def do_ls(self, _):
         """list tasks"""

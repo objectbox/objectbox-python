@@ -74,7 +74,7 @@ import objectbox
 model = objectbox.Model()
 model.entity(Person, last_property_id=objectbox.model.IdUid(10, 1010))
 model.last_entity_id = objectbox.model.IdUid(1, 1)
-ob = objectbox.Builder().model(model).directory("db").build()
+store = objectbox.Store(model=model, directory="db")
 
 # Open the box of "Person" entity. This can be called many times but you can also pass the variable around
 box = objectbox.Box(ob, Person)
