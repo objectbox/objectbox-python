@@ -19,6 +19,7 @@ import platform
 from objectbox.version import Version
 from typing import *
 import numpy as np
+from enum import IntEnum
 
 # This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
 # The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
@@ -83,6 +84,17 @@ OBXVectorDistanceType = ctypes.c_int
 OBXValidateOnOpenPagesFlags = ctypes.c_int
 OBXValidateOnOpenKvFlags = ctypes.c_int
 OBXBackupRestoreFlags = ctypes.c_int
+
+class DebugFlags(IntEnum):
+    NONE = 0,
+    LOG_TRANSACTIONS_READ = 1,
+    LOG_TRANSACTIONS_WRITE = 2,
+    LOG_QUERIES = 3,
+    LOG_QUERY_PARAMETERS = 8,
+    LOG_ASYNC_QUEUE = 16,
+    LOG_CACHE_HITS = 32,
+    LOG_CACHE_ALL = 64,
+    LOG_TREE = 128
 
 
 class OBX_model(ctypes.Structure):

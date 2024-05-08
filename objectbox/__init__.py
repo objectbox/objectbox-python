@@ -18,7 +18,7 @@ from objectbox.builder import Builder
 from objectbox.model import Model
 from objectbox.store import Store
 from objectbox.objectbox import ObjectBox
-from objectbox.c import NotFoundException, version_core
+from objectbox.c import NotFoundException, version_core, DebugFlags
 from objectbox.version import Version
 
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     'NotFoundException',
     'version',
     'version_info',
+    'DebugFlags'
 ]
 
 # Python binding version
