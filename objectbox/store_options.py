@@ -40,6 +40,7 @@ class StoreOptions:
         return self
 
     def model(self, model: Model):
+        model._finish()
         obx_opt_model(self._c_handle, model._c_model)
         return self
 
