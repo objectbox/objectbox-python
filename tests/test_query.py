@@ -9,7 +9,7 @@ from tests.model import *
 
 
 def test_basics():
-    ob = create_test_objectbox()
+    ob = create_test_store()
 
     box_test_entity = objectbox.Box(ob, TestEntity)
     box_test_entity.put(TestEntity(str="foo", int64=123))
@@ -108,7 +108,7 @@ def test_basics():
 
 
 def test_flex_contains_key_value():
-    ob = create_test_objectbox()
+    ob = create_test_store()
 
     box = objectbox.Box(ob, TestEntityFlex)
     box.put(TestEntityFlex(flex={"k1": "String", "k2": 2, "k3": "string"}))
@@ -156,7 +156,7 @@ def test_flex_contains_key_value():
 
 
 def test_offset_limit():
-    ob = load_empty_test_objectbox()
+    ob = load_empty_test_default_store()
 
     box = objectbox.Box(ob, TestEntity)
     box.put(TestEntity())
@@ -185,7 +185,7 @@ def test_offset_limit():
 
 
 def test_any_all():
-    db = create_test_objectbox()
+    db = create_test_store()
 
     box = objectbox.Box(db, TestEntity)
 
@@ -247,7 +247,7 @@ def test_any_all():
 
 
 def test_set_parameter():
-    db = create_test_objectbox()
+    db = create_test_store()
 
     box_test_entity = objectbox.Box(db, TestEntity)
     box_test_entity.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
@@ -300,7 +300,7 @@ def test_set_parameter():
 
 
 def test_set_parameter_alias():
-    db = create_test_objectbox()
+    db = create_test_store()
     box = objectbox.Box(db, TestEntity)
 
     box.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
@@ -375,7 +375,7 @@ def test_set_parameter_alias():
 
 def test_set_parameter_alias_advanced():
     """ Tests set_parameter_alias in a complex scenario (i.e. multiple query conditions/logical aggregations). """
-    db = create_test_objectbox()
+    db = create_test_store()
 
     # Setup 1
     box = objectbox.Box(db, TestEntity)
