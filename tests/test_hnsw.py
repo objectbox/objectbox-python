@@ -34,10 +34,10 @@ def _test_random_points(
 
     points = np.random.rand(num_points, 2).astype(np.float32)
 
-    db = create_test_store()
+    store = create_test_store()
 
     # Init and seed DB
-    box = objectbox.Box(db, VectorEntity)
+    box = store.box(VectorEntity)
 
     print(f"Seeding DB with {num_points} points...")
     objects = []
@@ -94,9 +94,9 @@ def test_random_points():
 
 def _test_combined_nn_search(distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN):
 
-    db = create_test_store()
+    store = create_test_store()
 
-    box = objectbox.Box(db, VectorEntity)
+    box = store.box(VectorEntity)
 
     vector_field_name = "vector_"+distance_type.name.lower()
    

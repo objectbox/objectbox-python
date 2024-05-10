@@ -11,6 +11,8 @@ def test_deprecated_ObjectBox():
     c_store = objectbox.c.obx_store_open(options._c_handle)
     with pytest.deprecated_call():
         ob = objectbox.objectbox.ObjectBox(c_store) 
+    box = objectbox.Box(ob, tests.model.TestEntity)
+    assert box.count() == 0
     
 def test_deprecated_Builder():
     model = tests.common.create_default_model()

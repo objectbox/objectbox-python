@@ -9,8 +9,8 @@ from math import floor
 
 
 def test_box_basics():
-    ob = load_empty_test_default_store()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
 
     assert box.is_empty()
     assert box.count() == 0
@@ -89,12 +89,12 @@ def test_box_basics():
     assert box.get(object.id) == None
     assert box.get(1) == None
 
-    ob.close()
+    store.close()
 
 
 def test_box_bulk():
-    ob = load_empty_test_default_store()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
 
     box.put(TestEntity(str="first"))
 
@@ -124,12 +124,12 @@ def test_box_bulk():
     assert removed == 4
     assert box.count() == 0
 
-    ob.close()
+    store.close()
 
 
 def test_datetime():
-    ob = load_empty_test_datetime_store()
-    box = objectbox.Box(ob, TestEntityDatetime)
+    store = load_empty_test_datetime_store()
+    box = store.box(TestEntityDatetime)
 
     assert box.is_empty()
     assert box.count() == 0
@@ -177,7 +177,7 @@ def test_datetime():
     assert box.get(object.id) == None
     assert box.get(1) == None
 
-    ob.close()
+    store.close()
 
 
 def test_flex():
@@ -188,8 +188,8 @@ def test_flex():
         read = box.get(object.id)
         assert read.flex == object.flex
 
-    ob = load_empty_test_default_store()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
     object = TestEntity()
 
     # Put an empty object
@@ -226,13 +226,13 @@ def test_flex():
     # Update to list inside dict
     test_put_get(object, box, {"a": 1, "b": [1, 2, 3]})
 
-    ob.close()
+    store.close()
 
 
 def test_flex_values():
-    ob = create_test_store()
+    store = create_test_store()
 
-    box = objectbox.Box(ob, TestEntityFlex)
+    box = store.box(TestEntityFlex)
 
     # Test empty object
     obj_id = box.put(TestEntityFlex())
