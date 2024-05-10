@@ -8,7 +8,7 @@ based on https://ollama.com/blog/embedding-models
 
  2. Pull models
 
-        ollama pull ollama2
+        ollama pull llama3
         ollama pull mxbai-embed-large
 
  3. Change to example directory:

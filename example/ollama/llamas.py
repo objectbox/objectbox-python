@@ -18,7 +18,8 @@ from objectbox.model import *
 from objectbox.model.properties import *
 import numpy as np
 
-obx_remove_db_files(c_str("objectbox"))  # Have fresh data for each start
+# Have fresh data for each start
+objectbox.Store.remove_db_files("objectbox")
 
 @Entity(id=1, uid=1)
 class DocumentEmbedding:
@@ -27,7 +28,7 @@ class DocumentEmbedding:
     embedding = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=1003, index=HnswIndex(
         id=3, uid=10001,
         dimensions=1024,
-        distance_type=HnswDistanceType.COSINE
+        distance_type=VectorDistanceType.COSINE
     ))
 
 model = Model()
@@ -35,8 +36,8 @@ model.entity(DocumentEmbedding, last_property_id=IdUid(3, 1003))
 model.last_entity_id = IdUid(1, 1)
 model.last_index_id = IdUid(3,10001)
 
-ob = objectbox.Builder().model(model).build()
-box = objectbox.Box(ob, DocumentEmbedding)
+store = objectbox.Store(model=model)
+box = store.box(DocumentEmbedding)
 
 print("Documents to embed: ", len(documents))
 
@@ -72,7 +73,7 @@ print("Generating the response now...")
 
 # generate a response combining the prompt and data we retrieved in step 2
 output = ollama.generate(
-  model="llama2",
+  model="llama3",
   prompt=f"Using this data: {data}. Respond to this prompt: {prompt}"
 )
 
