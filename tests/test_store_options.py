@@ -53,8 +53,8 @@ def test_store_with_options():
     store = objectbox.Store(
         model=tests.common.create_default_model(),
         directory=tests.common.test_dir,
-        max_db_size_in_kb=1<<30,
-        max_data_size_in_kb=(1<<30)-(1<<20),
+        max_db_size_in_kb=1<<20,
+        max_data_size_in_kb=(1<<20)-(1<<10),
         file_mode=int('664',8),
         max_readers=126,
         no_reader_thread_locals=True,
