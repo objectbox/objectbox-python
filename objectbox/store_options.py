@@ -36,7 +36,7 @@ class StoreOptions:
         return self
 
     def no_reader_thread_locals(self, flag: bool):
-        obx_opt_max_readers(self._c_handle, flag)
+        obx_opt_no_reader_thread_locals(self._c_handle, flag)
         return self
 
     def model(self, model: Model):
