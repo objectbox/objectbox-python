@@ -6,11 +6,9 @@ import shutil
 
 
 def test_inmemory():
-    # Expect path for persistent store
-    db_name = "testdata_persistent"
-    if os.path.exists(db_name):
-        shutil.rmtree(db_name) 
-    ob = load_empty_test_default_store(db_name)
+    # Use default path for persistent store
+    db_name = "testdata"
+    ob = load_empty_test_default_store()
     box = objectbox.Box(ob, TestEntity)
     object = TestEntity()
     id = box.put(object)
