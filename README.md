@@ -61,8 +61,8 @@ class Person:
 
 ### Using ObjectBox
 
-To actually use the database, you launch (or "build") it with the model you've just defined.
-Afterwards, you can reuse the instance (`ob` in the example below) and use it to access "Entity Boxes" which hold your objects.
+To actually use the database, you create a Store with the model you've just defined.
+Afterwards, you can reuse the instance (`store` in the example below) and use it to access "Entity Boxes" which hold your objects.
 
 #### program.py
 
@@ -70,14 +70,14 @@ Afterwards, you can reuse the instance (`ob` in the example below) and use it to
 import objectbox
 # from mypackage.model import Person
 
-# Configure ObjectBox: should be done only once in the whole program and the "ob" variable should be kept around
+# Configure ObjectBox: should be done only once in the whole program and the "store" variable should be kept around
 model = objectbox.Model()
 model.entity(Person, last_property_id=objectbox.model.IdUid(10, 1010))
 model.last_entity_id = objectbox.model.IdUid(1, 1)
-store = objectbox.Store(model=model, directory="db")
+store = objectbox.Store(model=model)
 
 # Open the box of "Person" entity. This can be called many times but you can also pass the variable around
-box = objectbox.Box(ob, Person)
+box = store.box(Person)
 
 person = Person()
 person.name = "Joe Green"
