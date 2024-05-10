@@ -18,7 +18,7 @@ def create_default_model() -> objectbox.Model:
 
 def load_empty_test_default_store(db_name: str = test_dir) -> objectbox.Store:
     model = create_default_model()
-    return objectbox.Builder().model(model).directory(db_name).build()
+    return objectbox.Store(model=model, directory=db_name)
 
 def load_empty_test_datetime_store(name: str = "") -> objectbox.Store:
     model = objectbox.Model()
@@ -27,7 +27,7 @@ def load_empty_test_datetime_store(name: str = "") -> objectbox.Store:
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
 
-    return objectbox.Builder().model(model).directory(db_name).build()
+    return objectbox.Store(model=model, directory=db_name)
 
 
 def load_empty_test_flex_store(name: str = "") -> objectbox.Store:
@@ -37,7 +37,7 @@ def load_empty_test_flex_store(name: str = "") -> objectbox.Store:
 
     db_name = test_dir if len(name) == 0 else test_dir + "/" + name
 
-    return objectbox.Builder().model(model).directory(db_name).build()
+    return objectbox.Store(model=model, directory=db_name)
 
 
 def create_test_store(db_name: Optional[str] = None, clear_db: bool = True) -> objectbox.Store:
@@ -57,7 +57,7 @@ def create_test_store(db_name: Optional[str] = None, clear_db: bool = True) -> o
     model.last_entity_id = IdUid(4, 4)
     model.last_index_id = IdUid(5, 40003)
 
-    return objectbox.Builder().model(model).directory(db_path).build()
+    return objectbox.Store(model=model, directory=db_path)
 
 
 def assert_equal_prop(actual, expected, default):

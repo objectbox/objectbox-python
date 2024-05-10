@@ -11,8 +11,8 @@ from tests.common import *
 
 @pytest.mark.skip(reason="Test indices implementation")
 def test_index_basics():
-    ob = load_empty_test_default_store()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
 
     # create
     object = TestEntity()

@@ -9,13 +9,13 @@ from tests.model import *
 
 
 def test_basics():
-    ob = create_test_store()
+    store = create_test_store()
 
-    box_test_entity = objectbox.Box(ob, TestEntity)
+    box_test_entity = store.box(TestEntity)
     box_test_entity.put(TestEntity(str="foo", int64=123))
     box_test_entity.put(TestEntity(str="bar", int64=456))
 
-    box_vector_entity = objectbox.Box(ob, VectorEntity)
+    box_vector_entity = store.box(VectorEntity)
     box_vector_entity.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector_entity.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
@@ -104,13 +104,13 @@ def test_basics():
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
-    ob.close()
+    store.close()
 
 
 def test_flex_contains_key_value():
-    ob = create_test_store()
+    store = create_test_store()
 
-    box = objectbox.Box(ob, TestEntityFlex)
+    box = store.box(TestEntityFlex)
     box.put(TestEntityFlex(flex={"k1": "String", "k2": 2, "k3": "string"}))
     box.put(TestEntityFlex(flex={"k1": "strinG", "k2": 3, "k3": 10, "k4": [1, "foo", 3]}))
     box.put(TestEntityFlex(flex={"k1": "buzz", "k2": 3, "k3": [2, 3], "k4": {"k1": "a", "k2": "inner text"}}))
@@ -156,9 +156,9 @@ def test_flex_contains_key_value():
 
 
 def test_offset_limit():
-    ob = load_empty_test_default_store()
+    store = load_empty_test_default_store()
 
-    box = objectbox.Box(ob, TestEntity)
+    box = store.box(TestEntity)
     box.put(TestEntity())
     box.put(TestEntity(str="a"))
     box.put(TestEntity(str="b"))
@@ -185,9 +185,9 @@ def test_offset_limit():
 
 
 def test_any_all():
-    db = create_test_store()
+    store = create_test_store()
 
-    box = objectbox.Box(db, TestEntity)
+    box = store.box(TestEntity)
 
     box.put(TestEntity(str="Foo", int32=10, int8=2, float32=3.14, bool=True))
     box.put(TestEntity(str="FooBar", int32=100, int8=50, float32=2.0, bool=True))
@@ -247,9 +247,9 @@ def test_any_all():
 
 
 def test_set_parameter():
-    db = create_test_store()
+    store = create_test_store()
 
-    box_test_entity = objectbox.Box(db, TestEntity)
+    box_test_entity = store.box(TestEntity)
     box_test_entity.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
     box_test_entity.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
     box_test_entity.put(TestEntity(str="Bar", int64=10, int32=226, int8=126))
@@ -257,7 +257,7 @@ def test_set_parameter():
     box_test_entity.put(TestEntity(str="Fox", int64=10, int32=157, int8=11))
     box_test_entity.put(TestEntity(str="Barrakuda", int64=4, int32=386, int8=60))
 
-    box_vector_entity = objectbox.Box(db, VectorEntity)
+    box_vector_entity = store.box(VectorEntity)
     box_vector_entity.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector_entity.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
@@ -300,13 +300,13 @@ def test_set_parameter():
 
 
 def test_set_parameter_alias():
-    db = create_test_store()
-    box = objectbox.Box(db, TestEntity)
+    store = create_test_store()
+    box = store.box(TestEntity)
 
     box.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
     box.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
 
-    box_vector = objectbox.Box(db, VectorEntity)
+    box_vector = store.box(VectorEntity)
     box_vector.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
@@ -375,10 +375,10 @@ def test_set_parameter_alias():
 
 def test_set_parameter_alias_advanced():
     """ Tests set_parameter_alias in a complex scenario (i.e. multiple query conditions/logical aggregations). """
-    db = create_test_store()
+    store = create_test_store()
 
     # Setup 1
-    box = objectbox.Box(db, TestEntity)
+    box = store.box(TestEntity)
     box.put(TestEntity(str="Apple", bool=False, int64=47, int32=70))
     box.put(TestEntity(str="applE", bool=True, int64=253, int32=798))
     box.put(TestEntity(str="APPLE", bool=False, int64=3456, int32=123))

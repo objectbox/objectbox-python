@@ -23,8 +23,8 @@ class VectorSearchCitiesCmd(Cmd):
         Cmd.__init__(self, *args)
         dbdir = "cities-db"
         new_db = not os.path.exists(dbdir)
-        self._ob = objectbox.Builder().model(get_objectbox_model()).directory(dbdir).build()
-        self._box = objectbox.Box(self._ob, City)
+        self._store = objectbox.Store(model=get_objectbox_model(),directory=dbdir)
+        self._box = _store.box(City)
         self._name_prop: Property = City.get_property("name")
         self._location_prop: Property = City.get_property("location")
         if new_db: 

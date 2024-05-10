@@ -17,7 +17,7 @@ import objectbox.store
 from warnings import warn
 
 class ObjectBox(objectbox.store.Store):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, c_store):
         """This throws a deprecation warning on initialization."""
         warn(f'{self.__class__.__name__} will be deprecated, use Store from objectbox.store.', DeprecationWarning, stacklevel=2)
-        super().__init__(*args, **kwargs)
+        super().__init__(c_store=c_store)

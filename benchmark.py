@@ -10,8 +10,8 @@ class ObjectBoxPerf:
     """
 
     def __init__(self):
-        self.ob = load_empty_test_default_store()
-        self.box = objectbox.Box(self.ob, TestEntity)
+        self.store = load_empty_test_default_store()
+        self.box = store.box(TestEntity)
 
     def remove_all(self):
         self.box.remove_all()
