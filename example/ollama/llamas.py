@@ -18,6 +18,7 @@ from objectbox.model import *
 from objectbox.model.properties import *
 import numpy as np
 
+obx_remove_db_files(c_str("objectbox"))  # Have fresh data for each start
 
 @Entity(id=1, uid=1)
 class DocumentEmbedding:
@@ -26,7 +27,7 @@ class DocumentEmbedding:
     embedding = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=1003, index=HnswIndex(
         id=3, uid=10001,
         dimensions=1024,
-        distance_type=HnswDistanceType.EUCLIDEAN
+        distance_type=HnswDistanceType.COSINE
     ))
 
 model = Model()
@@ -37,6 +38,7 @@ model.last_index_id = IdUid(3,10001)
 ob = objectbox.Builder().model(model).build()
 box = objectbox.Box(ob, DocumentEmbedding)
 
+print("Documents to embed: ", len(documents))
 
 # store each document in a vector embedding database
 for i, d in enumerate(documents):
@@ -44,6 +46,7 @@ for i, d in enumerate(documents):
   embedding = response["embedding"]
 
   box.put(DocumentEmbedding(document=d,embedding=embedding))
+  print(f"Document {i + 1} embedded")
  
 # an example prompt
 prompt = "What animals are llamas related to?"
@@ -63,6 +66,9 @@ query = box.query(
 results = query.find_with_scores()
 data = results[0][0].document 
 
+print(f"Data most relevant to \"{prompt}\" : {data}")
+
+print("Generating the response now...")
 
 # generate a response combining the prompt and data we retrieved in step 2
 output = ollama.generate(
