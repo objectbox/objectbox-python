@@ -17,6 +17,7 @@ import objectbox.c as c
 import objectbox.transaction
 from objectbox.store_options import StoreOptions
 import objectbox
+from objectbox.model.entity import _Entity
 from typing import *
 
 class Store:
@@ -170,6 +171,15 @@ class Store:
 
     def __del__(self):
         self.close()
+    
+    def box(self, entity: _Entity) -> 'objectbox.Box':
+        """
+        Open a box for an entity.
+        
+        :param entity:
+            Entity type of the model
+        """
+        return objectbox.Box(self, entity)
 
     def read_tx(self):
         return objectbox.transaction.read(self)
