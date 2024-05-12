@@ -24,7 +24,7 @@ class Query:
 
     def find(self) -> list:
         """ Finds a list of objects matching query. """
-        with self._store.read_tx():
+        with self._store.read_tx():  # We need a read transaction to ensure the object data stays valid
             # OBX_bytes_array*
             c_bytes_array_p = obx_query_find(self._c_query)
             try:
@@ -56,21 +56,22 @@ class Query:
     def find_with_scores(self):
         """ Finds objects matching the query associated to their query score (e.g. distance in NN search).
         The result is sorted by score in ascending order. """
-        c_bytes_score_array_p = obx_query_find_with_scores(self._c_query)
-        try:
-            # OBX_bytes_score_array
-            c_bytes_score_array: OBX_bytes_score_array = c_bytes_score_array_p.contents
-            result = []
-            for i in range(c_bytes_score_array.count):
-                c_bytes_score: OBX_bytes_score = c_bytes_score_array.bytes_scores[i]
-                data = c_voidp_as_bytes(c_bytes_score.data, c_bytes_score.size)
-                score = c_bytes_score.score
+        with self._store.read_tx():  # We need a read transaction to ensure the object data stays valid
+            c_bytes_score_array_p = obx_query_find_with_scores(self._c_query)
+            try:
+                # OBX_bytes_score_array
+                c_bytes_score_array: OBX_bytes_score_array = c_bytes_score_array_p.contents
+                result = []
+                for i in range(c_bytes_score_array.count):
+                    c_bytes_score: OBX_bytes_score = c_bytes_score_array.bytes_scores[i]
+                    data = c_voidp_as_bytes(c_bytes_score.data, c_bytes_score.size)
+                    score = c_bytes_score.score
 
-                object_ = self._box._entity.unmarshal(data)
-                result.append((object_, score))
-            return result
-        finally:
-            obx_bytes_score_array_free(c_bytes_score_array_p)
+                    object_ = self._box._entity.unmarshal(data)
+                    result.append((object_, score))
+                return result
+            finally:
+                obx_bytes_score_array_free(c_bytes_score_array_p)
 
     def find_ids_with_scores(self) -> List[Tuple[int, float]]:
         """ Finds object IDs matching the query associated to their query score (e.g. distance in NN search).
@@ -125,18 +126,19 @@ class Query:
         num_el = len(value)
         obx_query_param_vector_float32(self._c_query, self._entity.id, prop_id, c_value, num_el)
         return self
-    
+
     def offset(self, offset: int):
         return obx_query_offset(self._c_query, offset)
-    
+
     def limit(self, limit: int):
         return obx_query_limit(self._c_query, limit)
 
     def set_parameter_alias_string(self, alias: str, value: str):
-        return obx_query_param_alias_string(self._c_query,c_str(alias), c_str(value))
+        return obx_query_param_alias_string(self._c_query, c_str(alias), c_str(value))
 
     def set_parameter_alias_int(self, alias: str, value: int):
         return obx_query_param_alias_int(self._c_query, c_str(alias), value)
 
     def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]):
-        return obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float), len(value))
+        return obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float),
+                                                    len(value))
