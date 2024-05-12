@@ -881,6 +881,9 @@ obx_query_find_ids = c_fn('obx_query_find_ids', OBX_id_array_p, [OBX_query_p])
 # OBX_C_API OBX_id_score_array* obx_query_find_ids_with_scores(OBX_query* query);
 obx_query_find_ids_with_scores = c_fn('obx_query_find_ids_with_scores', OBX_id_score_array_p, [OBX_query_p])
 
+# OBX_C_API OBX_id_array* obx_query_find_ids_by_score(OBX_query* query);
+obx_query_find_ids_by_score = c_fn('obx_query_find_ids_by_score', OBX_id_array_p, [OBX_query_p])
+
 # OBX_C_API obx_err obx_query_count(OBX_query* query, uint64_t* out_count);
 obx_query_count = c_fn_rc('obx_query_count', [OBX_query_p, ctypes.POINTER(ctypes.c_uint64)])
 

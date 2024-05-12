@@ -88,6 +88,20 @@ class Query:
         finally:
             obx_id_score_array_free(c_id_score_array_p)
 
+    def find_ids_by_score(self) -> List[int]:
+        """ Finds object IDs matching the query ordered by their query score (e.g. distance in NN search).
+        The resulting list of IDs is sorted by score in ascending order. """
+        # TODO extract utility function for ID array conversion
+        c_id_array_p = obx_query_find_ids_by_score(self._c_query)
+        try:
+            c_id_array: OBX_id_array = c_id_array_p.contents
+            if c_id_array.count == 0:
+                return []
+            ids = ctypes.cast(c_id_array.ids, ctypes.POINTER(obx_id * c_id_array.count))
+            return list(ids.contents)
+        finally:
+            obx_id_array_free(c_id_array_p)
+
     def count(self) -> int:
         count = ctypes.c_uint64()
         obx_query_count(self._c_query, ctypes.byref(count))
