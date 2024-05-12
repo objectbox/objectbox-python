@@ -63,5 +63,10 @@ clean:					## Clean build artifacts
 	rm -rf *.egg-info
 
 publish:				## Publish the package built by `make build`
-	set -e ; \
-	${PYTHON} -m twine upload --verbose dist/objectbox*.whl
+	set -e
+	@echo "****************************************************************"
+	@echo ">>>  Please enter the API token when asked for a password.  <<<"
+	@echo ">>>  The API token starts with the prefix 'pypi-'.          <<<"
+	@echo ">>>  See https://pypi.org/help/#apitoken for details.       <<<"
+	@echo "****************************************************************"
+	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox*.whl
