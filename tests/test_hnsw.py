@@ -192,6 +192,16 @@ def _test_combined_nn_search(distance_type: VectorDistanceType = VectorDistanceT
     assert search_results[0] == 4
     assert search_results[1] == 5
 
+    # Test empty result
+    query.offset(999)
+    assert len(query.find_ids()) == 0
+    assert len(query.find_ids_with_scores()) == 0
+    assert len(query.find_ids_by_score()) == 0
+    numpy_result = query.find_ids_by_score_numpy()
+    assert numpy_result.size == 0
+    assert str(numpy_result.dtype) == "uint64"
+    assert len(numpy_result) == 0
+
 
 def test_combined_nn_search():
     """ Tests NN search combined with regular query conditions, offset and limit. """

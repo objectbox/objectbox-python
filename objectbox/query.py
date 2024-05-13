@@ -110,11 +110,10 @@ class Query:
         try:
             c_id_array: OBX_id_array = c_id_array_p.contents
             c_count = c_id_array.count
-            if c_count == 0:
-                return []
-            c_ids = ctypes.cast(c_id_array.ids, ctypes.POINTER(obx_id))
             numpy_array = np.empty(c_count, dtype=np.uint64)
-            ctypes.memmove(numpy_array.ctypes.data, c_ids, numpy_array.nbytes)
+            if c_count > 0:
+                c_ids = ctypes.cast(c_id_array.ids, ctypes.POINTER(obx_id))
+                ctypes.memmove(numpy_array.ctypes.data, c_ids, numpy_array.nbytes)
             return numpy_array
         finally:
             obx_id_array_free(c_id_array_p)
