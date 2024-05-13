@@ -21,7 +21,7 @@ from math import floor
 from datetime import datetime
 from objectbox.c import *
 from objectbox.model.properties import Property
-
+import threading
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
@@ -46,7 +46,8 @@ class _Entity(object):
         self.offset_properties = list()  # List[Property]
         self.id_property = None
         self.fill_properties()
-
+        self._tl = threading.local()
+        
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
         object_ = self.cls()
@@ -136,7 +137,10 @@ class _Entity(object):
         setattr(object, self.id_property._name, id)
 
     def marshal(self, object, id: int) -> bytearray:
-        builder = flatbuffers.Builder(256)
+        if not hasattr(self._tl, "builder"):
+            self._tl.builder = flatbuffers.Builder(256)
+        builder = self._tl.builder
+        builder.Clear()
 
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}

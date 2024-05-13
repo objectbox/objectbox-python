@@ -49,7 +49,7 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'flatbuffers==23.5.26',
+       'flatbuffers==24.3.25',
        'numpy'
     ],
 
