@@ -170,6 +170,13 @@ def _test_combined_nn_search(distance_type: VectorDistanceType = VectorDistanceT
     assert search_results[2] == 4
     assert search_results[3] == 2
 
+    search_results = query.find_ids_by_score_numpy()
+    assert search_results.size == 4
+    assert search_results[0] == 9
+    assert search_results[1] == 5
+    assert search_results[2] == 4
+    assert search_results[3] == 2
+
     search_results = query.find_ids()
     assert len(search_results) == 4
     assert search_results[0] == 2
