@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import objectbox_clib
 import ctypes.util
 import os
 import platform
@@ -43,7 +43,7 @@ def shlib_name(library: str) -> str:
 
 
 # initialize the C library
-lib_path = os.path.dirname(os.path.realpath(__file__))
+lib_path = os.path.dirname(os.path.realpath(objectbox_clib.__file__))
 lib_path = os.path.join(lib_path, 'lib',
                         platform.machine() if platform.system() != 'Darwin' else 'macos-universal',
                         shlib_name('objectbox'))

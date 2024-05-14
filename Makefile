@@ -26,6 +26,8 @@ all: depend build test	## Get dependencies, clean, build and test
 
 build: ${VENV} clean	## Clean and build
 	set -e ; \
+	${PYTHON} setup-clib.py bdist_wheel ; \
+	rm -rf build ; \
 	${PYTHON} setup.py bdist_wheel ; \
 	ls -lh dist
 

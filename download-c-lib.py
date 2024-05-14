@@ -12,7 +12,7 @@ variant = 'objectbox'  # or 'objectbox-sync'
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 
 # map between ./objectbox/lib paths and artifact suffixes at https://github.com/objectbox/objectbox-c/releases
-out_dir = "objectbox/lib"
+out_dir = "objectbox_clib/lib"
 files = {
     # header file is the same for all platforms, get it from the linux x86_64 distributable
     "objectbox.h": "linux-x64.tar.gz",

@@ -49,6 +49,7 @@ setuptools.setup(
     ],
 
     install_requires=[
+       'objectbox_clib',
        # A range instead of an exact pin, so we do not force a specific version on users that also depend on
        # flatbuffers via other packages. The lower bound is the previously pinned version known to work; no upper bound as
        # flatbuffers uses date-based versions (no semver), so its "major" version does not indicate breaking changes.
@@ -56,17 +57,5 @@ setuptools.setup(
        'numpy'
     ],
 
-    packages=setuptools.find_packages(exclude=['exampl*']), 
-    package_data={
-        'objectbox': [
-            # Linux, macOS
-            'lib/x86_64/*',
-            'lib/aarch64/*',
-            'lib/armv7l/*',
-            'lib/armv6l/*',
-            'lib/macos-universal/*',
-            # Windows
-            'lib/AMD64/*',
-        ],
-    }
+    packages=setuptools.find_packages(exclude=['exampl*','objectbox_cli*']), 
 )
