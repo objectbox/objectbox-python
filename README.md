@@ -64,6 +64,8 @@ box.remove(person)    # Delete
 
 Getting started
 ---------------
+Latest version: 4.0.0a0 (2024-05-15)
+
 To install or update the latest version of ObjectBox, run this:
 
 ```bash
