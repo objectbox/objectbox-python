@@ -1,88 +1,56 @@
-ObjectBox Python API
-====================
-[ObjectBox](https://objectbox.io) is a superfast database for objects, now also available for Python (3.4+) with a simple CRUD API.
+ObjectBox Python
+================
+[ObjectBox](https://objectbox.io) Python is a lightweight yet powerful on-device database & vector database.
+Store Python objects and vectors directly with an easy-to-use CRUD API while enjoying exceptional speed and efficiency.
 And because it's an embedded database, there's no setup required.
 
 Its advanced vector search empowers AI for a variety of applications, including RAG AI, generative AI,
-and similarity searches. Designed for high performance, the ObjectBox database is excellent for mobile and IoT devices,
-minimizing CPU, memory, and battery usage to enhance device efficiency and sustainability.
-As an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online. 
+and similarity searches.
 
+Designed for high performance, the ObjectBox database runs locally on-device.
+As an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
+(via [Sync](https://objectbox.io/sync/)).
 
-## Table of Contents:
+_Table of Contents_
+
+- [Feature Highlights](#feature-highlights)
+- [Code Example (CRUD - Create, Read, Update, Delete)](#code-example-crud---create-read-update-delete)
 - [Getting Started](#getting-started)
-   - [Model IDs and UIDs](#model-ids-and-uids)
-   - [model.py](#modelpy)
-- [Using ObjectBox](#using-objectbox)
-- [Some features](#some-features)
-- [Coming in the future](#coming-in-the-future)
+- [Alpha Notes](#alpha-notes)
 - [Help wanted](#help-wanted)
 - [Feedback](#feedback)
 - [License](#license)
 
----
+Feature Highlights
+------------------
 
-Getting started
----------------
-First of all, install the latest version:
+🏁 **On-device vector database** - for AI apps that work any place.\
+🏁 **High performance** - superfast response rates enabling real-time applications.\
+🪂 **ACID compliant** - Atomic, Consistent, Isolated, Durable.\
+🌱 **Scalable** - grows with your app, handling millions of objects with ease.\
+💚 **Sustainable** - frugal on CPU, Memory and battery / power use, reducing CO2 emissions.\
+💐 **[Queries](https://docs.objectbox.io/queries)** - filter data as needed, even across relations.\
+💻 **Multiplatform** - Get native speed on your favorite platforms.\
+* Linux x86-64 (64-bit)
+* Linux ARMv6hf (e.g. Raspberry PI Zero)
+* Linux ARMv7hf (e.g. Raspberry PI 3)
+* Linux ARMv8   (e.g. Raspberry PI 4, 5, etc.)
+* MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
+* Windows x86-64 (64-bit)
 
-```bash
-pip install --upgrade objectbox
-```
+#### Code Example (CRUD - Create, Read, Update, Delete)
 
-To start using ObjectBox as a storage for your data, you need to define your model first.
-The model consists of Python classes annotated with `@Entity` decorator.
-
-### Model IDs and UIDs
-
-Each Entity has to have an ID (unique among entities).
-Properties need an ID as well (unique inside one Entity).
-Both Entities and Properties must also have an UID, which is a globally unique identifier.
-
-For other ObjectBox supported languages, the binding takes care of assigning these IDs/UIDs but this feature is not yet implemented for Python.
-To learn more, see [ObjectBox Java documentation](https://docs.objectbox.io/advanced/meta-model-ids-and-uids)
-
-#### model.py
-
-```python
-from objectbox.model import *
-
-@Entity(id=1, uid=1)
-class Person:
-    id = Id(id=1, uid=1001)
-    name = Property(str, id=2, uid=1002)
-    is_enabled = Property(bool, id=3, uid=1003)
-    # int can be stored with 64 (default), 32, 16 or 8 bit precision.
-    int64 = Property(int, id=4, uid=1004)
-    int32 = Property(int, type=PropertyType.int, id=5, uid=1005)
-    int16 = Property(int, type=PropertyType.short, id=6, uid=1006)
-    int8 = Property(int, type=PropertyType.byte, id=7, uid=1007)
-    # float can be stored with 64 or 32 (default) bit precision.
-    float64 = Property(float, id=8, uid=1008)
-    float32 = Property(float, type=PropertyType.float, id=9, uid=1009)
-    byte_array = Property(bytes, id=10, uid=1010)
-    # Regular properties are not stored.
-    transient = ""
-```
-
-### Using ObjectBox
-
-To actually use the database, you create a Store with the model you've just defined.
-Afterwards, you can reuse the instance (`store` in the example below) and use it to access "Entity Boxes" which hold your objects.
-
-#### program.py
+What does using ObjectBox in Python look like?
 
 ```python
 import objectbox
+
 # from mypackage.model import Person
 
-# Configure ObjectBox: should be done only once in the whole program and the "store" variable should be kept around
-model = objectbox.Model()
-model.entity(Person, last_property_id=objectbox.model.IdUid(10, 1010))
-model.last_entity_id = objectbox.model.IdUid(1, 1)
+# The ObjectBox Store represents a database; keep it around...
 store = objectbox.Store(model=model)
 
-# Open the box of "Person" entity. This can be called many times but you can also pass the variable around
+# Get a box for the "Person" entity; a Box is the main interaction point with objects and the database.
 box = store.box(Person)
 
 person = Person()
@@ -94,65 +62,44 @@ box.put(person)       # Update
 box.remove(person)    # Delete
 ```
 
-Additionally, see the [TaskList example app](https://github.com/objectbox/objectbox-python/tree/main/example). After checking out this repository to run the example:
+Getting started
+---------------
+To install or update the latest version of ObjectBox, run this:
+
+```bash
+pip install --upgrade --pre objectbox  # "--pre" because you want to get the 4.0.0 alpha version
 ```
-// Set up virtual environment, download ObjectBox libraries
-make depend
+Now you are ready to use ObjectBox in your Python project.
 
-// Activate virtual environment...
-// ...on Linux
-source .venv/bin/activate
-// ...on Windows
-.venv\Scripts\activate
+Head over to the **[ObjectBox documentation](https://docs.objectbox.io)**
+and learn how to setup your first entity classes.
 
-// Run the example
-python3 -m example
+### Examples
 
-// Once done, leave the virtual environment
-deactivate
-```
+Do you prefer to dive right into working examples?
+We have you covered in the [example](example/) folder.
+It comes with a task list application and a vector search example using cities.
+Additionally, for AI enthusiasts, we provide an "ollama" example,
+which integrates a local LLM (via [ollama](https://ollama.com))
+with ObjectBox to manage and search embeddings effectively.
 
-For more information and code examples, see the tests folder. The docs for other languages may also help you understand the basics.
-
-* ObjectBox Java/Dart/Flutter - https://docs.objectbox.io
-* ObjectBox Go - https://golang.objectbox.io
-* ObjectBox Swift - https://swift.objectbox.io
-
-Some features
--------------
-* Automatic transactions (ACID compliant)
-* Bulk operations
-* Vector types, e.g. for AI vector embeddings
-* Platforms supported with native speed:
-  * Linux x86-64 (64-bit)
-  * Linux ARMv6hf (e.g. Raspberry PI Zero)
-  * Linux ARMv7hf (e.g. Raspberry PI 3; available only on request)
-  * Linux ARMv8   (e.g. Raspberry PI 4)
-  * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
-  * Windows x86-64 (64-bit)
-
-Coming in the future
---------------------
-The goodness you know from the other ObjectBox language-bindings, e.g.,
-
-* model management (no need to manually set id/uid)
-* automatic model migration (no schema upgrade scripts etc.)
-* powerful queries
-* relations (to-one, to-many)
-* asynchronous operations
-* secondary indexes
+Alpha Notes
+-----------
+While ObjectBox Python is powered by a rock stable core written in C/C++, we label our Python binding still "alpha."
+We do this to manage expectations as some quality of life improvements are yet to come to our Python binding.
+This is mostly about "model management," which still requires you to do some manual coding setup, e.g. for model IDs.
+The final release will take care of this for you automatically.
 
 Help wanted
 -----------
-ObjectBox for Python is still in an early stage with limited feature set (compared to our other supported languages).
-To bring all these features to Python, we're asking the community to help out. PRs are more than welcome!
+ObjectBox for Python is open to contributions.
 The ObjectBox team will try its best to guide you and answer questions.
 See [CONTRIBUTING.md](https://github.com/objectbox/objectbox-python/blob/main/CONTRIBUTING.md) to get started.
 
 Feedback
 --------
-Also, please let us know your feedback by opening an issue: for example, if you experience errors or if you have ideas
-for how to improve the API. Thanks!
+We are looking for your feedback!
+Please let us know what you think about ObjectBox for Python and how we can improve it.
 
 License
 -------
