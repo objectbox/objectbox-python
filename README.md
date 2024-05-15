@@ -2,7 +2,13 @@ ObjectBox Python API
 ====================
 [ObjectBox](https://objectbox.io) is a superfast database for objects, now also available for Python (3.4+) with a simple CRUD API.
 And because it's an embedded database, there's no setup required.
- 
+
+Its advanced vector search empowers AI for a variety of applications, including RAG AI, generative AI,
+and similarity searches. Designed for high performance, the ObjectBox database is excellent for mobile and IoT devices,
+minimizing CPU, memory, and battery usage to enhance device efficiency and sustainability.
+As an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online. 
+
+
 ## Table of Contents:
 - [Getting Started](#getting-started)
    - [Model IDs and UIDs](#model-ids-and-uids)
