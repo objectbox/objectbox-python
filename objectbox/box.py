@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
 
 
 from objectbox.model.entity import _Entity
-from objectbox.objectbox import ObjectBox
+from objectbox.store import Store
 from objectbox.query_builder import QueryBuilder
 from objectbox.condition import QueryCondition
 from objectbox.c import *
 
 
 class Box:
-    def __init__(self, ob: ObjectBox, entity: _Entity):
+    def __init__(self, store: Store, entity: _Entity):
         if not isinstance(entity, _Entity):
             raise Exception("Given type is not an Entity")
 
-        self._ob = ob
+        self._store = store 
         self._entity = entity
-        self._c_box = obx_box(ob._c_store, entity.id)
+        self._c_box = obx_box(store._c_store, entity.id)
 
     def is_empty(self) -> bool:
         is_empty = ctypes.c_bool()
@@ -109,17 +109,20 @@ class Box:
             self._entity.set_object_id(objects[k], ids[k])
 
     def get(self, id: int):
-        with self._ob.read_tx():
+        with self._store.read_tx():
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
-            obx_box_get(self._c_box, id, ctypes.byref(
-                c_data), ctypes.byref(c_size))
-
+            code : obx_err = obx_box_get(self._c_box, id, ctypes.byref(
+                    c_data), ctypes.byref(c_size))
+            if code == 404:
+                return None
+            elif code != 0:
+                raise CoreException(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
             return self._entity.unmarshal(data)
 
     def get_all(self) -> list:
-        with self._ob.read_tx():
+        with self._store.read_tx():
             # OBX_bytes_array*
             c_bytes_array_p = obx_box_get_all(self._c_box)
 
@@ -143,13 +146,27 @@ class Box:
             id = self._entity.get_object_id(id_or_object)
         else:
             id = id_or_object
-        obx_box_remove(self._c_box, id)
+        code : obx_err = obx_box_remove(self._c_box, id)
+        if code == 404:
+            return False
+        elif code != 0:
+            raise CoreException(code)
+        return True
 
     def remove_all(self) -> int:
         count = ctypes.c_uint64()
         obx_box_remove_all(self._c_box, ctypes.byref(count))
         return int(count.value)
-    
-    def query(self, condition: QueryCondition) -> QueryBuilder:
-        qb = QueryBuilder(self._ob, self, self._entity, condition)
+
+    def query(self, condition: Optional[QueryCondition] = None) -> QueryBuilder:
+        """ Creates a QueryBuilder for the Entity that is managed by the Box.
+
+        :param condition:
+            If given, applies the given high-level condition to the new QueryBuilder object.
+            Useful for a user-friendly API design; for example:
+                ``box.query(name_property.equals("Johnny")).build()``
+        """
+        qb = QueryBuilder(self._store, self)
+        if condition is not None:
+            condition.apply(qb)
         return qb

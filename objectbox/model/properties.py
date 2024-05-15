@@ -1,4 +1,4 @@
-# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from enum import IntEnum
-
-from objectbox.condition import QueryCondition, _ConditionOp
-from objectbox.c import *
 import flatbuffers.number_types
 import numpy as np
+from dataclasses import dataclass
+
+from objectbox.c import *
+from objectbox.condition import PropertyQueryCondition, PropertyQueryConditionOp
 
 
 class PropertyType(IntEnum):
@@ -72,42 +73,91 @@ fb_type_map = {
 
 
 class IndexType(IntEnum):
-    value = OBXPropertyFlags_INDEXED
-    hash = OBXPropertyFlags_INDEX_HASH
-    hash64 = OBXPropertyFlags_INDEX_HASH64
+    VALUE = OBXPropertyFlags_INDEXED
+    HASH = OBXPropertyFlags_INDEX_HASH
+    HASH64 = OBXPropertyFlags_INDEX_HASH64
+
+
+@dataclass
+class Index:
+    id: int
+    uid: int
+    # TODO HNSW isn't a type but HASH and HASH64 are, remove type member and make HashIndex and Hash64Index classes?
+    type: IndexType = IndexType.VALUE
+
+
+class HnswFlags(IntEnum):
+    NONE = 0
+    DEBUG_LOGS = 1
+    DEBUG_LOGS_DETAILED = 2
+    VECTOR_CACHE_SIMD_PADDING_OFF = 4
+    REPARATION_LIMIT_CANDIDATES = 8
+
+
+class VectorDistanceType(IntEnum):
+    UNKNOWN = OBXVectorDistanceType_UNKNOWN
+    EUCLIDEAN = OBXVectorDistanceType_EUCLIDEAN
+    COSINE = OBXVectorDistanceType_COSINE
+    DOT_PRODUCT = OBXVectorDistanceType_DOT_PRODUCT
+    DOT_PRODUCT_NON_NORMALIZED = OBXVectorDistanceType_DOT_PRODUCT_NON_NORMALIZED
+
+VectorDistanceType.UNKNOWN.__doc__ = "Not a real type, just best practice (e.g. forward compatibility)"
+VectorDistanceType.EUCLIDEAN.__doc__ = "The default; typically 'euclidean squared' internally."
+VectorDistanceType.COSINE.__doc__ = """
+Cosine similarity compares two vectors irrespective of their magnitude (compares the angle of two vectors).
+Often used for document or semantic similarity.
+Value range: 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
+"""
+VectorDistanceType.DOT_PRODUCT.__doc__ = """
+For normalized vectors (vector length == 1.0), the dot product is equivalent to the cosine similarity.
+Because of this, the dot product is often preferred as it performs better.
+Value range (normalized vectors): 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
+"""
+VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED.__doc__ = """
+A custom dot product similarity measure that does not require the vectors to be normalized.
+Note: this is no replacement for cosine similarity (like DotProduct for normalized vectors is).
+The non-linear conversion provides a high precision over the entire float range (for the raw dot product).
+The higher the dot product, the lower the distance is (the nearer the vectors are).
+The more negative the dot product, the higher the distance is (the farther the vectors are).
+Value range: 0.0 - 2.0 (nonlinear; 0.0: nearest, 1.0: orthogonal, 2.0: farthest)
+"""
+
+@dataclass
+class HnswIndex:
+    id: int
+    uid: int
+    dimensions: int
+    neighbors_per_node: Optional[int] = None
+    indexing_search_count: Optional[int] = None
+    flags: HnswFlags = HnswFlags.NONE
+    distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN
+    reparation_backlink_probability: Optional[float] = None
+    vector_cache_hint_size_kb: Optional[float] = None
 
 
 class Property:
-    def __init__(self, py_type: type, id: int, uid: int, type: PropertyType = None, index: bool = None, index_type: IndexType = None):
-        self._id = id
-        self._uid = uid
+    def __init__(self, pytype: Type, **kwargs):
+        self._id = kwargs['id']
+        self._uid = kwargs['uid']
         self._name = ""  # set in Entity.fill_properties()
 
-        self._py_type = py_type
-        self._ob_type = type if type != None else self.__determine_ob_type()
+        self._py_type = pytype
+        self._ob_type = kwargs['type'] if 'type' in kwargs else self._determine_ob_type()
         self._fb_type = fb_type_map[self._ob_type]
 
         self._is_id = isinstance(self, Id)
-        self._flags = OBXPropertyFlags(0)
-        self.__set_flags()
+        self._flags = 0
 
         # FlatBuffers marshalling information
         self._fb_slot = self._id - 1
-        self._fb_v_offset = 4 + 2*self._fb_slot
+        self._fb_v_offset = 4 + 2 * self._fb_slot
 
-        if index_type:
-            if index == True or index == None:
-                self._index = True
-                self._index_type = index_type
-            elif index == False:
-                raise Exception(f"trying to set index type on property with id {self._id} while index is set to False")
-        else:
-            self._index = index if index != None else False
-            if index:
-                self._index_type = IndexType.value if self._py_type != str else IndexType.hash
+        self._index = kwargs.get('index', None)
 
+        self._set_flags()
 
-    def __determine_ob_type(self) -> OBXPropertyType:
+    def _determine_ob_type(self) -> OBXPropertyType:
+        """ Tries to infer the OBX property type from the Python type. """
         ts = self._py_type
         if ts == str:
             return OBXPropertyType_String
@@ -124,45 +174,65 @@ class Property:
         else:
             raise Exception("unknown property type %s" % ts)
 
-    def __set_flags(self):
+    def _set_flags(self):
         if self._is_id:
-            self._flags = OBXPropertyFlags_ID
+            self._flags |= OBXPropertyFlags_ID
 
-    def op(self, op: _ConditionOp, value, case_sensitive: bool = True) -> QueryCondition:
-        return QueryCondition(self._id, op, value, case_sensitive)
+        if self._index is not None:
+            self._flags |= OBXPropertyFlags_INDEXED
+            if isinstance(self._index, Index):  # Generic index
+                self._flags |= self._index.type
 
-    def equals(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.eq, value, case_sensitive)
-        
-    def not_equals(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.notEq, value, case_sensitive)
-    
-    def contains(self, value: str, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.contains, value, case_sensitive)
-    
-    def starts_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.startsWith, value, case_sensitive)
-    
-    def ends_with(self, value: str, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.endsWith, value, case_sensitive)
-    
-    def greater_than(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.gt, value, case_sensitive)
-    
-    def greater_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.greaterOrEq, value, case_sensitive)
-    
-    def less_than(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.lt, value, case_sensitive)
-    
-    def less_or_equal(self, value, case_sensitive: bool = True) -> QueryCondition:
-        return self.op(_ConditionOp.lessOrEq, value, case_sensitive)
-    
-    def between(self, value_a, value_b) -> QueryCondition:
-        return QueryCondition(self._id, _ConditionOp.between, value_a, value_b)
-    
+    def equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
+
+    def not_equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
+
+    def contains(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS, args)
+
+    def starts_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.STARTS_WITH, args)
+
+    def ends_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.ENDS_WITH, args)
+
+    def greater_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+
+    def greater_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+
+    def less_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+
+    def less_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+
+    def between(self, a, b) -> PropertyQueryCondition:
+        args = {'a': a, 'b': b}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.BETWEEN, args)
+
+    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
+        args = {'query_vector': query_vector, 'element_count': element_count}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
+
+    def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)
+
 
 # ID property (primary key)
 class Id(Property):
     def __init__(self, py_type: type = int, id: int = 0, uid: int = 0):
-        super(Id, self).__init__(py_type, id, uid)
+        super(Id, self).__init__(py_type, id=id, uid=uid)

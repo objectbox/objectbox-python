@@ -1,13 +1,7 @@
 import pytest
 import objectbox
 from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex
-from tests.common import (
-    autocleanup,
-    load_empty_test_objectbox,
-    load_empty_test_datetime,
-    load_empty_test_flex,
-    assert_equal,
-)
+from tests.common import *
 import numpy as np
 from datetime import datetime
 import time
@@ -15,8 +9,8 @@ from math import floor
 
 
 def test_box_basics():
-    ob = load_empty_test_objectbox()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
 
     assert box.is_empty()
     assert box.count() == 0
@@ -83,26 +77,29 @@ def test_box_basics():
 
     # remove
     box.remove(object)
-    box.remove(1)
+
+    # remove should return success  
+    success = box.remove(1)
+    assert success == True
+    success = box.remove(1)
+    assert success == False
 
     # check they're gone
     assert box.count() == 0
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(object.id)
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(1)
+    assert box.get(object.id) == None
+    assert box.get(1) == None
 
-    ob.close()
+    store.close()
 
 
 def test_box_bulk():
-    ob = load_empty_test_objectbox()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
 
-    box.put(TestEntity("first"))
+    box.put(TestEntity(str="first"))
 
-    objects = [TestEntity("second"), TestEntity("third"),
-               TestEntity("fourth"), box.get(1)]
+    objects = [TestEntity(str="second"), TestEntity(str="third"),
+               TestEntity(str="fourth"), box.get(1)]
     box.put(objects)
     assert box.count() == 4
     assert objects[0].id == 2
@@ -127,12 +124,12 @@ def test_box_bulk():
     assert removed == 4
     assert box.count() == 0
 
-    ob.close()
+    store.close()
 
 
 def test_datetime():
-    ob = load_empty_test_datetime()
-    box = objectbox.Box(ob, TestEntityDatetime)
+    store = load_empty_test_datetime_store()
+    box = store.box(TestEntityDatetime)
 
     assert box.is_empty()
     assert box.count() == 0
@@ -172,20 +169,18 @@ def test_datetime():
     assert pytest.approx(read.date.timestamp()) == object.date.timestamp()
 
     # remove
-    box.remove(object)
+    success = box.remove(object)
+    assert success == True
 
     # check they're gone
     assert box.count() == 0
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(object.id)
-    with pytest.raises(objectbox.NotFoundException):
-        box.get(1)
+    assert box.get(object.id) == None
+    assert box.get(1) == None
 
-    ob.close()
+    store.close()
 
 
 def test_flex():
-
     def test_put_get(object: TestEntity, box: objectbox.Box, property):
         object.flex = property
         id = box.put(object)
@@ -193,8 +188,8 @@ def test_flex():
         read = box.get(object.id)
         assert read.flex == object.flex
 
-    ob = load_empty_test_objectbox()
-    box = objectbox.Box(ob, TestEntity)
+    store = load_empty_test_default_store()
+    box = store.box(TestEntity)
     object = TestEntity()
 
     # Put an empty object
@@ -221,7 +216,7 @@ def test_flex():
 
     # Update to dict
     test_put_get(object, box, {"a": 1, "b": 2})
-    
+
     # Update to bool
     test_put_get(object, box, True)
 
@@ -231,25 +226,36 @@ def test_flex():
     # Update to list inside dict
     test_put_get(object, box, {"a": 1, "b": [1, 2, 3]})
 
-    ob.close()
+    store.close()
 
 
-def test_flex_dict():
-    ob = load_empty_test_flex()
-    box = objectbox.Box(ob, TestEntityFlex)
-    object = TestEntityFlex()
+def test_flex_values():
+    store = create_test_store()
 
-    # Put an empty object
-    id = box.put(object)
-    assert id == object.id
-    read = box.get(object.id)
-    assert read.flex_dict == None
-    assert read.flex_int == None
+    box = store.box(TestEntityFlex)
 
-    object.flex_dict = {"a": 1, "b": 2}
-    object.flex_int = 25
-    id = box.put(object)
-    assert id == object.id
-    read = box.get(object.id)
-    assert read.flex_dict == object.flex_dict
-    assert read.flex_int == object.flex_int
+    # Test empty object
+    obj_id = box.put(TestEntityFlex())
+    read_obj = box.get(obj_id)
+    assert read_obj.flex is None
+
+    # Test int
+    obj_id = box.put(TestEntityFlex(flex=23))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == 23
+
+    # Test string
+    obj_id = box.put(TestEntityFlex(flex="hello"))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == "hello"
+
+    # Test mixed list
+    obj_id = box.put(TestEntityFlex(flex=[4, 5, 1, "foo", 23, "bar"]))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == [4, 5, 1, "foo", 23, "bar"]
+
+    # Test dictionary
+    dict_ = {"a": 1, "b": {"list": [1, 2, 3], "int": 5}}
+    obj_id = box.put(TestEntityFlex(flex=dict_))
+    read_obj = box.get(obj_id)
+    assert read_obj.flex == dict_

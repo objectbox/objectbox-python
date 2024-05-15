@@ -1,7 +1,7 @@
 pip
 setuptools
 wheel
-flatbuffers==23.5.26
+flatbuffers==24.3.25
 pytest>=4.4.1
 twine
 numpy

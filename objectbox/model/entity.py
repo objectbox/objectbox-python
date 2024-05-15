@@ -1,4 +1,4 @@
-# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ from math import floor
 from datetime import datetime
 from objectbox.c import *
 from objectbox.model.properties import Property
-
+import threading
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
@@ -46,9 +46,16 @@ class _Entity(object):
         self.offset_properties = list()  # List[Property]
         self.id_property = None
         self.fill_properties()
-
-    def __call__(self, *args):
-        return self.cls(*args)
+        self._tl = threading.local()
+        
+    def __call__(self, **properties):
+        """ The constructor of the user Entity class. """
+        object_ = self.cls()
+        for prop_name, prop_val in properties.items():
+            if not hasattr(object_, prop_name):
+                raise Exception(f"Entity {self.name} has no property \"{prop_name}\"")
+            setattr(object_, prop_name, prop_val)
+        return object_
 
     def fill_properties(self):
         # TODO allow subclassing and support entities with __slots__ defined
@@ -90,6 +97,24 @@ class _Entity(object):
         elif self.id_property._ob_type != OBXPropertyType_Long:
             raise Exception("ID property must be an int")
 
+    def get_property(self, name: str):
+        """ Gets the property having the given name. """
+        for prop in self.properties:
+            if prop._name == name:
+                return prop
+        raise Exception(f"Property \"{name}\" not found in Entity: \"{self.name}\"")
+
+    def get_property_id(self, prop: Union[int, str, Property]) -> int:
+        """ A convenient way to get the property ID regardless having its ID, name or Property. """
+        if isinstance(prop, int):
+            return prop  # We already have it!
+        elif isinstance(prop, str):
+            return self.get_property(prop)._id
+        elif isinstance(prop, Property):
+            return prop._id
+        else:
+            raise Exception(f"Unsupported Property type: {type(prop)}")
+
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop._name)
@@ -112,7 +137,10 @@ class _Entity(object):
         setattr(object, self.id_property._name, id)
 
     def marshal(self, object, id: int) -> bytearray:
-        builder = flatbuffers.Builder(256)
+        if not hasattr(self._tl, "builder"):
+            self._tl.builder = flatbuffers.Builder(256)
+        builder = self._tl.builder
+        builder.Clear()
 
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}
@@ -228,12 +256,8 @@ class _Entity(object):
         return obj
 
 
-# entity decorator - wrap _Entity to allow @Entity(id=, uid=), i.e. no class argument
-def Entity(cls=None, id: int = 0, uid: int = 0):
-    if cls:
-        return _Entity(cls, id, uid)
-    else:
-        def wrapper(cls):
-            return _Entity(cls, id, uid)
-
-        return wrapper
+def Entity(id: int = 0, uid: int = 0) -> Callable[[Type], _Entity]:
+    """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
+    def wrapper(class_):
+        return _Entity(class_, id, uid)
+    return wrapper

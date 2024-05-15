@@ -1,4 +1,4 @@
-# Copyright 2019-2023 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ from contextlib import contextmanager
 
 
 @contextmanager
-def read(ob: 'ObjectBox'):
-    tx = obx_txn_read(ob._c_store)
+def read(store: 'Store'):
+    tx = obx_txn_read(store._c_store)
     try:
         yield
     finally:
@@ -26,8 +26,8 @@ def read(ob: 'ObjectBox'):
 
 
 @contextmanager
-def write(ob: 'ObjectBox'):
-    tx = obx_txn_write(ob._c_store)
+def write(store: 'Store'):
+    tx = obx_txn_write(store._c_store)
     try:
         yield
         obx_txn_success(tx)

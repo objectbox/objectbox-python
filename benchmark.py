@@ -1,7 +1,7 @@
 import objectbox
 import time
 from tests.model import TestEntity
-from tests.common import remove_test_dir, load_empty_test_objectbox
+from tests.common import remove_test_dir, load_empty_test_default_store
 
 
 class ObjectBoxPerf:
@@ -10,8 +10,8 @@ class ObjectBoxPerf:
     """
 
     def __init__(self):
-        self.ob = load_empty_test_objectbox()
-        self.box = objectbox.Box(self.ob, TestEntity)
+        self.store = load_empty_test_default_store()
+        self.box = store.box(TestEntity)
 
     def remove_all(self):
         self.box.remove_all()

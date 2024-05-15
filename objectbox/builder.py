@@ -1,4 +1,4 @@
-# Copyright 2019-2021 ObjectBox Ltd. All rights reserved.
+# Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,34 +15,27 @@
 
 from objectbox.c import *
 from objectbox.model import Model
-from objectbox.objectbox import ObjectBox
-
+from objectbox.store import Store
+from objectbox.store_options import StoreOptions
+from warnings import warn
 
 class Builder:
     def __init__(self):
-        self._model = Model()
-        self._directory = ''
+        """This throws a deprecation warning on initialization."""
+        warn(f'Using {self.__class__.__name__} is deprecated, please use Store(model=, directory= ...) from objectbox.store.', DeprecationWarning, stacklevel=2)
+        self._kwargs = { }
 
     def directory(self, path: str) -> 'Builder':
-        self._directory = path
+        self._kwargs['directory'] = path
+        return self
+
+    def max_db_size_in_kb(self, size_in_kb: int) -> 'Builder':
+        self._kwargs['max_db_size_in_kb'] = size_in_kb
         return self
 
     def model(self, model: Model) -> 'Builder':
-        self._model = model
-        self._model._finish()
+        self._kwargs['model'] = model
         return self
 
-    def build(self) -> 'ObjectBox':
-        c_options = obx_opt()
-
-        try:
-            if len(self._directory) > 0:
-                obx_opt_directory(c_options, c_str(self._directory))
-
-            obx_opt_model(c_options, self._model._c_model)
-        except CoreException:
-            obx_opt_free(c_options)
-            raise
-
-        c_store = obx_store_open(c_options)
-        return ObjectBox(c_store)
+    def build(self) -> 'Store':
+        return Store(**self._kwargs)

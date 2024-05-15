@@ -49,11 +49,11 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'flatbuffers==23.5.26',
+       'flatbuffers==24.3.25',
        'numpy'
     ],
 
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=['exampl*']), 
     package_data={
         'objectbox': [
             # Linux, macOS
