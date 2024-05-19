@@ -1,14 +1,29 @@
 # ObjectBox-Python Examples
 
-The following examples are available from this repository.
+This directory contains a couple of examples that demonstrate capabilities of ObjectBox using the Python API.
+
+As we are currently short before releasing 4.0 version, please install the pre-release version of `objectbox` from PyPI via `pip`; for example, on UN*X-flavour platforms:
+
+```shell
+cd example # assuming you are in project root dir 
+python3 -m venv venv
+source venv/bin/activate
+pip install --pre objectbox
+```
+
+The following examples are available from this directory:
+
+- `tasks`: CRUD Application Example (see below for details)
+- `vectorsearch-cities`: VectorSearch Application Example (see below for details)
+- `ollama`: LLM + VectorSearch Embeddings Script Example (See [ollama/README.md](./ollama/README.md) for details)
+
 
 ## Application Example: Tasks
 
 This is our classic Tasks application using a CLI.
 
 ```
-cd example
-python -m tasks
+$ python -m tasks
 
 Welcome to the ObjectBox tasks-list app example. Type help or ? for a list of commands.
 > new buy oat
@@ -36,7 +51,8 @@ This example application starts with a pre-defined set of capital cities and the
 It allows to search for nearest neighbors of a city (`city_neighbors`) or by coordinates (`neighbors`) as well as adding more locations (`add`).
 
 ```
-python -m vectorsearch-cities
+$ python -m vectorsearch-cities
+
 Welcome to the ObjectBox vectorsearch-cities example. Type help or ? for a list of commands.
 > ls
 ID   Name                        Latitude  Longitude
