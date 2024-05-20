@@ -1,68 +1,32 @@
+from os import path
+import pytest
+import objectbox
+from objectbox.logger import logger
+from objectbox.store import Store
+from objectbox.model.sync_model import sync_model
+from tests.model import *
+import numpy as np
 from datetime import timezone
 
-import objectbox
-import os
-from os import path
-import shutil
-import pytest
-import numpy as np
-from typing import *
-from tests.model import *
-
-test_dir = 'testdata'
-
-
-def create_default_model() -> objectbox.Model:
+def create_default_model():
     model = objectbox.Model()
-    model.entity(TestEntity, last_property_id=IdUid(28, 1028))
-    model.last_entity_id = IdUid(2, 2)
-    model.last_index_id = IdUid(2, 10002)
+    model.entity(TestEntity)
+    model.entity(TestEntityDatetime)
+    model.entity(TestEntityFlex)
+    model.entity(VectorEntity)
+    sync_model(model)  # Assign IDs/UIDs
     return model
 
 
-def load_empty_test_default_store(db_name: str = test_dir) -> objectbox.Store:
-    model = create_default_model()
-    return objectbox.Store(model=model, directory=db_name)
-
-
-def load_empty_test_datetime_store(name: str = "") -> objectbox.Store:
-    model = objectbox.Model()
-    model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
-    model.last_entity_id = IdUid(2, 2)
-
-    db_name = test_dir if len(name) == 0 else test_dir + "/" + name
-
-    return objectbox.Store(model=model, directory=db_name)
-
-
-def load_empty_test_flex_store(name: str = "") -> objectbox.Store:
-    model = objectbox.Model()
-    model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
-    model.last_entity_id = IdUid(3, 3)
-
-    db_name = test_dir if len(name) == 0 else test_dir + "/" + name
-
-    return objectbox.Store(model=model, directory=db_name)
-
-
-def create_test_store(db_name: Optional[str] = None, clear_db: bool = True) -> objectbox.Store:
+def create_test_store(db_path: str = "testdata", clear_db: bool = True) -> objectbox.Store:
     """ Creates a Store instance with all entities. """
 
-    db_path = test_dir if db_name is None else path.join(test_dir, db_name)
-    print(f"DB path: \"{db_path}\"")
+    is_inmemory = db_path.startswith("memory:")
+    logger.info(f"DB path: {db_path} ({'in-memory' if is_inmemory else ''})")
 
-    if clear_db and path.exists(db_path):
-        shutil.rmtree(db_path)
-
-    model = objectbox.Model()
-    model.entity(TestEntity, last_property_id=IdUid(28, 1028))
-    model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
-    model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
-    model.entity(VectorEntity, last_property_id=IdUid(5, 4005))
-    model.last_entity_id = IdUid(4, 4)
-    model.last_index_id = IdUid(5, 40003)
-
-    return objectbox.Store(model=model, directory=db_path)
+    if clear_db:
+        Store.remove_db_files(db_path)
+    return objectbox.Store(model=create_default_model(), directory=db_path)
 
 
 def assert_equal_prop(actual, expected, default):

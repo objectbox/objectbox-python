@@ -9,7 +9,7 @@ from math import floor
 
 
 def test_box_basics():
-    store = load_empty_test_default_store()
+    store = create_test_store()
     box = store.box(TestEntity)
 
     assert box.is_empty()
@@ -98,7 +98,7 @@ def test_box_basics():
 
 
 def test_box_bulk():
-    store = load_empty_test_default_store()
+    store = create_test_store()
     box = store.box(TestEntity)
 
     box.put(TestEntity(str="first"))
@@ -134,7 +134,7 @@ def test_box_bulk():
 
 
 def test_datetime():
-    store = load_empty_test_datetime_store()
+    store = create_test_store()
     box = store.box(TestEntityDatetime)
 
     assert box.is_empty()
@@ -189,7 +189,7 @@ def test_datetime():
 
 
 def test_datetime_special_values():
-    store = load_empty_test_datetime_store()
+    store = create_test_store()
     box = store.box(TestEntityDatetime)
     assert box.is_empty()
 
@@ -224,7 +224,7 @@ def test_flex():
         read = box.get(object.id)
         assert read.flex == object.flex
 
-    store = load_empty_test_default_store()
+    store = create_test_store()
     box = store.box(TestEntity)
     object = TestEntity()
 

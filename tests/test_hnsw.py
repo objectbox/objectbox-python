@@ -3,7 +3,7 @@ import numpy as np
 import random
 from common import *
 from objectbox.query_builder import QueryBuilder
-
+from typing import *
 
 def _find_expected_nn(points: np.ndarray, query: np.ndarray, n: int):
     """ Given a set of points of shape (N, P) and a query of shape (P), finds the n points nearest to query. """
