@@ -193,11 +193,11 @@ class Store:
             self._c_store = None
             c.obx_store_close(c_store_to_close)
 
-    def remove_db_files(dir):
-        """
-        Remove Database files
+    @staticmethod
+    def remove_db_files(db_dir: str):
+        """ Remove database files.
         
-        :param dir:
-            Path to directory.
+        :param db_dir:
+            Path to DB directory.
         """
-        c.obx_remove_db_files(c.c_str(dir))
+        c.obx_remove_db_files(c.c_str(db_dir))

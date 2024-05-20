@@ -14,29 +14,49 @@
 
 
 from objectbox.logger import logger
+from objectbox.c import *
+from objectbox.model.iduid import IdUid
 from objectbox.model.entity import _Entity
 from objectbox.model.properties import *
-from objectbox.c import *
-
-
-class IdUid:
-    __slots__ = 'id', 'uid'
-
-    def __init__(self, id: int, uid: int):
-        self.id = id
-        self.uid = uid
-
-    def __bool__(self):
-        return self.id != 0 or self.uid != 0
 
 
 class Model:
     def __init__(self):
-        self._entities = list()
-        self._c_model = obx_model()
-        self.last_entity_id = IdUid(0, 0)
-        self.last_index_id = IdUid(0, 0)
-        self.last_relation_id = IdUid(0, 0)
+        self.entities: List[_Entity] = []
+
+        self.last_entity_id = IdUid.unassigned()
+        self.last_index_id = IdUid.unassigned()
+        self.last_relation_id = IdUid.unassigned()
+
+        self._c_model = None
+
+    def entity(self, entity: _Entity):
+        if not isinstance(entity, _Entity):
+            raise Exception(f"Given type is not an Entity ({type(entity)}). "
+                            f"Maybe did you forget the @Entity annotation?")
+        for other_entity in self.entities:  # Linear search (we should't have many entities)
+            if entity.name == other_entity.name:
+                raise Exception(f"Duplicate entity: \"{entity.name}\"")
+        self.entities.append(entity)
+
+    def validate_ids_assigned(self):
+        if not self.last_entity_id.is_assigned():
+            raise Exception("Model last_entity_id not assigned")
+        if not self.last_index_id.is_assigned():
+            raise ValueError("Model last_index_id not assigned")
+        # if not self.last_relation_id.is_assigned(): TODO last_relation_id
+        #     return False
+        # TODO validate last_entity_id value
+        # TODO validate last_index_id value
+        for entity in self.entities:
+            if not entity.id.is_assigned():
+                raise ValueError(f"Entity \"{entity.name}\" id not assigned")
+            for prop in entity.properties:
+                # TODO validate last_property_id value
+                if not prop.id.is_assigned():
+                    raise ValueError(f"Property \"{entity.name}\"->\"{prop.name}\" id not assigned")
+            if not entity.last_property_id.is_assigned():
+                raise ValueError(f"Entity \"{entity.name}\" last_property_id not assigned")
 
     def _set_hnsw_params(self, index: HnswIndex):
         if index.dimensions is not None:
@@ -55,42 +75,34 @@ class Model:
         if index.vector_cache_hint_size_kb is not None:
             obx_model_property_index_hnsw_vector_cache_hint_size_kb(self._c_model, index.vector_cache_hint_size_kb)
 
-    def entity(self, entity: _Entity, last_property_id: IdUid):
-        if not isinstance(entity, _Entity):
-            raise Exception("Given type is not an Entity. Are you passing an instance instead of a type or did you "
-                            "forget the '@Entity' annotation?")
+    def _create_index(self, index: Union[Index, HnswIndex]):
+        if isinstance(index, HnswIndex):
+            self._set_hnsw_params(index)
+        obx_model_property_index_id(self._c_model, index.id.id, index.id.uid)
 
-        entity.last_property_id = last_property_id
+    def _create_property(self, prop: Property):
+        obx_model_property(self._c_model, c_str(prop.name), prop._ob_type, prop.id.id, prop.id.uid)
+        if prop._flags != 0:
+            obx_model_property_flags(self._c_model, prop._flags)
+        if prop.index is not None:
+            self._create_index(prop.index)
 
-        obx_model_entity(self._c_model, c_str(entity.name), entity.id, entity.uid)
+    def _create_entity(self, entity: _Entity):
+        obx_model_entity(self._c_model, c_str(entity.name), entity.id.id, entity.id.uid)
+        for prop in entity.properties:
+            self._create_property(prop)
+        obx_model_entity_last_property_id(self._c_model, entity.last_property_id.id, entity.last_property_id.uid)
 
-        logger.debug(f"Creating entity \"{entity.name}\" (ID={entity.id}, {entity.uid})")
-
-        for property_ in entity.properties:
-            obx_model_property(self._c_model, c_str(property_._name), property_._ob_type, property_._id, property_._uid)
-
-            logger.debug(f"Creating property \"{property_._name}\" (ID={property_._id}, UID={property_._uid})")
-
-            if property_._flags != 0:
-                obx_model_property_flags(self._c_model, property_._flags)
-
-            if property_._index is not None:
-                index = property_._index
-                if isinstance(index, HnswIndex):
-                    self._set_hnsw_params(index)
-                    logger.debug(f"  HNSW index (ID={index.id}, UID{index.uid}); Dimensions: {index.dimensions}")
-                else:
-                    logger.debug(f"  Index (ID={index.id}, UID{index.uid}); Type: {index.type}")
-                obx_model_property_index_id(self._c_model, index.id, index.uid)
-
-        obx_model_entity_last_property_id(self._c_model, last_property_id.id, last_property_id.uid)
-
-    def _finish(self):  # Called by Builder
+    def _create_c_model(self) -> obx_model:  # Called by StoreOptions
+        """ Creates the OBX model by invoking the C API.
+        Before calling this method, IDs/UIDs must be assigned either manually or via sync_model(). """
+        self._c_model = obx_model()
+        for entity in self.entities:
+            self._create_entity(entity)
         if self.last_relation_id:
             obx_model_last_relation_id(self._c_model, self.last_relation_id.id, self.last_relation_id.uid)
-
         if self.last_index_id:
             obx_model_last_index_id(self._c_model, self.last_index_id.id, self.last_index_id.uid)
-
         if self.last_entity_id:
             obx_model_last_entity_id(self._c_model, self.last_entity_id.id, self.last_entity_id.uid)
+        return self._c_model

@@ -22,26 +22,20 @@ from objectbox.c import *
 from objectbox.model.properties import Property
 from objectbox.utils import date_value_to_int
 import threading
+from objectbox.c import *
+from objectbox.model.iduid import IdUid
+from objectbox.model.properties import Property
+
 
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
-    def __init__(self, cls, id: int, uid: int):
-        # currently, ID and UID are mandatory and are not fetched from the model.json
-        if id <= 0:
-            raise Exception(
-                "invalid or no 'id; given in the @Entity annotation")
+    def __init__(self, user_type, id_: IdUid):
+        self.user_type = user_type
+        self.id = id_
+        self.name = user_type.__name__
 
-        if uid <= 0:
-            raise Exception(
-                "invalid or no 'uid' given in the @Entity annotation")
-
-        self.cls = cls
-        self.name = cls.__name__
-        self.id = id
-        self.uid = uid
-
-        self.last_property_id = None  # IdUid - set in model.entity()
+        self.last_property_id = IdUid.unassigned()
 
         self.properties = list()  # List[Property]
         self.offset_properties = list()  # List[Property]
@@ -51,7 +45,7 @@ class _Entity(object):
 
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
-        object_ = self.cls()
+        object_ = self.user_type()
         for prop_name, prop_val in properties.items():
             if not hasattr(object_, prop_name):
                 raise Exception(f"Entity {self.name} has no property \"{prop_name}\"")
@@ -60,20 +54,19 @@ class _Entity(object):
 
     def fill_properties(self):
         # TODO allow subclassing and support entities with __slots__ defined
-        variables = dict(vars(self.cls))
+        variables = dict(vars(self.user_type))
 
         # filter only subclasses of Property
         variables = {k: v for k, v in variables.items(
         ) if issubclass(type(v), Property)}
 
-        for k, prop in variables.items():
-            prop._name = k
+        for prop_name, prop in variables.items():
+            prop.name = prop_name
             self.properties.append(prop)
 
-            if prop._is_id:
+            if prop.is_id():
                 if self.id_property:
-                    raise Exception("duplicate ID property: '%s' and '%s'" % (
-                        self.id_property._name, prop._name))
+                    raise Exception(f"Duplicate ID property: \"{self.id_property.name}\" and \"{prop.name}\"")
                 self.id_property = prop
 
             if prop._fb_type == flatbuffers.number_types.UOffsetTFlags:
@@ -91,7 +84,7 @@ class _Entity(object):
                 ], "programming error - invalid type OB & FB type combination"
                 self.offset_properties.append(prop)
 
-            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop._name, prop._py_type, prop._ob_type, prop._fb_type))
+            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop.name, prop._py_type, prop._ob_type, prop._fb_type))
 
         if not self.id_property:
             raise Exception("ID property is not defined")
@@ -101,7 +94,7 @@ class _Entity(object):
     def get_property(self, name: str):
         """ Gets the property having the given name. """
         for prop in self.properties:
-            if prop._name == name:
+            if prop.name == name:
                 return prop
         raise Exception(f"Property \"{name}\" not found in Entity: \"{self.name}\"")
 
@@ -110,15 +103,15 @@ class _Entity(object):
         if isinstance(prop, int):
             return prop  # We already have it!
         elif isinstance(prop, str):
-            return self.get_property(prop)._id
+            return self.get_property(prop).id.id
         elif isinstance(prop, Property):
-            return prop._id
+            return prop.id.id
         else:
             raise Exception(f"Unsupported Property type: {type(prop)}")
 
     def get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
-        val = getattr(object, prop._name)
+        val = getattr(object, prop.name)
         if prop._py_type == np.ndarray:
             if (val == np.array(prop)).all():
                 return np.array([])
@@ -131,13 +124,15 @@ class _Entity(object):
                 return prop._py_type()  # default (empty) value for the given type
         return val
 
-    def get_object_id(self, object) -> int:
-        return self.get_value(object, self.id_property)
+    def get_object_id(self, obj) -> int:
+        return self.get_value(obj, self.id_property)
 
-    def set_object_id(self, object, id: int):
-        setattr(object, self.id_property._name, id)
+    def set_object_id(self, obj, id_: int):
+        setattr(obj, self.id_property.name, id_)
 
     def marshal(self, object, id: int) -> bytearray:
+        # TODO _assert_ids_assigned
+
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
         builder = self._tl.builder
@@ -146,32 +141,33 @@ class _Entity(object):
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}
         for prop in self.offset_properties:
+            prop_id = prop.id.id
             val = self.get_value(object, prop)
             if prop._ob_type == OBXPropertyType_String:
-                offsets[prop._id] = builder.CreateString(val.encode('utf-8'))
+                offsets[prop_id] = builder.CreateString(val.encode('utf-8'))
             elif prop._ob_type == OBXPropertyType_BoolVector:
                 # Using a numpy bool as it seems to be more consistent in terms of size. TBD
                 # https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.bool
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.bool_))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.bool_))
             elif prop._ob_type == OBXPropertyType_ByteVector:
-                offsets[prop._id] = builder.CreateByteVector(val)
+                offsets[prop_id] = builder.CreateByteVector(val)
             elif prop._ob_type == OBXPropertyType_ShortVector:
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.int16))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.int16))
             elif prop._ob_type == OBXPropertyType_CharVector:
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.uint16))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.uint16))
             elif prop._ob_type == OBXPropertyType_IntVector:
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.int32))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.int32))
             elif prop._ob_type == OBXPropertyType_LongVector:
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.int64))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.int64))
             elif prop._ob_type == OBXPropertyType_FloatVector:
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float32))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.float32))
             elif prop._ob_type == OBXPropertyType_DoubleVector:
-                offsets[prop._id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
+                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
             elif prop._ob_type == OBXPropertyType_Flex:
                 flex_builder = flatbuffers.flexbuffers.Builder()
                 flex_builder.Add(val)
                 buffer = flex_builder.Finish()
-                offsets[prop._id] = builder.CreateByteVector(bytes(buffer))
+                offsets[prop_id] = builder.CreateByteVector(bytes(buffer))
             else:
                 assert False, "programming error - invalid type OB & FB type combination"
 
@@ -180,8 +176,9 @@ class _Entity(object):
 
         # add properties to the FB object
         for prop in self.properties:
-            if prop._id in offsets:
-                val = offsets[prop._id]
+            prop_id = prop.id.id
+            if prop_id in offsets:
+                val = offsets[prop_id]
                 if val:
                     builder.PrependUOffsetTRelative(val)
             else:
@@ -192,21 +189,29 @@ class _Entity(object):
                     val = date_value_to_int(val, 1000000000)  # convert to nanoseconds
                 builder.Prepend(prop._fb_type, val)
 
-            builder.Slot(prop._fb_slot)
+            fb_slot = prop_id - 1
+            # fb_v_offset = 4 + 2 * fb_slot
+            builder.Slot(fb_slot)
 
         builder.Finish(builder.EndObject())
         return builder.Output()
 
     def unmarshal(self, data: bytes):
+        # TODO _assert_ids_assigned
+
         pos = flatbuffers.encode.Get(flatbuffers.packer.uoffset, data, 0)
         table = flatbuffers.Table(data, pos)
 
         # initialize an empty object
-        obj = self.cls()
+        obj = self.user_type()
 
         # fill it with the data read from FlatBuffers
         for prop in self.properties:
-            o = table.Offset(prop._fb_v_offset)
+            prop_id = prop.id.id
+            fb_slot = prop_id - 1
+            fb_v_offset = 4 + 2 * fb_slot
+            # 4 + 2 * fb_slot
+            o = table.Offset(fb_v_offset)
             val = None
             ob_type = prop._ob_type
             if not o:
@@ -221,7 +226,7 @@ class _Entity(object):
                 size = table.VectorLen(o)
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start + size])
-            elif ob_type == OBXPropertyType_ShortVector:
+            elif prop._ob_type == OBXPropertyType_ShortVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
             elif ob_type == OBXPropertyType_CharVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
@@ -256,14 +261,14 @@ class _Entity(object):
                 val = table.Get(prop._fb_type, o + table.Pos)
             if prop._py_type == list:
                 val = val.tolist()
-            setattr(obj, prop._name, val)
+            setattr(obj, prop.name, val)
         return obj
 
 
-def Entity(id: int = 0, uid: int = 0) -> Callable[[Type], _Entity]:
+def Entity(id_: IdUid = IdUid.unassigned()) -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
 
     def wrapper(class_):
-        return _Entity(class_, id, uid)
+        return _Entity(class_, id_)
 
     return wrapper

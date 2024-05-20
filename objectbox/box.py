@@ -27,7 +27,7 @@ class Box:
 
         self._store = store 
         self._entity = entity
-        self._c_box = obx_box(store._c_store, entity.id)
+        self._c_box = obx_box(store._c_store, entity.id.id)
 
     def is_empty(self) -> bool:
         is_empty = ctypes.c_bool()
@@ -141,8 +141,8 @@ class Box:
             finally:
                 obx_bytes_array_free(c_bytes_array_p)
 
-    def remove(self, id_or_object) -> bool:
-        if isinstance(id_or_object, self._entity.cls):
+    def remove(self, id_or_object):
+        if isinstance(id_or_object, self._entity.user_type):
             id = self._entity.get_object_id(id_or_object)
         else:
             id = id_or_object
