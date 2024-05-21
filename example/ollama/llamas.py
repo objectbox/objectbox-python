@@ -15,8 +15,6 @@ documents = [
 
 
 from objectbox.model import *
-from objectbox.model.properties import *
-import numpy as np
 
 # Have fresh data for each start
 objectbox.Store.remove_db_files("objectbox")
@@ -24,8 +22,8 @@ objectbox.Store.remove_db_files("objectbox")
 @Entity(id=1, uid=1)
 class DocumentEmbedding:
     id = Id(id=1, uid=1001)
-    document = Property(str, id=2, uid=1002)
-    embedding = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=1003, index=HnswIndex(
+    document = String(id=2, uid=1002)
+    embedding = Float32Vector(id=3, uid=1003, index=HnswIndex(
         id=3, uid=10001,
         dimensions=1024,
         distance_type=VectorDistanceType.COSINE

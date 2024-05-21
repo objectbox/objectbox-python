@@ -13,13 +13,13 @@
 # limitations under the License.
 
 from enum import IntEnum
+from datetime import datetime
 import flatbuffers.number_types
 import numpy as np
 from dataclasses import dataclass
 
 from objectbox.c import *
 from objectbox.condition import PropertyQueryCondition, PropertyQueryConditionOp
-
 
 class PropertyType(IntEnum):
     bool = OBXPropertyType_Bool
@@ -183,18 +183,29 @@ class Property:
             if isinstance(self._index, Index):  # Generic index
                 self._flags |= self._index.type
 
-    def equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': case_sensitive}
+    def equals(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
 
-    def not_equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': case_sensitive}
+    def not_equals(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
 
-    def contains(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS, args)
+# ID property (primary key)
+class Id(Property):
+    def __init__(self, id : int = 0, uid : int = 0, py_type: type = int):
+        super(Id, self).__init__(py_type, id=id, uid=uid)
 
+# Bool property
+class Bool(Property):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Bool, self).__init__(bool, type=PropertyType.bool, id=id, uid=uid, **kwargs)
+
+# String property with starts/ends_with
+class String(Property):
+    def __init__(self, id: int = 0, uid : int = 0, **kwargs):
+        super(String, self).__init__(str, type=PropertyType.string, id=id, uid=uid, **kwargs)
+        
     def starts_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.STARTS_WITH, args)
@@ -202,7 +213,19 @@ class Property:
     def ends_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.ENDS_WITH, args)
+    
+    def equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
 
+    def not_equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
+    
+    def contains(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS, args)
+    
     def greater_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
@@ -218,21 +241,154 @@ class Property:
     def less_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+    
+
+# Numeric Properties
+class _NumericProperty(Property):
+    def __init__(self, py_type : Type, **kwargs):
+        super(_NumericProperty, self).__init__(py_type, **kwargs)
+    
+    def equals(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
+
+    def not_equals(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
+    
+    def greater_than(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+
+    def greater_or_equal(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+
+    def less_than(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+
+    def less_or_equal(self, value) -> PropertyQueryCondition:
+        args = {'value': value, 'case_sensitive': False}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
 
     def between(self, a, b) -> PropertyQueryCondition:
         args = {'a': a, 'b': b}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.BETWEEN, args)
 
-    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
-        args = {'query_vector': query_vector, 'element_count': element_count}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
 
+# Signed Integer Numeric Properties
+class Int8(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Int8, self).__init__(int, type=PropertyType.byte, id=id, uid=uid, **kwargs)
+class Int16(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Int16, self).__init__(int, type=PropertyType.short, id=id, uid=uid, **kwargs)
+class Int32(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Int32, self).__init__(int, type=PropertyType.int, id=id, uid=uid, **kwargs)
+class Int64(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Int64, self).__init__(int, type=PropertyType.long, id=id, uid=uid, **kwargs)
+        
+# Floating-Point Numeric Properties
+class Float32(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Float32, self).__init__(float, type=PropertyType.float, id=id, uid=uid, **kwargs)
+
+class Float64(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Float64, self).__init__(float, type=PropertyType.double, id=id, uid=uid, **kwargs)
+
+# Date Properties
+class Date(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Date, self).__init__(int, type=PropertyType.date, id=id, uid=uid, **kwargs)
+
+class DateNano(_NumericProperty):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(DateNano, self).__init__(int, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
+
+# Flex Property
+class Flex(Property):
+    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
+        super(Flex, self).__init__(Generic, type=PropertyType.flex, id=id, uid=uid, **kwargs)
     def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)
 
 
-# ID property (primary key)
-class Id(Property):
-    def __init__(self, py_type: type = int, id: int = 0, uid: int = 0):
-        super(Id, self).__init__(py_type, id=id, uid=uid)
+
+class _VectorProperty(Property):
+    def __init__(self, py_type : Type, **kwargs):
+        super(_VectorProperty, self).__init__(py_type, **kwargs)
+    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
+        args = {'query_vector': query_vector, 'element_count': element_count}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
+
+class BoolVector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(BoolVector, self).__init__(np.ndarray, type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
+class Int8Vector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int8Vector, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
+
+class Int16Vector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int16Vector, self).__init__(np.ndarray, type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
+
+class CharVector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(CharVector, self).__init__(np.ndarray, type=PropertyType.charVector, id=id, uid=uid, **kwargs)
+ 
+class Int32Vector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int32Vector, self).__init__(np.ndarray, type=PropertyType.intVector, id=id, uid=uid, **kwargs)
+
+class Int64Vector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int64Vector, self).__init__(np.ndarray, type=PropertyType.longVector, id=id, uid=uid, **kwargs)
+
+class Float32Vector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Float32Vector, self).__init__(np.ndarray, type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
+
+class Float64Vector(_VectorProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Float64Vector, self).__init__(np.ndarray, type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
+
+class _ListProperty(Property):
+    def __init__(self, **kwargs):
+        super(_ListProperty, self).__init__(list, **kwargs)
+
+class BoolList(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(BoolList, self).__init__(type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
+
+class Int8List(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int8List, self).__init__(type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
+
+class Int16List(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int16List, self).__init__(type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
+
+class Int32List(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int32List, self).__init__(type=PropertyType.intVector, id=id, uid=uid, **kwargs)
+
+class Int64List(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Int64List, self).__init__(type=PropertyType.longVector, id=id, uid=uid, **kwargs)
+
+class Float32List(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Float32List, self).__init__(type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
+
+class Float64List(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(Float64List, self).__init__(type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
+
+class CharList(_ListProperty):
+    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
+        super(CharList, self).__init__(type=PropertyType.charVector, id=id, uid=uid, **kwargs)

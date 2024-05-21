@@ -1,9 +1,5 @@
 from objectbox.model import *
-from objectbox.model.properties import *
-import numpy as np
 from datetime import datetime
-from typing import Generic, Dict, Any
-
 
 @Entity(id=1, uid=1)
 class TestEntity:
@@ -11,32 +7,32 @@ class TestEntity:
     # TODO Enable indexing dynamically, e.g. have a constructor to enable index(es).
     #      E.g. indexString=False (defaults to false). Same for bytes.
     # TODO Test HASH and HASH64 indices (only supported for strings)
-    str = Property(str, id=2, uid=1002, index=Index(id=1, uid=10001))
-    bool = Property(bool, id=3, uid=1003)
-    int64 = Property(int, type=PropertyType.long, id=4, uid=1004, index=Index(id=2, uid=10002))
-    int32 = Property(int, type=PropertyType.int, id=5, uid=1005)
-    int16 = Property(int, type=PropertyType.short, id=6, uid=1006)
-    int8 = Property(int, type=PropertyType.byte, id=7, uid=1007)
-    float64 = Property(float, type=PropertyType.double, id=8, uid=1008)
-    float32 = Property(float, type=PropertyType.float, id=9, uid=1009)
-    bools = Property(np.ndarray, type=PropertyType.boolVector, id=10, uid=1010)
-    bytes = Property(bytes, id=11, uid=1011)
-    shorts = Property(np.ndarray, type=PropertyType.shortVector, id=12, uid=1012)
-    chars = Property(np.ndarray, type=PropertyType.charVector, id=13, uid=1013)
-    ints = Property(np.ndarray, type=PropertyType.intVector, id=14, uid=1014)
-    longs = Property(np.ndarray, type=PropertyType.longVector, id=15, uid=1015)
-    floats = Property(np.ndarray, type=PropertyType.floatVector, id=16, uid=1016)
-    doubles = Property(np.ndarray, type=PropertyType.doubleVector, id=17, uid=1017)
-    bools_list = Property(list, type=PropertyType.boolVector, id=18, uid=1018)
-    shorts_list = Property(list, type=PropertyType.shortVector, id=19, uid=1019)
-    chars_list = Property(list, type=PropertyType.charVector, id=20, uid=1020)
-    ints_list = Property(list, type=PropertyType.intVector, id=21, uid=1021)
-    longs_list = Property(list, type=PropertyType.longVector, id=22, uid=1022)
-    floats_list = Property(list, type=PropertyType.floatVector, id=23, uid=1023)
-    doubles_list = Property(list, type=PropertyType.doubleVector, id=24, uid=1024)
-    date = Property(int, type=PropertyType.date, id=25, uid=1025)
-    date_nano = Property(int, type=PropertyType.dateNano, id=26, uid=1026)
-    flex = Property(Generic, type=PropertyType.flex, id=27, uid=1027)
+    str = String(id=2, uid=1002,index=Index(id=1, uid=10001)) 
+    bool = Bool(id=3, uid=1003)
+    int64 = Int64(id=4, uid=1004,index=Index(id=2, uid=10002))
+    int32 = Int32(id=5, uid=1005)
+    int16 = Int16(id=6, uid=1006)
+    int8 = Int8(id=7, uid=1007)
+    float64 = Float64(id=8, uid=1008)
+    float32 = Float32(id=9, uid=1009)
+    bools = BoolVector(id=10, uid=1010) 
+    bytes = Int8Vector(id=11, uid=1011) 
+    shorts = Int16Vector(id=12, uid=1012) 
+    chars = CharVector(id=13, uid=1013)
+    ints = Int32Vector(id=14, uid=1014)
+    longs = Int64Vector(id=15, uid=1015)
+    floats = Float32Vector(id=16, uid=1016) 
+    doubles = Float64Vector(id=17, uid=1017) 
+    bools_list = BoolList(id=18, uid=1018)
+    shorts_list = Int16List(id=19, uid=1019)
+    chars_list = CharList(id=20, uid=1020)
+    ints_list = Int32List(id=21, uid=1021)
+    longs_list = Int64List(id=22, uid=1022)
+    floats_list = Float32List(id=23, uid=1023)
+    doubles_list = Float64List(id=24, uid=1024)
+    date = Date(id=25, uid=1025) 
+    date_nano = DateNano(id=26, uid=1026)
+    flex = Flex(id=27, uid=1027) 
     transient = ""  # not "Property" so it's not stored
 
 
@@ -50,30 +46,14 @@ class TestEntityDatetime:
 @Entity(id=3, uid=3)
 class TestEntityFlex:
     id = Id(id=1, uid=3001)
-    flex = Property(Any, type=PropertyType.flex, id=2, uid=3002)
+    flex = Flex(id=2, uid=3002) 
 
 
 @Entity(id=4, uid=4)
 class VectorEntity:
     id = Id(id=1, uid=4001)
-    name = Property(str, type=PropertyType.string, id=2, uid=4002)
-    vector_euclidean = Property(np.ndarray, type=PropertyType.floatVector, id=3, uid=4003,
-                                index=HnswIndex(
-                                    id=3, uid=40001,
-                                    dimensions=2, distance_type=VectorDistanceType.EUCLIDEAN)
-                                )
-    vector_cosine = Property(np.ndarray, type=PropertyType.floatVector, id=4, uid=4004,
-                             index=HnswIndex(
-                                 id=4, uid=40002,
-                                 dimensions=2, distance_type=VectorDistanceType.COSINE)
-                             )
-    vector_dot_product = Property(np.ndarray, type=PropertyType.floatVector, id=5, uid=4005,
-                                  index=HnswIndex(
-                                      id=5, uid=40003,
-                                      dimensions=2, distance_type=VectorDistanceType.DOT_PRODUCT)
-                                  )
-    # vector_dot_product_non_normalized = Property(np.ndarray, type=PropertyType.floatVector, id=6, uid=4006,
-    #                  index=HnswIndex(
-    #                      id=6, uid=40004,
-    #                      dimensions=2, distance_type=VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED)
-    #                  )
+    name = String(id=2, uid=4002) 
+    vector_euclidean = Float32Vector(id=3, uid=4003,index=HnswIndex(id=3, uid=40001, dimensions=2, distance_type=VectorDistanceType.EUCLIDEAN))
+    vector_cosine = Float32Vector(id=4, uid=4004, index=HnswIndex(id=4, uid=40002, dimensions=2, distance_type=VectorDistanceType.COSINE))
+    vector_dot_product = Float32Vector(id=5, uid=4005, index=HnswIndex(id=5, uid=40003, dimensions=2, distance_type=VectorDistanceType.DOT_PRODUCT))
+    # vector_dot_product_non_normalized = FloatVector(index=HnswIndex(dimensions=2, distance_type=VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED)
