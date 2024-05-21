@@ -19,20 +19,18 @@ from objectbox.model import *
 # Have fresh data for each start
 objectbox.Store.remove_db_files("objectbox")
 
-@Entity(id=1, uid=1)
+@Entity()
 class DocumentEmbedding:
-    id = Id(id=1, uid=1001)
-    document = String(id=2, uid=1002)
-    embedding = Float32Vector(id=3, uid=1003, index=HnswIndex(
-        id=3, uid=10001,
+    id = Id()
+    document = String()
+    embedding = Float32Vector(index=HnswIndex(
         dimensions=1024,
         distance_type=VectorDistanceType.COSINE
     ))
 
 model = Model()
-model.entity(DocumentEmbedding, last_property_id=IdUid(3, 1003))
-model.last_entity_id = IdUid(1, 1)
-model.last_index_id = IdUid(3,10001)
+model.entity(DocumentEmbedding)
+sync_model(model)
 
 store = objectbox.Store(model=model)
 box = store.box(DocumentEmbedding)
