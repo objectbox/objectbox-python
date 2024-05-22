@@ -2,32 +2,40 @@
   "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
   "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
   "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "modelVersionParserMinimum": 5,
   "entities": [
     {
-      "id": "1:6465125355924028123",
+      "id": "1:8788355504645367043",
       "name": "Task",
-      "lastPropertyId": "4:8015673551585674115",
+      "lastPropertyId": "4:8008741740181940834",
       "properties": [
         {
-          "id": "1:8700906525982901970",
-          "name": "id"
+          "id": "1:2204404178690013419",
+          "name": "id",
+          "type": 6,
+          "flags": 1
         },
         {
-          "id": "2:6068517061615452812",
-          "name": "text"
+          "id": "2:9211247851395059885",
+          "name": "text",
+          "type": 9,
+          "flags": 0
         },
         {
-          "id": "3:1585967268027923630",
-          "name": "date_created"
+          "id": "3:1225557865887046719",
+          "name": "date_created",
+          "type": 10,
+          "flags": 0
         },
         {
-          "id": "4:8015673551585674115",
-          "name": "date_finished"
+          "id": "4:8008741740181940834",
+          "name": "date_finished",
+          "type": 10,
+          "flags": 0
         }
       ]
     }
   ],
-  "lastEntityId": "1:6465125355924028123",
-  "lastIndexId": "0:0",
-  "modelVersionParserMinimum": 5
+  "lastEntityId": "1:8788355504645367043",
+  "lastIndexId": "0:0"
 }

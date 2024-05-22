@@ -1,6 +1,6 @@
 from objectbox.model import *
 from objectbox.model.properties import *
-from objectbox.model.sync_model import sync_model
+from objectbox.model.idsync import sync_model
 import objectbox
 import numpy as np
 import os.path

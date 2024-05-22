@@ -15,6 +15,9 @@ documents = [
 
 
 from objectbox.model import *
+from objectbox.model.idsync import sync_model
+from objectbox.model.properties import *
+import numpy as np
 
 # Have fresh data for each start
 objectbox.Store.remove_db_files("objectbox")

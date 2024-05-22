@@ -1,5 +1,5 @@
 from objectbox.model import *
-from objectbox.model.sync_model import sync_model
+from objectbox.model.idsync import sync_model
 import os.path
 
 @Entity()
