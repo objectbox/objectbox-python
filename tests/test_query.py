@@ -216,6 +216,29 @@ def test_float_scalars():
         assert query.count() == 2
         assert query.find()[0].id == id1
         assert query.find()[1].id == id2
+    
+    # Test float scalar values 
+    for p in props:
+        prop = TestEntity.get_property(p)
+        query = box_test_entity.query(prop.greater_or_equal(11.0)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+        query = box_test_entity.query(prop.greater_than(12.0)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id2
+        query = box_test_entity.query(prop.less_than(45.0)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id1
+        query = box_test_entity.query(prop.less_or_equal(45.0)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+        query = box_test_entity.query(prop.between(10.0,50.0)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+
 
 def test_flex_contains_key_value():
     store = create_test_store()

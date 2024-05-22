@@ -162,6 +162,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.greater_than_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.greater_than_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.greater_than_double(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GT': {type(value)}")
 
@@ -172,6 +174,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.greater_or_equal_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.greater_or_equal_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.greater_or_equal_double(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GTE': {type(value)}")
 
@@ -182,6 +186,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.less_than_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.less_than_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.less_than_double(self._property_id, value)
         else:
             raise Exception("Unsupported type for 'LT': " + str(type(value)))
 
@@ -192,14 +198,18 @@ class PropertyQueryCondition(QueryCondition):
             return qb.less_or_equal_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.less_or_equal_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.less_or_equal_double(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'LTE': {type(value)}")
 
     def _apply_between(self, qb: QueryBuilder) -> obx_qb_cond:
         a = self._args['a']
         b = self._args['b']
-        if isinstance(a, int):
+        if isinstance(a, int) and isinstance(b, int):
             return qb.between_2ints(self._property_id, a, b)
+        elif isinstance(a, float) or isinstance(b, float):
+            return qb.between_2doubles(self._property_id, a, b)
         else:
             raise Exception(f"Unsupported type for 'BETWEEN': {type(a)}")
 

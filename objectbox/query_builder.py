@@ -88,25 +88,50 @@ class QueryBuilder:
         prop_id = self._entity.get_property_id(prop)
         cond = obx_qb_greater_than_int(self._c_builder, prop_id, value)
         return cond
+    
+    def greater_than_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_greater_than_double(self._c_builder, prop_id, value)
+        return cond
 
     def greater_or_equal_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
         prop_id = self._entity.get_property_id(prop)
         cond = obx_qb_greater_or_equal_int(self._c_builder, prop_id, value)
+        return cond
+    
+    def greater_or_equal_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_greater_or_equal_double(self._c_builder, prop_id, value)
         return cond
 
     def less_than_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
         prop_id = self._entity.get_property_id(prop)
         cond = obx_qb_less_than_int(self._c_builder, prop_id, value)
         return cond
+    
+    def less_than_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_less_than_double(self._c_builder, prop_id, value)
+        return cond
 
     def less_or_equal_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
         prop_id = self._entity.get_property_id(prop)
         cond = obx_qb_less_or_equal_int(self._c_builder, prop_id, value)
         return cond
+    
+    def less_or_equal_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_less_or_equal_double(self._c_builder, prop_id, value)
+        return cond
 
     def between_2ints(self, prop: Union[int, str, Property], value_a: int, value_b: int) -> obx_qb_cond:
         prop_id = self._entity.get_property_id(prop)
         cond = obx_qb_between_2ints(self._c_builder, prop_id, value_a, value_b)
+        return cond
+    
+    def between_2doubles(self, prop: Union[int, str, Property], value_a: float, value_b: float) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_between_2doubles(self._c_builder, prop_id, value_a, value_b)
         return cond
 
     def nearest_neighbors_f32(self,
