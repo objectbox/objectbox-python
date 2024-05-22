@@ -184,11 +184,11 @@ class Property:
                 self._flags |= self._index.type
 
     def equals(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
 
 # ID property (primary key)
@@ -249,27 +249,27 @@ class _NumericProperty(Property):
         super(_NumericProperty, self).__init__(py_type, **kwargs)
     
     def equals(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
     
     def greater_than(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value) -> PropertyQueryCondition:
-        args = {'value': value, 'case_sensitive': False}
+        args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
 
     def between(self, a, b) -> PropertyQueryCondition:
