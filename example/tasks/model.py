@@ -1,5 +1,6 @@
 from objectbox.model import *
 from objectbox.model.sync_model import sync_model
+import os.path
 
 @Entity()
 class Task:
@@ -13,5 +14,5 @@ class Task:
 def get_objectbox_model():
     m = Model()
     m.entity(Task)
-    sync_model(m)
+    sync_model(m, os.path.join(os.path.dirname(__file__),"obx-model.json") )
     return m
