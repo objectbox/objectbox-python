@@ -30,18 +30,28 @@ from objectbox.model.properties import Property
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
-    def __init__(self, user_type, id_: IdUid):
+    def __init__(self, user_type, uid: int = 0):
         self.user_type = user_type
-        self.id = id_
+        self.iduid = IdUid(0, uid)
         self.name = user_type.__name__
+        self.last_property_iduid = IdUid(0, 0)
 
-        self.last_property_id = IdUid.unassigned()
-
-        self.properties = list()  # List[Property]
+        self.properties: List[Property] = list()  # List[Property]
         self.offset_properties = list()  # List[Property]
         self.id_property = None
         self.fill_properties()
         self._tl = threading.local()
+
+    @property
+    def id(self) -> int:
+        return self.iduid.id
+
+    @property
+    def uid(self) -> int:
+        return self.iduid.uid
+
+    def has_uid(self) -> bool:
+        return self.iduid.uid != 0
 
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
@@ -103,9 +113,9 @@ class _Entity(object):
         if isinstance(prop, int):
             return prop  # We already have it!
         elif isinstance(prop, str):
-            return self.get_property(prop).id.id
+            return self.get_property(prop).id
         elif isinstance(prop, Property):
-            return prop.id.id
+            return prop.id
         else:
             raise Exception(f"Unsupported Property type: {type(prop)}")
 
@@ -141,42 +151,41 @@ class _Entity(object):
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}
         for prop in self.offset_properties:
-            prop_id = prop.id.id
             val = self.get_value(object, prop)
             if prop._ob_type == OBXPropertyType_String:
-                offsets[prop_id] = builder.CreateString(val.encode('utf-8'))
+                offsets[prop.id] = builder.CreateString(val.encode('utf-8'))
             elif prop._ob_type == OBXPropertyType_BoolVector:
                 # Using a numpy bool as it seems to be more consistent in terms of size. TBD
                 # https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.bool
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.bool_))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.bool_))
             elif prop._ob_type == OBXPropertyType_ByteVector:
-                offsets[prop_id] = builder.CreateByteVector(val)
+                offsets[prop.id] = builder.CreateByteVector(val)
             elif prop._ob_type == OBXPropertyType_ShortVector:
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.int16))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.int16))
             elif prop._ob_type == OBXPropertyType_CharVector:
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.uint16))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.uint16))
             elif prop._ob_type == OBXPropertyType_IntVector:
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.int32))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.int32))
             elif prop._ob_type == OBXPropertyType_LongVector:
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.int64))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.int64))
             elif prop._ob_type == OBXPropertyType_FloatVector:
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.float32))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.float32))
             elif prop._ob_type == OBXPropertyType_DoubleVector:
-                offsets[prop_id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
+                offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
             elif prop._ob_type == OBXPropertyType_Flex:
                 flex_builder = flatbuffers.flexbuffers.Builder()
                 flex_builder.Add(val)
                 buffer = flex_builder.Finish()
-                offsets[prop_id] = builder.CreateByteVector(bytes(buffer))
+                offsets[prop.id] = builder.CreateByteVector(bytes(buffer))
             else:
                 assert False, "programming error - invalid type OB & FB type combination"
 
         # start the FlatBuffers object with the largest number of properties that were ever present in the Entity
-        builder.StartObject(self.last_property_id.id)
+        builder.StartObject(self.last_property_iduid.id)
 
         # add properties to the FB object
         for prop in self.properties:
-            prop_id = prop.id.id
+            prop_id = prop.id
             if prop_id in offsets:
                 val = offsets[prop_id]
                 if val:
@@ -207,8 +216,7 @@ class _Entity(object):
 
         # fill it with the data read from FlatBuffers
         for prop in self.properties:
-            prop_id = prop.id.id
-            fb_slot = prop_id - 1
+            fb_slot = prop.id - 1
             fb_v_offset = 4 + 2 * fb_slot
             # 4 + 2 * fb_slot
             o = table.Offset(fb_v_offset)
@@ -265,10 +273,10 @@ class _Entity(object):
         return obj
 
 
-def Entity(id_: IdUid = IdUid.unassigned()) -> Callable[[Type], _Entity]:
+def Entity(uid: int = 0) -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
 
     def wrapper(class_):
-        return _Entity(class_, id_)
+        return _Entity(class_, uid)
 
     return wrapper

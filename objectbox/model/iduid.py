@@ -6,7 +6,8 @@ class IdUid:
         self.uid = uid
 
     def is_assigned(self):
-        return self.id != 0 or self.uid != 0
+        """ Checks that both ID and UID are assigned. Shall be true after the model is synced. """
+        return self.id != 0 and self.uid != 0
 
     def __bool__(self):
         return self.is_assigned()

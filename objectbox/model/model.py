@@ -24,9 +24,9 @@ class Model:
     def __init__(self):
         self.entities: List[_Entity] = []
 
-        self.last_entity_id = IdUid.unassigned()
-        self.last_index_id = IdUid.unassigned()
-        self.last_relation_id = IdUid.unassigned()
+        self.last_entity_iduid = IdUid(0, 0)
+        self.last_index_iduid = IdUid(0, 0)
+        self.last_relation_iduid = IdUid(0, 0)
 
         self._c_model = None
 
@@ -40,22 +40,22 @@ class Model:
         self.entities.append(entity)
 
     def validate_ids_assigned(self):
-        if not self.last_entity_id.is_assigned():
+        if not self.last_entity_iduid.is_assigned():
             raise Exception("Model last_entity_id not assigned")
-        if not self.last_index_id.is_assigned():
+        if not self.last_entity_iduid.is_assigned():
             raise ValueError("Model last_index_id not assigned")
         # if not self.last_relation_id.is_assigned(): TODO last_relation_id
         #     return False
         # TODO validate last_entity_id value
         # TODO validate last_index_id value
         for entity in self.entities:
-            if not entity.id.is_assigned():
+            if not entity.iduid.is_assigned():
                 raise ValueError(f"Entity \"{entity.name}\" id not assigned")
             for prop in entity.properties:
                 # TODO validate last_property_id value
-                if not prop.id.is_assigned():
+                if not prop.iduid.is_assigned():
                     raise ValueError(f"Property \"{entity.name}\"->\"{prop.name}\" id not assigned")
-            if not entity.last_property_id.is_assigned():
+            if not entity.last_property_iduid.is_assigned():
                 raise ValueError(f"Entity \"{entity.name}\" last_property_id not assigned")
 
     def _set_hnsw_params(self, index: HnswIndex):
@@ -78,20 +78,20 @@ class Model:
     def _create_index(self, index: Union[Index, HnswIndex]):
         if isinstance(index, HnswIndex):
             self._set_hnsw_params(index)
-        obx_model_property_index_id(self._c_model, index.id.id, index.id.uid)
+        obx_model_property_index_id(self._c_model, index.id, index.uid)
 
     def _create_property(self, prop: Property):
-        obx_model_property(self._c_model, c_str(prop.name), prop._ob_type, prop.id.id, prop.id.uid)
+        obx_model_property(self._c_model, c_str(prop.name), prop._ob_type, prop.id, prop.uid)
         if prop._flags != 0:
             obx_model_property_flags(self._c_model, prop._flags)
         if prop.index is not None:
             self._create_index(prop.index)
 
     def _create_entity(self, entity: _Entity):
-        obx_model_entity(self._c_model, c_str(entity.name), entity.id.id, entity.id.uid)
+        obx_model_entity(self._c_model, c_str(entity.name), entity.id, entity.uid)
         for prop in entity.properties:
             self._create_property(prop)
-        obx_model_entity_last_property_id(self._c_model, entity.last_property_id.id, entity.last_property_id.uid)
+        obx_model_entity_last_property_id(self._c_model, entity.last_property_iduid.id, entity.last_property_iduid.uid)
 
     def _create_c_model(self) -> obx_model:  # Called by StoreOptions
         """ Creates the OBX model by invoking the C API.
@@ -99,10 +99,10 @@ class Model:
         self._c_model = obx_model()
         for entity in self.entities:
             self._create_entity(entity)
-        if self.last_relation_id:
-            obx_model_last_relation_id(self._c_model, self.last_relation_id.id, self.last_relation_id.uid)
-        if self.last_index_id:
-            obx_model_last_index_id(self._c_model, self.last_index_id.id, self.last_index_id.uid)
-        if self.last_entity_id:
-            obx_model_last_entity_id(self._c_model, self.last_entity_id.id, self.last_entity_id.uid)
+        if self.last_relation_iduid:
+            obx_model_last_relation_id(self._c_model, self.last_relation_iduid.id, self.last_relation_iduid.uid)
+        if self.last_index_iduid:
+            obx_model_last_index_id(self._c_model, self.last_index_iduid.id, self.last_index_iduid.uid)
+        if self.last_entity_iduid:
+            obx_model_last_entity_id(self._c_model, self.last_entity_iduid.id, self.last_entity_iduid.uid)
         return self._c_model

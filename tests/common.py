@@ -3,7 +3,7 @@ import pytest
 import objectbox
 from objectbox.logger import logger
 from objectbox.store import Store
-from objectbox.model.sync_model import sync_model
+from objectbox.model.idsync import sync_model
 from tests.model import *
 import numpy as np
 from datetime import timezone
