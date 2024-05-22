@@ -317,8 +317,6 @@ class Flex(Property):
         args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)
 
-
-
 class _VectorProperty(Property):
     def __init__(self, py_type : Type, **kwargs):
         super(_VectorProperty, self).__init__(py_type, **kwargs)

@@ -23,6 +23,7 @@ def test_basics():
     # String query
     str_prop: Property = TestEntity.get_property("str")
 
+    # Case Sensitive = True
     query = box_test_entity.query(str_prop.equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
@@ -61,6 +62,46 @@ def test_basics():
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
+    # Case Sensitive = False
+    
+    query = box_test_entity.query(str_prop.equals("Bar", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "bar"
+
+    query = box_test_entity.query(str_prop.not_equals("Bar", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "foo"
+
+    query = box_test_entity.query(str_prop.contains("Ba", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "bar"
+
+    query = box_test_entity.query(str_prop.starts_with("F", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "foo"
+
+    query = box_test_entity.query(str_prop.ends_with("O", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "foo"
+
+    query = box_test_entity.query(str_prop.greater_than("BAR", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "foo"
+
+    query = box_test_entity.query(str_prop.greater_or_equal("BAR", case_sensitive=False)).build()
+    assert query.count() == 2
+    assert query.find()[0].str == "foo"
+    assert query.find()[1].str == "bar"
+
+    query = box_test_entity.query(str_prop.less_than("FOo", case_sensitive=False)).build()
+    assert query.count() == 1
+    assert query.find()[0].str == "bar"
+
+    query = box_test_entity.query(str_prop.less_or_equal("FoO", case_sensitive=False)).build()
+    assert query.count() == 2
+    assert query.find()[0].str == "foo"
+    assert query.find()[1].str == "bar"
+
     # Int queries
     int_prop: Property = TestEntity.get_property("int64")
 
@@ -93,7 +134,7 @@ def test_basics():
     query = box_test_entity.query(int_prop.between(100, 200)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
-
+    
     #
     assert query.remove() == 1
 
@@ -106,6 +147,75 @@ def test_basics():
 
     store.close()
 
+def test_integer_scalars():
+    store = create_test_store()
+
+    box_test_entity = store.box(TestEntity)
+    id1 = box_test_entity.put(TestEntity(int8=12, int16=12, int32=12, int64=12))
+    id2 = box_test_entity.put(TestEntity(int8=45, int16=45, int32=45, int64=45))
+   
+    props = [ "int8", "int16", "int32", "int64"] 
+    for p in props:
+        prop = TestEntity.get_property(p)
+
+        query = box_test_entity.query(prop.equals(12)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id1
+        
+        query = box_test_entity.query(prop.equals(45)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id2
+    
+        query = box_test_entity.query(prop.not_equals(12)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id2
+    
+        query = box_test_entity.query(prop.greater_than(12)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id2
+
+        query = box_test_entity.query(prop.greater_or_equal(12)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+    
+        query = box_test_entity.query(prop.less_than(45)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id1
+
+        query = box_test_entity.query(prop.less_or_equal(45)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+
+def test_float_scalars():
+    store = create_test_store()
+
+    box_test_entity = store.box(TestEntity)
+    id1 = box_test_entity.put(TestEntity(float32=12, float64=12))
+    id2 = box_test_entity.put(TestEntity(float32=45, float64=45))
+   
+    props = [ "float32", "float64" ]
+    for p in props:
+        prop = TestEntity.get_property(p)
+        query = box_test_entity.query(prop.greater_or_equal(11)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+        query = box_test_entity.query(prop.greater_than(12)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id2
+        query = box_test_entity.query(prop.less_than(45)).build()
+        assert query.count() == 1
+        assert query.find()[0].id == id1
+        query = box_test_entity.query(prop.less_or_equal(45)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
+        query = box_test_entity.query(prop.between(10,50)).build()
+        assert query.count() == 2
+        assert query.find()[0].id == id1
+        assert query.find()[1].id == id2
 
 def test_flex_contains_key_value():
     store = create_test_store()
