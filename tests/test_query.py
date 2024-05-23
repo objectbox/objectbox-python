@@ -21,112 +21,113 @@ def test_basics():
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
 
     # Id query
-    id_prop: Property = TestEntity.get_property("id")
-    query = box_test_entity.query(id_prop.equals(id1)).build()
+    query = box_test_entity.query(TestEntity.id.equals(id1)).build()
     assert query.count() == 1
-    query = box_test_entity.query(id_prop.greater_than(id1)).build()
+    query = box_test_entity.query(TestEntity.id.greater_than(id1)).build()
     assert query.count() == 1
-    query = box_test_entity.query(id_prop.greater_or_equal(id1)).build()
+    query = box_test_entity.query(TestEntity.id.greater_or_equal(id1)).build()
     assert query.count() == 2
-    query = box_test_entity.query(id_prop.less_than(id2)).build()
+    query = box_test_entity.query(TestEntity.id.less_than(id2)).build()
     assert query.count() == 1
-    query = box_test_entity.query(id_prop.less_or_equal(id2)).build()
+    query = box_test_entity.query(TestEntity.id.less_or_equal(id2)).build()
     assert query.count() == 2
 
     # Bool query
-    bool_prop: Property = TestEntity.get_property("bool")
-    query = box_test_entity.query(bool_prop.equals(True)).build()
+    query = box_test_entity.query(TestEntity.bool.equals(True)).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box_test_entity.query(bool_prop.equals(False)).build()
+    query = box_test_entity.query(TestEntity.bool.equals(False)).build()
     assert query.count() == 1
     assert query.find()[0].id == id2
 
     # String query
-    str_prop: Property = TestEntity.get_property("str")
+    str_prop: Property = TestEntity.str
 
     # Case Sensitive = True
     query = box_test_entity.query(str_prop.equals("bar", case_sensitive=True)).build()
+    # String query using direct `<entity>.<propname>` notation
+
+    query = box_test_entity.query(TestEntity.str.equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.not_equals("bar", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.not_equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.contains("ba", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.contains("ba", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.starts_with("f", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.starts_with("f", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.ends_with("o", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.ends_with("o", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_than("bar", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.greater_than("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_or_equal("bar", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.greater_or_equal("bar", case_sensitive=True)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_than("foo", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.less_than("foo", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_or_equal("foo", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.less_or_equal("foo", case_sensitive=True)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
     # Case Sensitive = False
 
-    query = box_test_entity.query(str_prop.equals("Bar", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.equals("Bar", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.not_equals("Bar", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.not_equals("Bar", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.contains("Ba", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.contains("Ba", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.starts_with("F", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.starts_with("F", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.ends_with("O", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.ends_with("O", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_than("BAR", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.greater_than("BAR", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_or_equal("BAR", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.greater_or_equal("BAR", case_sensitive=False)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_than("FOo", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.less_than("FOo", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_or_equal("FoO", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.less_or_equal("FoO", case_sensitive=False)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    # Int queries
-    int_prop: Property = TestEntity.get_property("int64")
+    # Int queries using a reference to property
+    int_prop: Property = TestEntity.int64
 
     query = box_test_entity.query(int_prop.equals(123)).build()
     assert query.count() == 1
@@ -161,8 +162,8 @@ def test_basics():
     #
     assert query.remove() == 1
 
-    # NN query
-    vector_prop: Property = VectorEntity.get_property("vector_euclidean")
+    # NN query and using `get_property`
+    vector_prop: Property = VectorEntity.vector_euclidean
 
     query = box_vector_entity.query(vector_prop.nearest_neighbor([2.1, 2.1], 2)).build()
     assert query.count() == 2
