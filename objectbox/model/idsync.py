@@ -85,12 +85,12 @@ class IdSync:
 
         for entity in self.model.entities:
             entity_json = {
-                "id": str(entity.iduid),
+                "id": str(entity._iduid),
                 "name": entity._name,
-                "lastPropertyId": str(entity.last_property_iduid),
+                "lastPropertyId": str(entity._last_property_iduid),
                 "properties": []
             }
-            for prop in entity.properties:
+            for prop in entity._properties:
                 prop_json = {
                     "id": str(prop.iduid),
                     "name": prop.name,
@@ -232,8 +232,8 @@ class IdSync:
         else:  # Assign new ID to new property
             if not prop.has_uid():
                 prop.iduid.uid = self._generate_uid()
-            prop.iduid = IdUid(entity.last_property_iduid.id + 1, prop.iduid.uid)
-            entity.last_property_iduid = prop.iduid
+            prop.iduid = IdUid(entity._last_property_iduid.id + 1, prop.iduid.uid)
+            entity._last_property_iduid = prop.iduid
             write_json = True
 
         if prop.index is not None:
@@ -245,11 +245,11 @@ class IdSync:
         write_json = False
 
         # entity_json = None
-        if entity.has_uid():
-            entity_json = self._find_entity_json_by_uid(entity.uid)
+        if entity._has_uid():
+            entity_json = self._find_entity_json_by_uid(entity._uid)
             if entity_json is None:
                 # User provided a UID not matching any entity, make sure it's not assigned elsewhere
-                self._validate_uid_unassigned(entity.uid)
+                self._validate_uid_unassigned(entity._uid)
             else:
                 write_json = entity._name != entity_json["name"]  # If renaming we shall update the JSON
         else:
@@ -257,21 +257,21 @@ class IdSync:
 
         # Write JSON if the number of properties differs (to handle removed property)
         if entity_json is not None:
-            write_json |= len(entity.properties) != len(entity_json["properties"])
+            write_json |= len(entity._properties) != len(entity_json["properties"])
 
         if entity_json is not None:  # Load existing IDs from JSON
-            entity.iduid = IdUid.from_str(entity_json["id"])
-            entity.last_property_iduid = IdUid.from_str(entity_json["lastPropertyId"])
+            entity._iduid = IdUid.from_str(entity_json["id"])
+            entity._last_property_iduid = IdUid.from_str(entity_json["lastPropertyId"])
         else:  # Assign new ID to new entity
-            if not entity.has_uid():
-                entity.iduid.uid = self._generate_uid()
-            entity.iduid = IdUid(self.model.last_entity_iduid.id + 1, entity.iduid.uid)
-            self.model.last_entity_iduid = entity.iduid
-            entity.last_property_iduid = IdUid(0, 0)
+            if not entity._has_uid():
+                entity._iduid.uid = self._generate_uid()
+            entity._iduid = IdUid(self.model.last_entity_iduid.id + 1, entity._iduid.uid)
+            self.model.last_entity_iduid = entity._iduid
+            entity._last_property_iduid = IdUid(0, 0)
             write_json = True
 
         # Load properties
-        for prop in entity.properties:
+        for prop in entity._properties:
             write_json |= self._sync_property(entity, prop, entity_json)
 
         return write_json

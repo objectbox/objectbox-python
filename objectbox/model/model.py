@@ -33,7 +33,7 @@ class Model:
     def on_sync(self):
         """ Method called once ID/UID are synced with the model file. """
         for entity in self.entities:
-            entity.on_sync()
+            entity._on_sync()
 
     def entity(self, entity: _Entity):
         if not isinstance(entity, _Entity):
@@ -49,17 +49,17 @@ class Model:
         has_entities = len(self.entities) > 0
         has_indices = False
         for entity in self.entities:
-            has_properties = len(entity.properties) > 0
-            if not entity.iduid.is_assigned():
+            has_properties = len(entity._properties) > 0
+            if not entity._iduid.is_assigned():
                 raise ValueError(f"Entity \"{entity._name}\" ID/UID not assigned")
-            for prop in entity.properties:
+            for prop in entity._properties:
                 if not prop.iduid.is_assigned():
                     raise ValueError(f"Property \"{entity._name}.{prop.name}\" ID/UID not assigned")
                 if prop.index is not None:
                     has_indices = True
                     if not prop.index.iduid.is_assigned():
                         raise ValueError(f"Property index \"{entity._name}.{prop.name}\" ID/UID not assigned")
-            if has_properties and not entity.last_property_iduid.is_assigned():
+            if has_properties and not entity._last_property_iduid.is_assigned():
                 raise ValueError(f"Entity \"{entity._name}\" last property ID/UID not assigned")
         if has_entities and not self.last_entity_iduid.is_assigned():
             raise ValueError("Last entity ID/UID not assigned")
@@ -96,10 +96,10 @@ class Model:
             self._create_index(prop.index)
 
     def _create_entity(self, entity: _Entity):
-        obx_model_entity(self._c_model, c_str(entity._name), entity.id, entity.uid)
-        for prop in entity.properties:
+        obx_model_entity(self._c_model, c_str(entity._name), entity._id, entity._uid)
+        for prop in entity._properties:
             self._create_property(prop)
-        obx_model_entity_last_property_id(self._c_model, entity.last_property_iduid.id, entity.last_property_iduid.uid)
+        obx_model_entity_last_property_id(self._c_model, entity._last_property_iduid.id, entity._last_property_iduid.uid)
 
     def _create_c_model(self) -> obx_model:  # Called by StoreOptions
         """ Creates the OBX model by invoking the C API.

@@ -180,7 +180,7 @@ def test_integer_scalars():
 
     props = [ "int8", "int16", "int32", "int64"]
     for p in props:
-        prop = TestEntity.get_property(p)
+        prop = TestEntity._get_property(p)
 
         query = box_test_entity.query(prop.equals(12)).build()
         assert query.count() == 1
@@ -223,7 +223,7 @@ def test_float_scalars():
     # Test int scalar literals
     props = [ "float32", "float64" ]
     for p in props:
-        prop = TestEntity.get_property(p)
+        prop = TestEntity._get_property(p)
 
         # equals/not_equals should not exist 
         with pytest.raises(AttributeError):
@@ -249,7 +249,7 @@ def test_float_scalars():
 
     # Test float scalar literals 
     for p in props:
-        prop = TestEntity.get_property(p)
+        prop = TestEntity._get_property(p)
         query = box_test_entity.query(prop.less_or_equal(12.299999)).build()
         assert query.count() == 0
         query = box_test_entity.query(prop.greater_than(12.3)).build()
@@ -322,7 +322,7 @@ def test_offset_limit():
     box.put(TestEntity(str="c"))
     assert box.count() == 4
 
-    int_prop = TestEntity.get_property("int64")
+    int_prop = TestEntity._get_property("int64")
 
     query = box.query(int_prop.equals(0)).build()
     assert query.count() == 4
@@ -470,9 +470,9 @@ def test_set_parameter_alias():
     box_vector.put(VectorEntity(name="Object 4", vector_euclidean=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector_euclidean=[5, 5]))
 
-    str_prop: Property = TestEntity.get_property("str")
-    int32_prop: Property = TestEntity.get_property("int32")
-    int64_prop: Property = TestEntity.get_property("int64")
+    str_prop: Property = TestEntity._get_property("str")
+    int32_prop: Property = TestEntity._get_property("int32")
+    int64_prop: Property = TestEntity._get_property("int64")
 
     # Test set parameter alias on string
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -519,7 +519,7 @@ def test_set_parameter_alias():
     assert query.count() == 1
 
     # Test set parameter alias on vector
-    vector_prop: Property = VectorEntity.get_property("vector_euclidean")
+    vector_prop: Property = VectorEntity._get_property("vector_euclidean")
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
     assert query.count() == 3
@@ -546,10 +546,10 @@ def test_set_parameter_alias_advanced():
     box.put(TestEntity(str="Zucchini", bool=False, int64=1234, int32=9))
     assert box.count() == 8
 
-    str_prop = TestEntity.get_property("str")
-    bool_prop = TestEntity.get_property("bool")
-    int32_prop = TestEntity.get_property("int32")
-    int64_prop = TestEntity.get_property("int64")
+    str_prop = TestEntity._get_property("str")
+    bool_prop = TestEntity._get_property("bool")
+    int32_prop = TestEntity._get_property("int32")
+    int64_prop = TestEntity._get_property("int64")
 
     query = box.query(
         str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
@@ -598,8 +598,7 @@ def test_bytes():
     store = create_test_store()
     box = store.box(TestEntity)
 
-    bytes_prop: Property = TestEntity.get_property("bytes")
-
+    bytes_prop: Property = TestEntity.bytes 
 
     id1 = box.put(TestEntity(bytes=bytes([9])))
     id2 = box.put(TestEntity(bytes=bytes([1,0])))
