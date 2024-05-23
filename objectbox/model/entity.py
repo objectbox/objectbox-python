@@ -18,10 +18,11 @@ import flatbuffers.flexbuffers
 from typing import Generic
 import numpy as np
 from math import floor
-from datetime import datetime
+from datetime import datetime, timezone
 from objectbox.c import *
 from objectbox.model.properties import Property
 import threading
+
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
@@ -47,7 +48,7 @@ class _Entity(object):
         self.id_property = None
         self.fill_properties()
         self._tl = threading.local()
-        
+
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
         object_ = self.cls()
@@ -122,9 +123,9 @@ class _Entity(object):
             if (val == np.array(prop)).all():
                 return np.array([])
         elif val == prop:
-            if prop._py_type == datetime:
-                return datetime.fromtimestamp(0)
-            if prop._ob_type == OBXPropertyType_Flex:
+            if prop._ob_type == OBXPropertyType_Date or prop._ob_type == OBXPropertyType_DateNano:
+                return 0.0  # For marshalling, prefer float over datetime
+            elif prop._ob_type == OBXPropertyType_Flex:
                 return None
             else:
                 return prop._py_type()  # default (empty) value for the given type
@@ -135,6 +136,19 @@ class _Entity(object):
 
     def set_object_id(self, object, id: int):
         setattr(object, self.id_property._name, id)
+
+    @staticmethod
+    def date_value_to_int(value, multiplier: int) -> int:
+        if isinstance(value, datetime):
+            return round(value.timestamp() * multiplier)  # timestamp returns seconds
+        elif isinstance(value, float):
+            return round(value * multiplier)  # floats typically represent seconds
+        elif isinstance(value, int):  # Interpret ints as-is (without the multiplier); e.g. milliseconds or nanoseconds
+            return value
+        else:
+            raise TypeError(
+                f"Unsupported Python datetime type: {type(value)}. Please use datetime, float (seconds based) or "
+                f"int (milliseconds for Date, nanoseconds for DateNano).")
 
     def marshal(self, object, id: int) -> bytearray:
         if not hasattr(self._tl, "builder"):
@@ -186,13 +200,9 @@ class _Entity(object):
             else:
                 val = id if prop == self.id_property else self.get_value(object, prop)
                 if prop._ob_type == OBXPropertyType_Date:
-                    if prop._py_type == datetime:
-                        val = val.timestamp() * 1000  # timestamp returns seconds, convert to milliseconds
-                    val = floor(val)  # use floor to allow for float types
+                    val = self.date_value_to_int(val, 1000)  # convert to milliseconds
                 elif prop._ob_type == OBXPropertyType_DateNano:
-                    if prop._py_type == datetime:
-                        val = val.timestamp() * 1000000000  # convert to nanoseconds
-                    val = floor(val)  # use floor to allow for float types
+                    val = self.date_value_to_int(val, 1000000000)  # convert to nanoseconds
                 builder.Prepend(prop._fb_type, val)
 
             builder.Slot(prop._fb_slot)
@@ -211,42 +221,49 @@ class _Entity(object):
         for prop in self.properties:
             o = table.Offset(prop._fb_v_offset)
             val = None
+            ob_type = prop._ob_type
             if not o:
                 val = prop._py_type()  # use default (empty) value if not present in the object
-            elif prop._ob_type == OBXPropertyType_String:
+            elif ob_type == OBXPropertyType_String:
                 val = table.String(o + table.Pos).decode('utf-8')
-            elif prop._ob_type == OBXPropertyType_BoolVector:
+            elif ob_type == OBXPropertyType_BoolVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.BoolFlags, o)
-            elif prop._ob_type == OBXPropertyType_ByteVector:
+            elif ob_type == OBXPropertyType_ByteVector:
                 # access the FB byte vector information
                 start = table.Vector(o)
                 size = table.VectorLen(o)
                 # slice the vector as a requested type
-                val = prop._py_type(table.Bytes[start:start+size])
-            elif prop._ob_type == OBXPropertyType_ShortVector:
+                val = prop._py_type(table.Bytes[start:start + size])
+            elif ob_type == OBXPropertyType_ShortVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
-            elif prop._ob_type == OBXPropertyType_CharVector:
+            elif ob_type == OBXPropertyType_CharVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
-            elif prop._ob_type == OBXPropertyType_Date and prop._py_type == datetime:
-                table_val = table.Get(prop._fb_type, o + table.Pos)
-                val = datetime.fromtimestamp(table_val/1000) if table_val != 0 else datetime.fromtimestamp(0)  # default timestamp
-            elif prop._ob_type == OBXPropertyType_DateNano and prop._py_type == datetime:
-                table_val = table.Get(prop._fb_type, o + table.Pos)
-                val = datetime.fromtimestamp(table_val/1000000000) if table_val != 0 else datetime.fromtimestamp(0)  # default timestamp
-            elif prop._ob_type == OBXPropertyType_IntVector:
+            elif ob_type == OBXPropertyType_Date:
+                val = table.Get(prop._fb_type, o + table.Pos)  # int
+                if prop._py_type == datetime:
+                    val = datetime.fromtimestamp(val / 1000.0, tz=timezone.utc)
+                elif prop._py_type == float:
+                    val = val / 1000.0
+            elif ob_type == OBXPropertyType_DateNano and prop._py_type == datetime:
+                val = table.Get(prop._fb_type, o + table.Pos)  # int
+                if prop._py_type == datetime:
+                    val = datetime.fromtimestamp(val / 1000000000.0, tz=timezone.utc)
+                elif prop._py_type == float:
+                    val = val / 1000000000.0
+            elif ob_type == OBXPropertyType_IntVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int32Flags, o)
-            elif prop._ob_type == OBXPropertyType_LongVector:
+            elif ob_type == OBXPropertyType_LongVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int64Flags, o)
-            elif prop._ob_type == OBXPropertyType_FloatVector:
+            elif ob_type == OBXPropertyType_FloatVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Float32Flags, o)
-            elif prop._ob_type == OBXPropertyType_DoubleVector:
+            elif ob_type == OBXPropertyType_DoubleVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Float64Flags, o)
-            elif prop._ob_type == OBXPropertyType_Flex:
+            elif ob_type == OBXPropertyType_Flex:
                 # access the FB byte vector information
                 start = table.Vector(o)
                 size = table.VectorLen(o)
                 # slice the vector as bytes
-                buf = table.Bytes[start:start+size]
+                buf = table.Bytes[start:start + size]
                 val = flatbuffers.flexbuffers.Loads(buf)
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)
@@ -258,6 +275,8 @@ class _Entity(object):
 
 def Entity(id: int = 0, uid: int = 0) -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
+
     def wrapper(class_):
         return _Entity(class_, id, uid)
+
     return wrapper

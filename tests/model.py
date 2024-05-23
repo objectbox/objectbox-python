@@ -31,8 +31,8 @@ class TestEntity:
     longs_list = Int64List(id=22, uid=1022)
     floats_list = Float32List(id=23, uid=1023)
     doubles_list = Float64List(id=24, uid=1024)
-    date = Date(py_type=int, id=25, uid=1025)
-    date_nano = DateNano(py_type=int, id=26, uid=1026)
+    date = Date(id=25, uid=1025)
+    date_nano = DateNano(int, id=26, uid=1026)
     flex = Flex(id=27, uid=1027)
     transient = ""  # not "Property" so it's not stored
 
@@ -40,7 +40,7 @@ class TestEntity:
 @Entity(id=2, uid=2)
 class TestEntityDatetime:
     id = Id(id=1, uid=2001)
-    date = Date(id=2, uid=2002)
+    date = Date(float, id=2, uid=2002)
     date_nano = DateNano(id=3, uid=2003)
 
 

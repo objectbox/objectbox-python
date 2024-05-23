@@ -1,3 +1,5 @@
+from datetime import timezone
+
 import objectbox
 import os
 from os import path
@@ -9,6 +11,7 @@ from tests.model import *
 
 test_dir = 'testdata'
 
+
 def create_default_model() -> objectbox.Model:
     model = objectbox.Model()
     model.entity(TestEntity, last_property_id=IdUid(27, 1027))
@@ -16,9 +19,11 @@ def create_default_model() -> objectbox.Model:
     model.last_index_id = IdUid(2, 10002)
     return model
 
+
 def load_empty_test_default_store(db_name: str = test_dir) -> objectbox.Store:
     model = create_default_model()
     return objectbox.Store(model=model, directory=db_name)
+
 
 def load_empty_test_datetime_store(name: str = "") -> objectbox.Store:
     model = objectbox.Model()
@@ -61,8 +66,10 @@ def create_test_store(db_name: Optional[str] = None, clear_db: bool = True) -> o
 
 
 def assert_equal_prop(actual, expected, default):
-    assert actual == expected or (isinstance(
-        expected, objectbox.model.Property) and actual == default)
+    if isinstance(expected, objectbox.model.Property):
+        assert (actual == default)
+    else:
+        assert (actual == expected)
 
 
 def assert_equal_prop_vector(actual, expected, default):
@@ -72,8 +79,10 @@ def assert_equal_prop_vector(actual, expected, default):
 
 # compare approx values
 def assert_equal_prop_approx(actual, expected, default):
-    assert pytest.approx(actual) == expected or (isinstance(
-        expected, objectbox.model.Property) and actual == default)
+    if isinstance(expected, objectbox.model.Property):
+        assert (actual == default)
+    else:
+        assert (pytest.approx(actual) == expected)
 
 
 def assert_equal(actual: TestEntity, expected: TestEntity):
@@ -100,6 +109,6 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop_approx(actual.longs_list, expected.longs_list, [])
     assert_equal_prop_approx(actual.floats_list, expected.floats_list, [])
     assert_equal_prop_approx(actual.doubles_list, expected.doubles_list, [])
-    assert_equal_prop_approx(actual.date, expected.date, 0)
+    assert_equal_prop_approx(actual.date, expected.date, datetime.fromtimestamp(0, timezone.utc))
     assert_equal_prop(actual.date_nano, expected.date_nano, 0)
     assert_equal_prop(actual.flex, expected.flex, None)
