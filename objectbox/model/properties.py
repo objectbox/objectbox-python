@@ -302,12 +302,12 @@ class Float64(_NumericProperty):
 
 # Date Properties
 class Date(_NumericProperty):
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Date, self).__init__(int, type=PropertyType.date, id=id, uid=uid, **kwargs)
+    def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
+        super(Date, self).__init__(py_type, type=PropertyType.date, id=id, uid=uid, **kwargs)
 
 class DateNano(_NumericProperty):
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(DateNano, self).__init__(int, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
+    def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
+        super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
 
 # Flex Property
 class Flex(Property):

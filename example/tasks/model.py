@@ -6,8 +6,8 @@ class Task:
     id = Id(id=1, uid=1001)
     text = String(id=2, uid=1002)
 
-    date_created = Date(id=3, uid=1003)
-    date_finished = Date(id=4, uid=1004)
+    date_created = Date(py_type=int, id=3, uid=1003)
+    date_finished = Date(py_type=int, id=4, uid=1004)
 
 
 def get_objectbox_model():
