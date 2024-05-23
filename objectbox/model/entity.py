@@ -68,6 +68,13 @@ class _Entity(object):
             setattr(object_, prop_name, prop_val)
         return object_
 
+    def __getattr__(self, name):
+        """ Overload to get properties via "<Entity>.<Prop>" notation. """
+        for prop in self.properties:
+            if prop._name == name:
+                return prop
+        return self.__getattribute__(name)     
+
     def fill_properties(self):
         # TODO allow subclassing and support entities with __slots__ defined
         variables = dict(vars(self.user_type))
