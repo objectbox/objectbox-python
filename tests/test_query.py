@@ -281,8 +281,7 @@ def test_flex_contains_key_value():
     assert box.count() == 5
 
     # Search case-sensitive = False
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("k1", "string", False)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("k1", "string", False)).build()
     results = query.find()
     assert len(results) == 2
     assert results[0].flex["k1"] == "String"
@@ -294,8 +293,7 @@ def test_flex_contains_key_value():
     assert results[1].flex["k4"] == [1, "foo", 3]
 
     # Search case-sensitive = True
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("n1", "string", True)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("n1", "string", True)).build()
     results = query.find()
     assert len(results) == 1
     assert results[0].flex["n1"] == "string"
@@ -306,13 +304,11 @@ def test_flex_contains_key_value():
     # TODO Search using nested key (not supported yet)
 
     # No match (key)
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("missing key", "string", True)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("missing key", "string", True)).build()
     assert len(query.find()) == 0
 
     # No match (value)
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("k1", "missing value", True)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("k1", "missing value", True)).build()
     assert len(query.find()) == 0
 
 
