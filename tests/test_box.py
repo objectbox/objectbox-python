@@ -206,7 +206,7 @@ def test_datetime_special_values():
     assert read.date_nano == datetime.fromtimestamp(0, timezone.utc)
 
     object.date = datetime.fromtimestamp(1.0, timezone.utc)
-    object.date_nano = datetime.fromtimestamp(1.0)
+    object.date_nano = datetime.fromtimestamp(1.0, timezone.utc)
     id = box.put(object)
 
     read = box.get(id)
