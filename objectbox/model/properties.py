@@ -320,9 +320,6 @@ class Flex(Property):
 class _VectorProperty(Property):
     def __init__(self, py_type : Type, **kwargs):
         super(_VectorProperty, self).__init__(py_type, **kwargs)
-    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
-        args = {'query_vector': query_vector, 'element_count': element_count}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
 
 class BoolVector(_VectorProperty):
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
@@ -350,6 +347,9 @@ class Int64Vector(_VectorProperty):
 class Float32Vector(_VectorProperty):
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Float32Vector, self).__init__(np.ndarray, type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
+    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
+        args = {'query_vector': query_vector, 'element_count': element_count}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
 
 class Float64Vector(_VectorProperty):
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):

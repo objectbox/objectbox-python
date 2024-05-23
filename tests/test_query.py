@@ -12,13 +12,23 @@ def test_basics():
     store = create_test_store()
 
     box_test_entity = store.box(TestEntity)
-    box_test_entity.put(TestEntity(str="foo", int64=123))
-    box_test_entity.put(TestEntity(str="bar", int64=456))
+    id1 = box_test_entity.put(TestEntity(bool=True, str="foo", int64=123))
+    id2 = box_test_entity.put(TestEntity(bool=False, str="bar", int64=456))
 
     box_vector_entity = store.box(VectorEntity)
     box_vector_entity.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector_entity.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
+
+    # Bool query
+    bool_prop: Property = TestEntity.get_property("bool")
+    query = box_test_entity.query(bool_prop.equals(True)).build()
+    assert query.count() == 1
+    assert query.find()[0].id == id1
+    
+    query = box_test_entity.query(bool_prop.equals(False)).build()
+    assert query.count() == 1
+    assert query.find()[0].id == id2
 
     # String query
     str_prop: Property = TestEntity.get_property("str")
@@ -194,7 +204,8 @@ def test_float_scalars():
     box_test_entity = store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(float32=12, float64=12))
     id2 = box_test_entity.put(TestEntity(float32=45, float64=45))
-   
+  
+    # Test int scalar literals
     props = [ "float32", "float64" ]
     for p in props:
         prop = TestEntity.get_property(p)
@@ -217,7 +228,7 @@ def test_float_scalars():
         assert query.find()[0].id == id1
         assert query.find()[1].id == id2
     
-    # Test float scalar values 
+    # Test float scalar literals 
     for p in props:
         prop = TestEntity.get_property(p)
         query = box_test_entity.query(prop.greater_or_equal(11.0)).build()
