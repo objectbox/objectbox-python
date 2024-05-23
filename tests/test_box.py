@@ -75,22 +75,24 @@ def test_box_basics():
 
     # read again
     read = box.get(object.id)
-    assert (floor(read.date.timestamp() * 1000) == object.date)
-    assert (read.date_nano == floor(object.date_nano * 1000000000))
+    assert read.str == "bar"
+    assert floor(read.date.timestamp() * 1000) == object.date
+    assert read.date_nano == floor(object.date_nano * 1000000000)
 
     # remove
-    box.remove(object)
+    success = box.remove(object)
+    assert success
 
     # remove should return success  
     success = box.remove(1)
-    assert success == True
+    assert success
     success = box.remove(1)
-    assert success == False
+    assert success is False
 
     # check they're gone
     assert box.count() == 0
-    assert box.get(object.id) == None
-    assert box.get(1) == None
+    assert box.get(object.id) is None
+    assert box.get(1) is None
 
     store.close()
 
@@ -164,7 +166,6 @@ def test_datetime():
     assert pytest.approx(read.date) == object.date.timestamp()
 
     # update
-    object.str = "bar"
     object.date = datetime.utcnow()
     object.date_nano = datetime.utcnow()
     id = box.put(object)
@@ -173,17 +174,46 @@ def test_datetime():
     # read again
     read = box.get(object.id)
     assert pytest.approx(read.date) == object.date.timestamp()
+    assert pytest.approx(read.date_nano.timestamp()) == object.date_nano.timestamp()
 
     # remove
     success = box.remove(object)
-    assert success == True
+    assert success
 
     # check they're gone
     assert box.count() == 0
-    assert box.get(object.id) == None
-    assert box.get(1) == None
+    assert box.get(object.id) is None
+    assert box.get(1) is None
 
     store.close()
+
+
+def test_datetime_special_values():
+    store = load_empty_test_datetime_store()
+    box = store.box(TestEntityDatetime)
+    assert box.is_empty()
+
+    object = TestEntityDatetime()
+    object.date = 0
+    object.date_nano = 0.0
+    id = box.put(object)
+    assert object.id == id
+
+    read = box.get(id)
+    assert isinstance(read.date, float)
+    assert read.date == 0.0
+    assert isinstance(read.date_nano, datetime)
+    assert read.date_nano == datetime.fromtimestamp(0, timezone.utc)
+
+    object.date = datetime.fromtimestamp(1.0, timezone.utc)
+    object.date_nano = datetime.fromtimestamp(1.0)
+    id = box.put(object)
+
+    read = box.get(id)
+    assert isinstance(read.date, float)
+    assert read.date == 1.0
+    assert isinstance(read.date_nano, datetime)
+    assert read.date_nano == datetime.fromtimestamp(1.0, timezone.utc)
 
 
 def test_flex():

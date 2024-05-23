@@ -1,3 +1,4 @@
+import sys
 from datetime import timezone, datetime, timedelta
 
 import pytest
@@ -11,7 +12,16 @@ def test_date_value_to_int__basics():
     assert _Entity.date_value_to_int(1234, 1000000000) == 1234
     assert _Entity.date_value_to_int(1234.0, 1000) == 1234000  # milliseconds
     assert _Entity.date_value_to_int(1234.0, 1000000000) == 1234000000000  # nanoseconds
-    assert _Entity.date_value_to_int(datetime.fromtimestamp(1234), 1000) == 1234000  # milliseconds
+    dt = datetime.fromtimestamp(1234)
+    if sys.platform == "win32":
+        try:
+            dt.timestamp()
+            assert False, "Expected OSError"
+        except OSError as e:
+            assert e.errno == 22
+    else:
+        assert dt.timestamp() == 1234
+        assert _Entity.date_value_to_int(dt, 1000) == 1234000  # milliseconds
 
 
 def test_date_value_to_int__timezone():
