@@ -33,7 +33,7 @@ class _Entity(object):
     def __init__(self, user_type, uid: int = 0):
         self.user_type = user_type
         self.iduid = IdUid(0, uid)
-        self.name = user_type.__name__
+        self._name = user_type.__name__
         self.last_property_iduid = IdUid(0, 0)
 
         self.properties: List[Property] = list()  # List[Property]
@@ -64,7 +64,7 @@ class _Entity(object):
         object_ = self.user_type()
         for prop_name, prop_val in properties.items():
             if not hasattr(object_, prop_name):
-                raise Exception(f"Entity {self.name} has no property \"{prop_name}\"")
+                raise Exception(f"Entity {self._name} has no property \"{prop_name}\"")
             setattr(object_, prop_name, prop_val)
         return object_
 
@@ -119,7 +119,7 @@ class _Entity(object):
         for prop in self.properties:
             if prop.name == name:
                 return prop
-        raise Exception(f"Property \"{name}\" not found in Entity: \"{self.name}\"")
+        raise Exception(f"Property \"{name}\" not found in Entity: \"{self._name}\"")
 
     def get_property_id(self, prop: Union[int, str, Property]) -> int:
         """ A convenient way to get the property ID regardless having its ID, name or Property. """

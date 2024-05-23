@@ -86,7 +86,7 @@ class IdSync:
         for entity in self.model.entities:
             entity_json = {
                 "id": str(entity.iduid),
-                "name": entity.name,
+                "name": entity._name,
                 "lastPropertyId": str(entity.last_property_iduid),
                 "properties": []
             }
@@ -178,7 +178,7 @@ class IdSync:
             elif prop.index is not None and "indexId" not in prop_json:
                 raise ValueError("property has index, but index not found in JSON")
         except ValueError as error:
-            raise ValueError(f"Property {entity.name}.{prop.name} mismatches property found in JSON file: {error}")
+            raise ValueError(f"Property {entity._name}.{prop.name} mismatches property found in JSON file: {error}")
 
     def _sync_index(self, entity: _Entity, prop: Property, prop_json: Optional[Dict[str, Any]]) -> bool:
         assert prop.index is not None
@@ -251,9 +251,9 @@ class IdSync:
                 # User provided a UID not matching any entity, make sure it's not assigned elsewhere
                 self._validate_uid_unassigned(entity.uid)
             else:
-                write_json = entity.name != entity_json["name"]  # If renaming we shall update the JSON
+                write_json = entity._name != entity_json["name"]  # If renaming we shall update the JSON
         else:
-            entity_json = self._find_entity_json_by_name(entity.name)
+            entity_json = self._find_entity_json_by_name(entity._name)
 
         # Write JSON if the number of properties differs (to handle removed property)
         if entity_json is not None:
