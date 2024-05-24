@@ -38,7 +38,7 @@ def test_basics():
     query = box_test_entity.query(bool_prop.equals(True)).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
-    
+
     query = box_test_entity.query(bool_prop.equals(False)).build()
     assert query.count() == 1
     assert query.find()[0].id == id2
@@ -86,7 +86,7 @@ def test_basics():
     assert query.find()[1].str == "bar"
 
     # Case Sensitive = False
-    
+
     query = box_test_entity.query(str_prop.equals("Bar", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
@@ -157,7 +157,7 @@ def test_basics():
     query = box_test_entity.query(int_prop.between(100, 200)).build()
     assert query.count() == 1
     assert query.find()[0].int64 == 123
-    
+
     #
     assert query.remove() == 1
 
@@ -176,23 +176,23 @@ def test_integer_scalars():
     box_test_entity = store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(int8=12, int16=12, int32=12, int64=12))
     id2 = box_test_entity.put(TestEntity(int8=45, int16=45, int32=45, int64=45))
-   
-    props = [ "int8", "int16", "int32", "int64"] 
+
+    props = [ "int8", "int16", "int32", "int64"]
     for p in props:
         prop = TestEntity.get_property(p)
 
         query = box_test_entity.query(prop.equals(12)).build()
         assert query.count() == 1
         assert query.find()[0].id == id1
-        
+
         query = box_test_entity.query(prop.equals(45)).build()
         assert query.count() == 1
         assert query.find()[0].id == id2
-    
+
         query = box_test_entity.query(prop.not_equals(12)).build()
         assert query.count() == 1
         assert query.find()[0].id == id2
-    
+
         query = box_test_entity.query(prop.greater_than(12)).build()
         assert query.count() == 1
         assert query.find()[0].id == id2
@@ -201,7 +201,7 @@ def test_integer_scalars():
         assert query.count() == 2
         assert query.find()[0].id == id1
         assert query.find()[1].id == id2
-    
+
         query = box_test_entity.query(prop.less_than(45)).build()
         assert query.count() == 1
         assert query.find()[0].id == id1
@@ -217,49 +217,54 @@ def test_float_scalars():
     box_test_entity = store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(float32=12.3, float64=12.3))
     id2 = box_test_entity.put(TestEntity(float32=45.6, float64=45.6))
-  
+    id3 = box_test_entity.put(TestEntity(float32=45.7, float64=45.7))
+
     # Test int scalar literals
     props = [ "float32", "float64" ]
     for p in props:
         prop = TestEntity.get_property(p)
-        
+
         # equals/not_equals should not exist 
         with pytest.raises(AttributeError):
             prop.equals(12)
         with pytest.raises(AttributeError):
             prop.not_equals(12)
-        
+
         query = box_test_entity.query(prop.greater_or_equal(12)).build()
-        assert query.count() == 2
+        assert query.count() == 3
         query = box_test_entity.query(prop.greater_than(13)).build()
-        assert query.count() == 1
+        assert query.count() == 2
         assert query.find()[0].id == id2
         query = box_test_entity.query(prop.less_than(46)).build()
-        assert query.count() == 2
+        assert query.count() == 3
         query = box_test_entity.query(prop.less_or_equal(45)).build()
         assert query.count() == 1
-        query = box_test_entity.query(prop.between(10,50)).build()
-        assert query.count() == 2
-        query = box_test_entity.query(prop.between(12,13)).build()
+        query = box_test_entity.query(prop.between(10, 50)).build()
+        assert query.count() == 3
+        query = box_test_entity.query(prop.between(12, 13)).build()
         assert query.count() == 1
-        query = box_test_entity.query(prop.between(12,12)).build()
+        query = box_test_entity.query(prop.between(12, 12)).build()
         assert query.count() == 0
-    
+
     # Test float scalar literals 
     for p in props:
         prop = TestEntity.get_property(p)
+        query = box_test_entity.query(prop.less_or_equal(12.299999)).build()
+        assert query.count() == 0
         query = box_test_entity.query(prop.greater_than(12.3)).build()
-        assert query.count() == 1
-        query = box_test_entity.query(prop.greater_or_equal(12.3)).build()
         assert query.count() == 2
+        query = box_test_entity.query(prop.greater_or_equal(12.3)).build()
+        assert query.count() == 3
         query = box_test_entity.query(prop.less_than(45.6)).build()
         assert query.count() == 1
         query = box_test_entity.query(prop.less_or_equal(45.6)).build()
         assert query.count() == 2
-        query = box_test_entity.query(prop.between(12.2,12.4)).build()
+        query = box_test_entity.query(prop.between(12.2, 12.4)).build()
         assert query.count() == 1
-        query = box_test_entity.query(prop.between(45.6,45.61)).build()
+        query = box_test_entity.query(prop.between(45.5999, 45.61)).build()
         assert query.count() == 1
+        query = box_test_entity.query(prop.between(45.5999, 45.7001)).build()
+        assert query.count() == 2
 
 
 def test_flex_contains_key_value():
@@ -515,7 +520,7 @@ def test_set_parameter_alias():
         & int32_prop.greater_than(700).alias("int32 condition")
     ).build()
     assert query.count() == 1
-    
+
     # Test set parameter alias on vector
     vector_prop: Property = VectorEntity.get_property("vector_euclidean")
 
@@ -558,14 +563,14 @@ def test_set_parameter_alias_advanced():
         )
     ).build()
     assert len(query.find_ids()) == 0
- 
+
     # Test & and | without alias
     query = box.query(
         str_prop.equals("applE")
         | str_prop.equals("orange", case_sensitive=False) & bool_prop.equals(False)
     ).build()
     assert len(query.find_ids()) == 2
-   
+
     # Test using & and | ops
     query = box.query(
         str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
@@ -595,45 +600,44 @@ def test_set_parameter_alias_advanced():
 def test_bytes():
     store = create_test_store()
     box = store.box(TestEntity)
-   
+
     bytes_prop: Property = TestEntity.get_property("bytes")
-    
-    
+
+
     id1 = box.put(TestEntity(bytes=bytes([9])))
     id2 = box.put(TestEntity(bytes=bytes([1,0])))
     id3 = box.put(TestEntity(bytes=bytes([0,1])))
-    query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build() 
+    query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build()
     assert query.count() == 3
-    query = box.query(bytes_prop.greater_or_equal(bytes([1]))).build() 
+    query = box.query(bytes_prop.greater_or_equal(bytes([1]))).build()
     assert query.count() == 2
-    query = box.query(bytes_prop.greater_or_equal(bytes([9]))).build() 
+    query = box.query(bytes_prop.greater_or_equal(bytes([9]))).build()
     assert query.count() == 1
-  
+
     assert box.remove_all() == 3
     id1 = box.put(TestEntity(bytes=bytes([1,2,3,4])))
     id2 = box.put(TestEntity(bytes=bytes([5,6,7,8,9,10,11])))
-    query = box.query(bytes_prop.equals(bytes([1,2,3,4]))).build() 
+    query = box.query(bytes_prop.equals(bytes([1,2,3,4]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box.query(bytes_prop.greater_than(bytes([1,2,3,4]))).build() 
+    query = box.query(bytes_prop.greater_than(bytes([1,2,3,4]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id2
-    
-    query = box.query(bytes_prop.greater_or_equal(bytes([1,2,3,4]))).build() 
+
+    query = box.query(bytes_prop.greater_or_equal(bytes([1,2,3,4]))).build()
     assert query.count() == 2
-    
-    query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build() 
+
+    query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build()
     assert query.count() == 2
-    
-    query = box.query(bytes_prop.less_than(bytes([5,6,7,8,9,10,11]))).build() 
+
+    query = box.query(bytes_prop.less_than(bytes([5,6,7,8,9,10,11]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
-    
-    query = box.query(bytes_prop.less_or_equal(bytes([5,6,7,8,9,10,11]))).build() 
+
+    query = box.query(bytes_prop.less_or_equal(bytes([5,6,7,8,9,10,11]))).build()
     assert query.count() == 2
-    
+
     # bytes does not support not equals
     with pytest.raises(AttributeError):
-        bytes_prop.not_equals(bytes([])) 
-    
+        bytes_prop.not_equals(bytes([]))
