@@ -118,6 +118,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.equals_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.equals_int(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.equals_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'EQ': {type(value)}")
 
@@ -164,6 +166,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.greater_than_int(self._property_id, value)
         elif isinstance(value, float):
             return qb.greater_than_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.greater_than_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GT': {type(value)}")
 
@@ -176,6 +180,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.greater_or_equal_int(self._property_id, value)
         elif isinstance(value, float):
             return qb.greater_or_equal_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.greater_or_equal_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GTE': {type(value)}")
 
@@ -188,6 +194,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.less_than_int(self._property_id, value)
         elif isinstance(value, float):
             return qb.less_than_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.less_than_bytes(self._property_id, value)
         else:
             raise Exception("Unsupported type for 'LT': " + str(type(value)))
 
@@ -200,6 +208,8 @@ class PropertyQueryCondition(QueryCondition):
             return qb.less_or_equal_int(self._property_id, value)
         elif isinstance(value, float):
             return qb.less_or_equal_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.less_or_equal_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'LTE': {type(value)}")
 

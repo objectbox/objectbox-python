@@ -134,6 +134,31 @@ class QueryBuilder:
         cond = obx_qb_between_2doubles(self._c_builder, prop_id, value_a, value_b)
         return cond
 
+    def equals_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_equals_bytes(self._c_builder, prop_id, value, len(value))
+        return cond
+    
+    def greater_than_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_greater_than_bytes(self._c_builder, prop_id, value, len(value))
+        return cond
+    
+    def greater_or_equal_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_greater_or_equal_bytes(self._c_builder, prop_id, value, len(value))
+        return cond
+    
+    def less_than_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_less_than_bytes(self._c_builder, prop_id, value, len(value))
+        return cond
+    
+    def less_or_equal_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
+        prop_id = self._entity.get_property_id(prop)
+        cond = obx_qb_less_or_equal_bytes(self._c_builder, prop_id, value, len(value))
+        return cond
+    
     def nearest_neighbors_f32(self,
                               prop: Union[int, str, Property],
                               query_vector: Union[np.ndarray, List[float]],

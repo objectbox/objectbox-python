@@ -34,6 +34,7 @@ class TestEntity:
     date = Date(id=25, uid=1025)
     date_nano = DateNano(int, id=26, uid=1026)
     flex = Flex(id=27, uid=1027)
+    bytes = Bytes(id=28, uid=1028)
     transient = ""  # not "Property" so it's not stored
 
 

@@ -55,4 +55,5 @@ __all__ = [
     'Int64List',
     'Float32List',
     'Float64List',
+    'Bytes',
 ]

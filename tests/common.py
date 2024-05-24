@@ -14,7 +14,7 @@ test_dir = 'testdata'
 
 def create_default_model() -> objectbox.Model:
     model = objectbox.Model()
-    model.entity(TestEntity, last_property_id=IdUid(27, 1027))
+    model.entity(TestEntity, last_property_id=IdUid(28, 1028))
     model.last_entity_id = IdUid(2, 2)
     model.last_index_id = IdUid(2, 10002)
     return model
@@ -55,7 +55,7 @@ def create_test_store(db_name: Optional[str] = None, clear_db: bool = True) -> o
         shutil.rmtree(db_path)
 
     model = objectbox.Model()
-    model.entity(TestEntity, last_property_id=IdUid(27, 1027))
+    model.entity(TestEntity, last_property_id=IdUid(28, 1028))
     model.entity(TestEntityDatetime, last_property_id=IdUid(4, 2004))
     model.entity(TestEntityFlex, last_property_id=IdUid(2, 3002))
     model.entity(VectorEntity, last_property_id=IdUid(5, 4005))

@@ -586,3 +586,50 @@ def test_set_parameter_alias_advanced():
     query.set_parameter_alias_string("str_filter", "Zucchini")
     assert len(query.find_ids()) == 1  # Zucchini
 
+
+# Bytes query
+def test_bytes():
+    store = create_test_store()
+    box = store.box(TestEntity)
+   
+    bytes_prop: Property = TestEntity.get_property("bytes")
+    
+    
+    id1 = box.put(TestEntity(bytes=bytes([9])))
+    id2 = box.put(TestEntity(bytes=bytes([1,0])))
+    id3 = box.put(TestEntity(bytes=bytes([0,1])))
+    query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build() 
+    assert query.count() == 3
+    query = box.query(bytes_prop.greater_or_equal(bytes([1]))).build() 
+    assert query.count() == 2
+    query = box.query(bytes_prop.greater_or_equal(bytes([9]))).build() 
+    assert query.count() == 1
+  
+    assert box.remove_all() == 3
+    id1 = box.put(TestEntity(bytes=bytes([1,2,3,4])))
+    id2 = box.put(TestEntity(bytes=bytes([5,6,7,8,9,10,11])))
+    query = box.query(bytes_prop.equals(bytes([1,2,3,4]))).build() 
+    assert query.count() == 1
+    assert query.find()[0].id == id1
+
+    query = box.query(bytes_prop.greater_than(bytes([1,2,3,4]))).build() 
+    assert query.count() == 1
+    assert query.find()[0].id == id2
+    
+    query = box.query(bytes_prop.greater_or_equal(bytes([1,2,3,4]))).build() 
+    assert query.count() == 2
+    
+    query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build() 
+    assert query.count() == 2
+    
+    query = box.query(bytes_prop.less_than(bytes([5,6,7,8,9,10,11]))).build() 
+    assert query.count() == 1
+    assert query.find()[0].id == id1
+    
+    query = box.query(bytes_prop.less_or_equal(bytes([5,6,7,8,9,10,11]))).build() 
+    assert query.count() == 2
+    
+    # bytes does not support not equals
+    with pytest.raises(AttributeError):
+        bytes_prop.not_equals(bytes([])) 
+    

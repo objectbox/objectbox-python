@@ -311,6 +311,31 @@ class DateNano(_IntProperty):
     def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
         super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
 
+# Bytes Property
+class Bytes(_NumericProperty):
+    def __init__(self, id: int = 0, uid : int = 0, **kwargs):
+        super(Bytes, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
+    
+    def equals(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
+    
+    def greater_than(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+
+    def greater_or_equal(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+
+    def less_than(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+
+    def less_or_equal(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+
 # Flex Property
 class Flex(Property):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
