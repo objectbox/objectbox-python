@@ -237,7 +237,7 @@ class IdSync:
         self._save_model_json()
 
 
-def sync_model(model: Model, model_filepath: str = "obx-model.json"):
+def sync_model(model: Model, model_filepath: str = "objectbox-model.json"):
     """ Syncs the provided model with the model JSON file. """
 
     id_sync = IdSync(model, model_filepath)

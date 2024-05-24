@@ -33,7 +33,7 @@ class DocumentEmbedding:
 
 model = Model()
 model.entity(DocumentEmbedding)
-sync_model(model, os.path.join(os.path.dirname(__file__),"obx-model.json") )
+sync_model(model, os.path.join(os.path.dirname(__file__),"objectbox-model.json") )
 
 store = objectbox.Store(model=model)
 box = store.box(DocumentEmbedding)
