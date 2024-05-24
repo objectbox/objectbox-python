@@ -113,18 +113,20 @@ class PropertyQueryCondition(QueryCondition):
 
     def _apply_eq(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.equals_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.equals_int(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.equals_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'EQ': {type(value)}")
 
     def _apply_not_eq(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.not_equals_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.not_equals_int(self._property_id, value)
@@ -149,57 +151,75 @@ class PropertyQueryCondition(QueryCondition):
 
     def _apply_ends_with(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.ends_with_string(self._property_id, value, case_sensitive)
         else:
             raise Exception(f"Unsupported type for 'ENDS_WITH': {type(value)}")
 
     def _apply_gt(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.greater_than_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.greater_than_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.greater_than_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.greater_than_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GT': {type(value)}")
 
     def _apply_gte(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.greater_or_equal_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.greater_or_equal_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.greater_or_equal_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.greater_or_equal_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'GTE': {type(value)}")
 
     def _apply_lt(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.less_than_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.less_than_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.less_than_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.less_than_bytes(self._property_id, value)
         else:
             raise Exception("Unsupported type for 'LT': " + str(type(value)))
 
     def _apply_lte(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
-        case_sensitive = self._args['case_sensitive']
         if isinstance(value, str):
+            case_sensitive = self._args['case_sensitive']
             return qb.less_or_equal_string(self._property_id, value, case_sensitive)
         elif isinstance(value, int):
             return qb.less_or_equal_int(self._property_id, value)
+        elif isinstance(value, float):
+            return qb.less_or_equal_double(self._property_id, value)
+        elif isinstance(value, bytes):
+            return qb.less_or_equal_bytes(self._property_id, value)
         else:
             raise Exception(f"Unsupported type for 'LTE': {type(value)}")
 
     def _apply_between(self, qb: QueryBuilder) -> obx_qb_cond:
         a = self._args['a']
         b = self._args['b']
-        if isinstance(a, int):
+        if isinstance(a, int) and isinstance(b, int):
             return qb.between_2ints(self._property_id, a, b)
+        elif isinstance(a, float) or isinstance(b, float):
+            return qb.between_2doubles(self._property_id, a, b)
         else:
             raise Exception(f"Unsupported type for 'BETWEEN': {type(a)}")
 
