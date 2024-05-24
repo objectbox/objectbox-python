@@ -183,6 +183,40 @@ class Property:
             if isinstance(self._index, Index):  # Generic index
                 self._flags |= self._index.type
 
+class _NumericProperty(Property):
+    """Common class for numeric conditions.
+    Implicitly no support for equals/not_equals, see also _IntProperty below.
+    """
+    def __init__(self, py_type : Type, **kwargs):
+        super(_NumericProperty, self).__init__(py_type, **kwargs)
+    
+    def greater_than(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+
+    def greater_or_equal(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+
+    def less_than(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+
+    def less_or_equal(self, value) -> PropertyQueryCondition:
+        args = {'value': value}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+
+    def between(self, a, b) -> PropertyQueryCondition:
+        args = {'a': a, 'b': b}
+        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.BETWEEN, args)
+
+class _IntProperty(_NumericProperty):
+    """Integer-based conditions.
+    Adds support for equals/not_equals.
+    """
+    def __init__(self, py_type : Type, **kwargs):
+        super(_IntProperty, self).__init__(py_type, **kwargs)
+        
     def equals(self, value) -> PropertyQueryCondition:
         args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
@@ -191,13 +225,14 @@ class Property:
         args = {'value': value}
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
 
+
 # ID property (primary key)
-class Id(Property):
+class Id(_IntProperty):
     def __init__(self, id : int = 0, uid : int = 0, py_type: type = int):
         super(Id, self).__init__(py_type, id=id, uid=uid)
 
 # Bool property
-class Bool(Property):
+class Bool(_IntProperty):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Bool, self).__init__(bool, type=PropertyType.bool, id=id, uid=uid, **kwargs)
 
@@ -243,51 +278,18 @@ class String(Property):
         return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
     
 
-# Numeric Properties
-class _NumericProperty(Property):
-    def __init__(self, py_type : Type, **kwargs):
-        super(_NumericProperty, self).__init__(py_type, **kwargs)
-    
-    def equals(self, value) -> PropertyQueryCondition:
-        args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
-
-    def not_equals(self, value) -> PropertyQueryCondition:
-        args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
-    
-    def greater_than(self, value) -> PropertyQueryCondition:
-        args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
-
-    def greater_or_equal(self, value) -> PropertyQueryCondition:
-        args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
-
-    def less_than(self, value) -> PropertyQueryCondition:
-        args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
-
-    def less_or_equal(self, value) -> PropertyQueryCondition:
-        args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
-
-    def between(self, a, b) -> PropertyQueryCondition:
-        args = {'a': a, 'b': b}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.BETWEEN, args)
-
-
+ 
 # Signed Integer Numeric Properties
-class Int8(_NumericProperty):
+class Int8(_IntProperty):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int8, self).__init__(int, type=PropertyType.byte, id=id, uid=uid, **kwargs)
-class Int16(_NumericProperty):
+class Int16(_IntProperty):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int16, self).__init__(int, type=PropertyType.short, id=id, uid=uid, **kwargs)
-class Int32(_NumericProperty):
+class Int32(_IntProperty):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int32, self).__init__(int, type=PropertyType.int, id=id, uid=uid, **kwargs)
-class Int64(_NumericProperty):
+class Int64(_IntProperty):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int64, self).__init__(int, type=PropertyType.long, id=id, uid=uid, **kwargs)
         
@@ -301,11 +303,11 @@ class Float64(_NumericProperty):
         super(Float64, self).__init__(float, type=PropertyType.double, id=id, uid=uid, **kwargs)
 
 # Date Properties
-class Date(_NumericProperty):
+class Date(_IntProperty):
     def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
         super(Date, self).__init__(py_type, type=PropertyType.date, id=id, uid=uid, **kwargs)
 
-class DateNano(_NumericProperty):
+class DateNano(_IntProperty):
     def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
         super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
 

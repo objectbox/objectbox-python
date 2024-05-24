@@ -209,6 +209,13 @@ def test_float_scalars():
     props = [ "float32", "float64" ]
     for p in props:
         prop = TestEntity.get_property(p)
+        
+        # equals/not_equals should not exist 
+        with pytest.raises(AttributeError):
+            prop.equals(12)
+        with pytest.raises(AttributeError):
+            prop.not_equals(12)
+        
         query = box_test_entity.query(prop.greater_or_equal(11)).build()
         assert query.count() == 2
         assert query.find()[0].id == id1
