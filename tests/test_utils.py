@@ -3,24 +3,23 @@ from datetime import timezone, datetime, timedelta
 
 import pytest
 
-from objectbox.model.entity import _Entity
 from objectbox.utils import *
 
 
 def test_date_value_to_int__basics():
-    assert _Entity.date_value_to_int(1234, 1000) == 1234
-    assert _Entity.date_value_to_int(1234, 1000000000) == 1234
-    assert _Entity.date_value_to_int(1234.0, 1000) == 1234000  # milliseconds
-    assert _Entity.date_value_to_int(1234.0, 1000000000) == 1234000000000  # nanoseconds
+    assert date_value_to_int(1234, 1000) == 1234
+    assert date_value_to_int(1234, 1000000000) == 1234
+    assert date_value_to_int(1234.0, 1000) == 1234000  # milliseconds
+    assert date_value_to_int(1234.0, 1000000000) == 1234000000000  # nanoseconds
     dt = datetime.fromtimestamp(12345678)  # May 1970; 1234 is too close to the epoch (special case for that below)
-    assert _Entity.date_value_to_int(dt, 1000) == 12345678000  # milliseconds
+    assert date_value_to_int(dt, 1000) == 12345678000  # milliseconds
 
 
 def test_date_value_to_int__close_to_epoch():
-    assert _Entity.date_value_to_int(datetime.fromtimestamp(0, timezone.utc), 1000) == 0
-    assert _Entity.date_value_to_int(datetime.fromtimestamp(1234, timezone.utc), 1000) == 1234000
-    assert _Entity.date_value_to_int(datetime.fromtimestamp(0), 1000) == 0
-    assert _Entity.date_value_to_int(datetime.fromtimestamp(1234), 1000) == 1234000
+    assert date_value_to_int(datetime.fromtimestamp(0, timezone.utc), 1000) == 0
+    assert date_value_to_int(datetime.fromtimestamp(1234, timezone.utc), 1000) == 1234000
+    assert date_value_to_int(datetime.fromtimestamp(0), 1000) == 0
+    assert date_value_to_int(datetime.fromtimestamp(1234), 1000) == 1234000
 
     # "Return the local date corresponding to the POSIX timestamp"; but not always!? Was -1 hour off with CEST:
     dt0naive = datetime.fromtimestamp(0)
@@ -47,7 +46,7 @@ def test_date_value_to_int__close_to_epoch():
         # Non-Windows platforms should work fine
         assert dt.timestamp() == 1234
 
-    assert _Entity.date_value_to_int(dt, 1000) == 1234000  # milliseconds
+    assert date_value_to_int(dt, 1000) == 1234000  # milliseconds
 
 
 def test_date_value_to_int__timezone():
@@ -62,8 +61,8 @@ def test_date_value_to_int__timezone():
 
     # Actual test
     expected: int = 957184245123
-    assert _Entity.date_value_to_int(dt_utc, 1000) == expected
-    assert _Entity.date_value_to_int(dt_plus2, 1000) == expected
+    assert date_value_to_int(dt_utc, 1000) == expected
+    assert date_value_to_int(dt_plus2, 1000) == expected
 
 
 def test_date_value_to_int__naive():
@@ -76,7 +75,7 @@ def test_date_value_to_int__naive():
     assert dt_naive.timestamp() == dt_local.timestamp()
 
     # Actual test
-    assert _Entity.date_value_to_int(dt_naive, 1000) == _Entity.date_value_to_int(dt_local, 1000)
+    assert date_value_to_int(dt_naive, 1000) == date_value_to_int(dt_local, 1000)
 
 
 def test_vector_distance_f32():

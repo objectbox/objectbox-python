@@ -17,10 +17,10 @@ import flatbuffers
 import flatbuffers.flexbuffers
 from typing import Generic
 import numpy as np
-from math import floor
 from datetime import datetime, timezone
 from objectbox.c import *
 from objectbox.model.properties import Property
+from objectbox.utils import date_value_to_int
 import threading
 
 
@@ -137,34 +137,6 @@ class _Entity(object):
     def set_object_id(self, object, id: int):
         setattr(object, self.id_property._name, id)
 
-    @staticmethod
-    def date_value_to_int(value, multiplier: int) -> int:
-        if isinstance(value, datetime):
-            try:
-                return round(value.timestamp() * multiplier)  # timestamp returns seconds
-            except OSError:
-                # On Windows, timestamp() raises an OSError for naive datetime objects with dates is close to the epoch.
-                # Thus, it is highly recommended to only use datetime *with* timezone information (no issue here).
-                # See bug reports:
-                # https://github.com/python/cpython/issues/81708 and https://github.com/python/cpython/issues/94414
-                # The workaround is to go via timezone-aware datetime objects, which seem to work - with one caveat.
-                local_tz = datetime.now().astimezone().tzinfo
-                value = value.replace(tzinfo=local_tz)
-                value = value.astimezone(timezone.utc)
-                # Caveat: times may be off by; offset should be 0 but actually was seen at -3600 in CEST (Linux & Win).
-                # See also https://stackoverflow.com/q/56931738/551269
-                # So, let's check value 0 as a reference and use the resulting timestamp as an offset for correction.
-                offset = datetime.fromtimestamp(0).replace(tzinfo=local_tz).astimezone(timezone.utc).timestamp()
-                return round((value.timestamp() - offset) * multiplier)  # timestamp returns seconds
-        elif isinstance(value, float):
-            return round(value * multiplier)  # floats typically represent seconds
-        elif isinstance(value, int):  # Interpret ints as-is (without the multiplier); e.g. milliseconds or nanoseconds
-            return value
-        else:
-            raise TypeError(
-                f"Unsupported Python datetime type: {type(value)}. Please use datetime, float (seconds based) or "
-                f"int (milliseconds for Date, nanoseconds for DateNano).")
-
     def marshal(self, object, id: int) -> bytearray:
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
@@ -215,9 +187,9 @@ class _Entity(object):
             else:
                 val = id if prop == self.id_property else self.get_value(object, prop)
                 if prop._ob_type == OBXPropertyType_Date:
-                    val = self.date_value_to_int(val, 1000)  # convert to milliseconds
+                    val = date_value_to_int(val, 1000)  # convert to milliseconds
                 elif prop._ob_type == OBXPropertyType_DateNano:
-                    val = self.date_value_to_int(val, 1000000000)  # convert to nanoseconds
+                    val = date_value_to_int(val, 1000000000)  # convert to nanoseconds
                 builder.Prepend(prop._fb_type, val)
 
             builder.Slot(prop._fb_slot)
