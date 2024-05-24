@@ -162,10 +162,8 @@ def test_basics():
     #
     assert query.remove() == 1
 
-    # NN query and using `get_property`
-    vector_prop: Property = VectorEntity.vector_euclidean
-
-    query = box_vector_entity.query(vector_prop.nearest_neighbor([2.1, 2.1], 2)).build()
+    # NN query 
+    query = box_vector_entity.query(VectorEntity.vector_euclidean.nearest_neighbor([2.1, 2.1], 2)).build()
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
@@ -322,7 +320,7 @@ def test_offset_limit():
     box.put(TestEntity(str="c"))
     assert box.count() == 4
 
-    int_prop = TestEntity._get_property("int64")
+    int_prop = TestEntity.int64 
 
     query = box.query(int_prop.equals(0)).build()
     assert query.count() == 4
@@ -470,9 +468,9 @@ def test_set_parameter_alias():
     box_vector.put(VectorEntity(name="Object 4", vector_euclidean=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector_euclidean=[5, 5]))
 
-    str_prop: Property = TestEntity._get_property("str")
-    int32_prop: Property = TestEntity._get_property("int32")
-    int64_prop: Property = TestEntity._get_property("int64")
+    str_prop: Property = TestEntity.str 
+    int32_prop: Property = TestEntity.int32 
+    int64_prop: Property = TestEntity.int64
 
     # Test set parameter alias on string
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -519,7 +517,7 @@ def test_set_parameter_alias():
     assert query.count() == 1
 
     # Test set parameter alias on vector
-    vector_prop: Property = VectorEntity._get_property("vector_euclidean")
+    vector_prop: Property = VectorEntity.vector_euclidean
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
     assert query.count() == 3
@@ -546,10 +544,10 @@ def test_set_parameter_alias_advanced():
     box.put(TestEntity(str="Zucchini", bool=False, int64=1234, int32=9))
     assert box.count() == 8
 
-    str_prop = TestEntity._get_property("str")
-    bool_prop = TestEntity._get_property("bool")
-    int32_prop = TestEntity._get_property("int32")
-    int64_prop = TestEntity._get_property("int64")
+    str_prop = TestEntity.str
+    bool_prop = TestEntity.bool
+    int32_prop = TestEntity.int32
+    int64_prop = TestEntity.int64
 
     query = box.query(
         str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
