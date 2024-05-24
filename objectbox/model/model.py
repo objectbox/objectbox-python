@@ -40,23 +40,26 @@ class Model:
         self.entities.append(entity)
 
     def validate_ids_assigned(self):
-        if not self.last_entity_iduid.is_assigned():
-            raise Exception("Model last_entity_id not assigned")
-        if not self.last_entity_iduid.is_assigned():
-            raise ValueError("Model last_index_id not assigned")
-        # if not self.last_relation_id.is_assigned(): TODO last_relation_id
-        #     return False
-        # TODO validate last_entity_id value
-        # TODO validate last_index_id value
+        # TODO validate last_relation_iduid
+        has_entities = len(self.entities) > 0
+        has_indices = False
         for entity in self.entities:
+            has_properties = len(entity.properties) > 0
             if not entity.iduid.is_assigned():
-                raise ValueError(f"Entity \"{entity.name}\" id not assigned")
+                raise ValueError(f"Entity \"{entity.name}\" ID not assigned")
             for prop in entity.properties:
-                # TODO validate last_property_id value
                 if not prop.iduid.is_assigned():
-                    raise ValueError(f"Property \"{entity.name}\"->\"{prop.name}\" id not assigned")
-            if not entity.last_property_iduid.is_assigned():
-                raise ValueError(f"Entity \"{entity.name}\" last_property_id not assigned")
+                    raise ValueError(f"Property \"{entity.name}.{prop.name}\" ID not assigned")
+                if prop.index is not None:
+                    has_indices = True
+                    if not prop.index.iduid.is_assigned():
+                        raise ValueError(f"Property index \"{entity.name}.{prop.name}\" ID not assigned")
+            if has_properties and not entity.last_property_iduid.is_assigned():
+                raise ValueError(f"Entity \"{entity.name}\" last_property_iduid not assigned")
+        if has_entities and not self.last_entity_iduid.is_assigned():
+            raise Exception("Model last_entity_iduid not assigned")
+        if has_indices and not self.last_index_iduid.is_assigned():
+            raise ValueError("Model last_index_iduid not assigned")
 
     def _set_hnsw_params(self, index: HnswIndex):
         if index.dimensions is not None:
