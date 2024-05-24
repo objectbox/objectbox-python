@@ -253,4 +253,54 @@ def test_prop_remove(env):
     box = store.box(MyEntity)
     assert box.count() == 2
 
-# TODO: test_prop_rename ? Do we need a uid annotation for properties then?
+
+def test_prop_rename(env):
+    @Entity()
+    class EntityA:
+        id = Id()
+        name = Property(str)
+
+    model = Model()
+    model.entity(EntityA)
+    env.sync(model)
+    store = env.store()
+    box = store.box(EntityA)
+    box.put(EntityA(name="Luca"))
+    assert box.count() == 1
+    assert box.get(1).name == "Luca"
+    assert not hasattr(box.get(1), "renamed_name")
+
+    entity1_iduid = EntityA.iduid
+    name = EntityA.get_property("name")
+    name_iduid = name.iduid
+    print(f"Entity.name ID/UID: {name.iduid}")
+
+    del box  # Close store
+    store.close()
+    del store
+
+    # *** Rename ***
+
+    @Entity()
+    class EntityA:
+        id = Id()
+        renamed_name = Property(str, uid=name.uid)  # Renamed property (same UID as "name")
+
+    model = Model()
+    model.entity(EntityA)
+    env.sync(model)
+    store = env.store()
+
+    # Check ID/UID(s) are preserved after renaming
+    entity2_iduid = EntityA.iduid
+    renamed_name = EntityA.get_property("renamed_name")
+    renamed_name_iduid = renamed_name.iduid
+    print(f"Entity.renamed_name ID/UID: {renamed_name_iduid}")
+    assert entity1_iduid == entity2_iduid
+    assert name_iduid == renamed_name_iduid
+
+    # Check property value is preserved after renaming
+    box = store.box(EntityA)
+    assert box.count() == 1
+    assert not hasattr(box.get(1), "name")
+    assert box.get(1).renamed_name == "Luca"

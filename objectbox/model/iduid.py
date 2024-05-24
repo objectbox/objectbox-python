@@ -12,6 +12,9 @@ class IdUid:
     def __bool__(self):
         return self.is_assigned()
 
+    def __eq__(self, rhs: 'IdUid'):
+        return self.id == rhs.id and self.uid == rhs.uid
+
     def __str__(self):
         return f"{self.id}:{self.uid}"
 
