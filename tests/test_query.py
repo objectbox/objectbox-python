@@ -20,6 +20,19 @@ def test_basics():
     box_vector_entity.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
 
+    # Id query
+    id_prop: Property = TestEntity.get_property("id")
+    query = box_test_entity.query(id_prop.equals(id1)).build()
+    assert query.count() == 1
+    query = box_test_entity.query(id_prop.greater_than(id1)).build()
+    assert query.count() == 1
+    query = box_test_entity.query(id_prop.greater_or_equal(id1)).build()
+    assert query.count() == 2
+    query = box_test_entity.query(id_prop.less_than(id2)).build()
+    assert query.count() == 1
+    query = box_test_entity.query(id_prop.less_or_equal(id2)).build()
+    assert query.count() == 2
+
     # Bool query
     bool_prop: Property = TestEntity.get_property("bool")
     query = box_test_entity.query(bool_prop.equals(True)).build()
