@@ -64,25 +64,63 @@ def test_empty(env):
     # assert len(doc['retiredRelationUids']) == 0
     # assert len(doc['version']) == 1
 
-def test_basics(env):
+
+def test_json(env):
     @Entity()
     class MyEntity:
         id = Id()
-        name = String()
+        my_string = String()
+        my_string_indexed = String(index=Index())
+
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
     doc = env.json()
-    # debug: pprint(doc) 
+    # debug: pprint(doc)
+
     json_e0 = doc['entities'][0]
     e0_id = json_e0['id']
     assert e0_id == str(MyEntity.iduid)
     assert e0_id.startswith("1:")
     assert json_e0['name'] == "MyEntity"
+
     json_p0 = json_e0['properties'][0]
     p0_id = json_p0['id']
     assert p0_id == str(MyEntity.get_property('id').iduid)
     assert p0_id.startswith("1:")
+    assert json_p0['name'] == "id"
+    assert json_p0['flags'] == 1
+    assert json_p0.get('indexId') is None
+
+    json_p1 = json_e0['properties'][1]
+    assert json_p1['id'] == str(MyEntity.get_property('my_string').iduid)
+    assert json_p1['name'] == "my_string"
+    assert json_p1.get('flags') is None
+    assert json_p1.get('indexId') is None
+
+    json_p2 = json_e0['properties'][2]
+    assert json_p2['id'] == str(MyEntity.get_property('my_string_indexed').iduid)
+    assert json_p2['name'] == "my_string_indexed"
+    assert json_p2['flags'] == 8
+    assert json_p2['indexId'] == str(MyEntity.get_property('my_string_indexed').index.iduid)
+    assert json_e0['lastPropertyId'] == json_p2['id']
+
+    assert doc['lastEntityId'] == e0_id
+    assert doc['lastIndexId'] == json_p2['indexId']
+
+
+def test_basics(env):
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    assert MyEntity.id == 1
+    assert MyEntity.uid != 0
+    entity_ids = str(MyEntity.iduid)
 
     # create new database and populate with two objects
     store = env.store()
@@ -102,7 +140,7 @@ def test_basics(env):
     model.entity(MyEntity)
     assert str(model.entities[0].iduid) == "0:0"
     env.sync(model)
-    assert str(model.entities[0].iduid) == e0_id
+    assert str(model.entities[0].iduid) == entity_ids
 
     # open existing database 
     store = env.store()

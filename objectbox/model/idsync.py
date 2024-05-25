@@ -10,6 +10,12 @@ MODEL_PARSER_VERSION = 5
 
 
 class IdSync:
+    """
+    Synchronizes a model with the IDs from model JSON file.
+    After syncing, the model will have all IDs assigned.
+    The JSON file is written (from scratch) based on the model.
+    """
+
     def __init__(self, model: Model, model_json_filepath: str):
         self.model = model
 
@@ -63,8 +69,9 @@ class IdSync:
                     "id": str(prop.iduid),
                     "name": prop.name,
                     "type": prop._ob_type,
-                    "flags": prop._flags
                 }
+                if prop._flags != 0:
+                    prop_json["flags"] = prop._flags
                 if prop.index is not None:
                     prop_json["indexId"] = str(prop.index.iduid)
                 entity_json["properties"].append(prop_json)
@@ -80,6 +87,7 @@ class IdSync:
         """ Finds entity JSON by UID. """
         if self.model_json is None:
             return None
+        # TODO put entities in a dict (e.g. while/after loading) for faster lookup
         for entity_json in self.model_json["entities"]:
             if IdUid.from_str(entity_json["id"]).uid == uid:
                 return entity_json
@@ -89,6 +97,7 @@ class IdSync:
         """ Finds entity JSON by name. """
         if self.model_json is None:
             return None
+        # TODO put entities in a dict (e.g. while/after loading) for faster lookup
         for entity_json in self.model_json["entities"]:
             if entity_json["name"] == entity_name:
                 return entity_json
@@ -96,6 +105,7 @@ class IdSync:
 
     def _find_property_json_by_uid(self, entity_json: Dict[str, Any], uid: int) -> Optional[Dict[str, Any]]:
         """ Finds entity property JSON by property UID. """
+        # TODO put properties in a multi-dict (e.g. while/after loading) for faster lookup
         for prop_json in entity_json["properties"]:
             if IdUid.from_str(prop_json["id"]).uid == uid:
                 return prop_json
@@ -103,6 +113,7 @@ class IdSync:
 
     def _find_property_json_by_name(self, entity_json: Dict[str, Any], prop_name: str) -> Optional[Dict[str, Any]]:
         """ Finds entity property JSON by property name. """
+        # TODO put properties in a multi-dict (e.g. while/after loading) for faster lookup
         for prop_json in entity_json["properties"]:
             if prop_json["name"] == prop_name:
                 return prop_json
@@ -113,6 +124,7 @@ class IdSync:
         return random.getrandbits(63) + 1  # 0 would be invalid
 
     def _validate_uid_unassigned(self, uid: int):
+        # TODO use a dict/set for all assigned UIDs (for all entities/properties/indexes) for faster lookup
         """ Validates that a user supplied UID is not assigned for any other entity/property/index.
         Raises a ValueError if the UID is already assigned elsewhere.
         """
@@ -141,9 +153,12 @@ class IdSync:
             #    raise ValueError(f"name {prop.name} != name {prop_json['name']} (in JSON)")
             if prop._ob_type != prop_json["type"]:
                 raise ValueError(f"OBX type {prop._ob_type} != OBX type {prop_json['type']} (in JSON)")
-            elif prop._flags != prop_json["flags"]:
-                raise ValueError(f"flags {prop._flags} != flags {prop_json['flags']} (in JSON)")
-            elif prop.index is None and "indexId" in prop_json:
+
+            json_flags = prop_json.get("flags", 0)
+            if prop._flags != json_flags:
+                raise ValueError(f"flags {prop._flags} != flags {json_flags} (in JSON)")
+
+            if prop.index is None and "indexId" in prop_json:
                 raise ValueError("property hasn't index, but index found in JSON")
             elif prop.index is not None and "indexId" not in prop_json:
                 raise ValueError("property has index, but index not found in JSON")
@@ -169,7 +184,7 @@ class IdSync:
 
         if (iduid_json is not None) and (not index.has_uid() or index.iduid.uid == iduid_json.uid):  # Load
             index.iduid = IdUid.from_str(prop_json["indexId"])
-        else:  # Assign
+        else:  # Assign new ID to new index
             index.iduid = IdUid(self.model.last_index_iduid.id + 1, index.uid)
             self.model.last_index_iduid = index.iduid
 
@@ -186,11 +201,11 @@ class IdSync:
             if entity_json is not None:
                 prop_json = self._find_property_json_by_name(entity_json, prop.name)
 
-        if prop_json is not None:  # Load
+        if prop_json is not None:  # Load existing IDs from JSON
             # Property was matched with a JSON property (either by UID or by name), make sure they're equal
             self._validate_matching_prop(entity, prop, prop_json)
             prop.iduid = IdUid.from_str(prop_json["id"])
-        else:  # Assign
+        else:  # Assign new ID to new property
             if not prop.has_uid():
                 prop.iduid.uid = self._generate_uid()
             prop.iduid = IdUid(entity.last_property_iduid.id + 1, prop.iduid.uid)
@@ -209,10 +224,10 @@ class IdSync:
         else:
             entity_json = self._find_entity_json_by_name(entity.name)
 
-        if entity_json is not None:  # Load
+        if entity_json is not None:  # Load existing IDs from JSON
             entity.iduid = IdUid.from_str(entity_json["id"])
             entity.last_property_iduid = IdUid.from_str(entity_json["lastPropertyId"])
-        else:  # Assign
+        else:  # Assign new ID to new entity
             if not entity.has_uid():
                 entity.iduid.uid = self._generate_uid()
             entity.iduid = IdUid(self.model.last_entity_iduid.id + 1, entity.iduid.uid)
