@@ -141,7 +141,7 @@ class Box:
             finally:
                 obx_bytes_array_free(c_bytes_array_p)
 
-    def remove(self, id_or_object):
+    def remove(self, id_or_object) -> bool:
         if isinstance(id_or_object, self._entity.user_type):
             id = self._entity.get_object_id(id_or_object)
         else:

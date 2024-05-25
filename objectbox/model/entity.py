@@ -234,7 +234,7 @@ class _Entity(object):
                 size = table.VectorLen(o)
                 # slice the vector as a requested type
                 val = prop._py_type(table.Bytes[start:start + size])
-            elif prop._ob_type == OBXPropertyType_ShortVector:
+            elif ob_type == OBXPropertyType_ShortVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
             elif ob_type == OBXPropertyType_CharVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)

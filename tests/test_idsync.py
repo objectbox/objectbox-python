@@ -1,5 +1,6 @@
 from objectbox import *
 from objectbox.model import *
+from objectbox.model.entity import _Entity
 from objectbox.model.idsync import sync_model
 from objectbox.c import CoreException
 import json
@@ -9,7 +10,10 @@ import tests.model
 import pytest
 
 class _TestEnv:
-    """Test setup/tear-down of model json files, db store and utils."""
+    """
+    Test setup/tear-down of model json files, db store and utils.
+    Starts "fresh" on construction: deletes the model json file and the db files.
+    """
     def __init__(self):
         self.model_path = 'test.json'
         if os.path.exists(self.model_path):
@@ -23,7 +27,16 @@ class _TestEnv:
         return json.load(open(self.model_path))
     def store(self):
         return Store(model=self.model, directory=self.db_path)
-        
+
+
+def reset_ids(entity: _Entity):
+    entity.iduid = IdUid(0, 0)
+    entity.last_property_iduid = IdUid(0, 0)
+    for prop in entity.properties:
+        prop.iduid = IdUid(0, 0)
+        if prop.index:
+            prop.index.iduid = IdUid(0, 0)
+
 @pytest.fixture
 def env():
     return _TestEnv()
@@ -55,18 +68,22 @@ def test_basics(env):
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
+        name = String()
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
-    doc = env.json() 
+    doc = env.json()
     # debug: pprint(doc) 
-    e0 = doc['entities'][0] 
-    assert e0['id'] == str(MyEntity.iduid)
-    assert e0['name'] == "MyEntity"
-    props = e0['properties'] 
-    assert props[0]['id'] == str(MyEntity.get_property('id').iduid)
-   
+    json_e0 = doc['entities'][0]
+    e0_id = json_e0['id']
+    assert e0_id == str(MyEntity.iduid)
+    assert e0_id.startswith("1:")
+    assert json_e0['name'] == "MyEntity"
+    json_p0 = json_e0['properties'][0]
+    p0_id = json_p0['id']
+    assert p0_id == str(MyEntity.get_property('id').iduid)
+    assert p0_id.startswith("1:")
+
     # create new database and populate with two objects
     store = env.store()
     entityBox = store.box(MyEntity)
@@ -75,16 +92,18 @@ def test_basics(env):
     del entityBox
     store.close()
     del store
-   
+
     # recreate model using existing model json and open existing database 
     model = Model()
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
+        name = String()
     model.entity(MyEntity)
+    assert str(model.entities[0].iduid) == "0:0"
     env.sync(model)
-   
+    assert str(model.entities[0].iduid) == e0_id
+
     # open existing database 
     store = env.store()
     entityBox = store.box(MyEntity)
@@ -94,43 +113,47 @@ def test_entity_add(env):
     @Entity()
     class MyEntity1:
         id = Id()
-        name = Property(str)
+        name = String()
     model = Model()
     model.entity(MyEntity1)
     env.sync(model)
+    e0_iduid = IdUid(MyEntity1.id, MyEntity1.uid)
     store = env.store()
     box = store.box(MyEntity1)
     box.put( MyEntity1(name="foo"), MyEntity1(name="bar"))
     assert box.count() == 2
     store.close()
     del store
-    
+
     @Entity()
     class MyEntity2:
         id = Id()
-        name = Property(str)
-        value = Property(int)
+        name = String()
+        value = Int64()
     model = Model()
+    reset_ids(MyEntity1)
     model.entity(MyEntity1)
     model.entity(MyEntity2)
+    assert str(model.entities[0].iduid) == "0:0"
     env.sync(model)
+    assert model.entities[0].iduid == e0_iduid
     store = env.store()
     box1 = store.box(MyEntity1)
     assert box1.count() == 2
     box2 = store.box(MyEntity2)
     box2.put( MyEntity2(name="foo"), MyEntity2(name="bar"))
-    assert box2.count() == 2     
+    assert box2.count() == 2
 
 def test_entity_remove(env):
     @Entity()
     class MyEntity1:
         id = Id()
-        name = Property(str)
+        name = String()
     @Entity()
     class MyEntity2:
         id = Id()
-        name = Property(str)
-        value = Property(int)
+        name = String()
+        value = Int64()
     model = Model()
     model.entity(MyEntity1)
     model.entity(MyEntity2)
@@ -145,10 +168,11 @@ def test_entity_remove(env):
 
     store.close()
     del store
-   
+
     # Re-create a model without MyEntity2 
-    
+
     model = Model()
+    reset_ids(MyEntity1)
     model.entity(MyEntity1)
     env.sync(model)
     store = env.store()
@@ -156,22 +180,23 @@ def test_entity_remove(env):
     assert box1.count() == 2
 
     # MyEntity2 is gone and should raise CoreException
-    with pytest.raises(CoreException): 
+    with pytest.raises(CoreException):
         box2 = store.box(MyEntity2)
-    
+
 def test_entity_rename(env):
     model = Model()
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
+        name = String()
     model.entity(MyEntity)
     env.sync(model)
-    
+
     # Save uid of entity for renaming purposes..
     uid = MyEntity.uid # iduid.uid
+    assert uid != 0
     # Debug: print("UID: "+ str(uid))
- 
+
     store = env.store()
     box = store.box(MyEntity)
     box.put(MyEntity(name="foo"),MyEntity(name="bar"))
@@ -179,11 +204,11 @@ def test_entity_rename(env):
     del box
     store.close()
     del store
-    
+
     @Entity(uid=uid)
     class MyRenamedEntity:
         id = Id()
-        name = Property(str)
+        name = String()
 
     model = Model()
     model.entity(MyRenamedEntity)
@@ -194,11 +219,11 @@ def test_entity_rename(env):
 
 
 def test_prop_add(env):
-    
+
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
+        name = String()
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
@@ -212,7 +237,7 @@ def test_prop_add(env):
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
+        name = String()
         value = Property(int, type=PropertyType.int)
 
     model = Model()
@@ -222,13 +247,13 @@ def test_prop_add(env):
     box = store.box(MyEntity)
 
     assert box.count() == 2
-  
+
 def test_prop_remove(env):
-    
+
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
+        name = String()
         value = Property(int, type=PropertyType.int)
 
     model = Model()
@@ -240,12 +265,12 @@ def test_prop_remove(env):
     del box
     store.close()
     del store
-    
+
     @Entity()
     class MyEntity:
         id = Id()
-        name = Property(str)
-    
+        name = String()
+
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
@@ -258,7 +283,7 @@ def test_prop_rename(env):
     @Entity()
     class EntityA:
         id = Id()
-        name = Property(str)
+        name = String()
 
     model = Model()
     model.entity(EntityA)
