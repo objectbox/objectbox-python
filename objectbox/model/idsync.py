@@ -305,7 +305,7 @@ class IdSync:
 
 def sync_model(model: Model, model_filepath: str = "objectbox-model.json") -> bool:
     """ Syncs the provided model with the model JSON file.
-    Returns True if the model JSON was written. """
+    Returns True if changes were made and the model JSON was written. """
 
     id_sync = IdSync(model, model_filepath)
     return id_sync.sync()

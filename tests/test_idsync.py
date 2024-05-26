@@ -25,6 +25,7 @@ class _TestEnv:
         Store.remove_db_files(self.db_path)
 
     def sync(self, model: Model) -> bool:
+        """ Returns True if changes were made and the model JSON was written. """
         self.model = model
         return sync_model(self.model, self.model_path)
 
@@ -421,25 +422,25 @@ def test_prop_rename(env):
 def test_model_json_updates(env):
     """ Tests situations where the model JSON should be written/should not be written. """
 
-    def assert_model_json_written(value: bool, *entities: _Entity):
+    def sync_entities(*entities: _Entity):
         model = Model()
         for entity in entities:
             model.entity(entity)
-        assert env.sync(model) == value
+        return env.sync(model)
 
     # Init
     @Entity()
     class EntityA:
         id = Id()
         name = String()
-    assert_model_json_written(True, EntityA)
+    assert sync_entities(EntityA)
 
     # Add entity
     @Entity()
     class EntityB:
         id = Id()
         name = String()
-    assert_model_json_written(True, EntityB)
+    assert sync_entities(EntityB)
 
     entityb_uid = EntityB.uid
 
@@ -448,7 +449,7 @@ def test_model_json_updates(env):
     class EntityC:
         id = Id()
         name = String()
-    assert_model_json_written(True, EntityC)
+    assert sync_entities(EntityC)
 
     # Noop
     model = Model()
@@ -461,25 +462,25 @@ def test_model_json_updates(env):
         id = Id()
         name = String()
         age = Int8()
-    assert_model_json_written(True, EntityC, EntityD)
+    assert sync_entities(EntityC, EntityD)
 
     # Noop
-    assert_model_json_written(False, EntityC, EntityD)
+    assert sync_entities(EntityC, EntityD) is False
 
     # Replace entity
     @Entity()
     class EntityE:
         id = Id()
-    assert_model_json_written(True, EntityD, EntityE)
+    assert sync_entities(EntityD, EntityE)
 
     # Noop
-    assert_model_json_written(False, EntityD, EntityE)
+    assert sync_entities(EntityD, EntityE) is False
 
     # Remove entity
-    assert_model_json_written(True, EntityD)
+    assert sync_entities(EntityD)
 
     # Noop
-    assert_model_json_written(False, EntityD)
+    assert sync_entities(EntityD) is False
 
     # Add property
     @Entity()
@@ -488,7 +489,7 @@ def test_model_json_updates(env):
         name = String()
         age = Int8()
         my_prop = String()
-    assert_model_json_written(True, EntityD)
+    assert sync_entities(EntityD)
 
     my_prop_uid = EntityD.get_property("my_prop").uid
 
@@ -499,10 +500,10 @@ def test_model_json_updates(env):
         name = String()
         age = Int8()
         my_prop_renamed = String(uid=my_prop_uid)
-    assert_model_json_written(True, EntityD)
+    assert sync_entities(EntityD)
 
     # Noop
-    assert_model_json_written(False, EntityD)
+    assert sync_entities(EntityD) is False
 
     # Remove property
     @Entity()
@@ -510,7 +511,7 @@ def test_model_json_updates(env):
         id = Id()
         name = String()
         age = Int8()
-    assert_model_json_written(True, EntityD)
+    assert sync_entities(EntityD)
 
 
 def test_model_uid_already_assigned(env):
