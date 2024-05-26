@@ -21,6 +21,9 @@ class IdSync:
 
         self.model_filepath = model_json_filepath
         self.model_json = None
+
+        self._assigned_uids: Set[int] = set()
+
         self._load_model_json()
 
     def _load_model_json(self):
@@ -34,6 +37,16 @@ class IdSync:
         with open(self.model_filepath, "rt") as model_file:
             self.model_json = json.load(model_file)
         logger.debug(f"Syncing model with model file: {self.model_filepath}")
+
+        self._load_assigned_uids()
+
+    def _load_assigned_uids(self):
+        for entity_json in self.model_json["entities"]:
+            self._assigned_uids.add(IdUid.from_str(entity_json["id"]).uid)
+            for prop_json in entity_json["properties"]:
+                self._assigned_uids.add(IdUid.from_str(prop_json["id"]).uid)
+                if "indexId" in prop_json:
+                    self._assigned_uids.add(IdUid.from_str(prop_json["indexId"]).uid)
 
     def _save_model_json(self):
         """ Replaces model JSON with the serialized model whose ID/UIDs are assigned. """
@@ -119,31 +132,20 @@ class IdSync:
                 return prop_json
         return None
 
-    @staticmethod
-    def _generate_uid() -> int:
-        return random.getrandbits(63) + 1  # 0 would be invalid
+    def _generate_uid(self) -> int:
+        while True:
+            generated_uid = random.getrandbits(63) + 1  # 0 would be invalid
+            if generated_uid not in self._assigned_uids:
+                break
+        self._assigned_uids.add(generated_uid)
+        return generated_uid
 
     def _validate_uid_unassigned(self, uid: int):
-        # TODO use a dict/set for all assigned UIDs (for all entities/properties/indexes) for faster lookup
         """ Validates that a user supplied UID is not assigned for any other entity/property/index.
         Raises a ValueError if the UID is already assigned elsewhere.
         """
-
-        try:
-            entity_json = self._find_entity_json_by_uid(uid)
-            if entity_json is not None:
-                raise ValueError(f"in Entity \"{entity_json['name']}\" ({entity_json['id']})")
-
-            for entity_json in self.model_json["entities"]:
-                prop_json = self._find_property_json_by_uid(entity_json, uid)
-                if prop_json is not None:
-                    raise ValueError(f"in Property \"{entity_json['name']}.{prop_json['name']}\" ({prop_json['id']})")
-                for prop_json in entity_json["properties"]:
-                    if "indexId" in prop_json and IdUid.from_str(prop_json["indexId"]).uid == uid:
-                        raise ValueError(
-                            f"in Property index \"{entity_json['name']}.{prop_json['name']}\" ({prop_json['id']})")
-        except ValueError as error:
-            raise ValueError(f"User supplied UID \"{uid}\" found {error}")
+        if uid in self._assigned_uids:
+            raise ValueError(f"User supplied UID {uid} is already assigned elsewhere")
 
     def _validate_matching_prop(self, entity: _Entity, prop: Property, prop_json: Dict[str, Any]):
         """ Validates that the given property matches the JSON property. """

@@ -468,3 +468,30 @@ def test_model_json_updates(env):
         name = String()
         age = Int8()
     assert_model_json_written(True, EntityD)
+
+
+def test_model_uid_already_assigned(env):
+    """ Tests an invalid situation where the user supplies a UID which is already present elsewhere in the JSON. """
+
+    @Entity()
+    class EntityA:
+        id = Id()
+        prop = Property(str)
+
+    model = Model()
+    model.entity(EntityA)
+    env.sync(model)
+
+    entitya_uid = EntityA.uid
+
+    # Rename property, but use a UID which is already assigned
+    @Entity()
+    class EntityA:
+        id = Id()
+        renamed_prop = Property(str, uid=entitya_uid)
+
+    model = Model()
+    model.entity(EntityA)
+    with pytest.raises(ValueError) as e:
+        env.sync(model)
+    assert f"User supplied UID {entitya_uid} is already assigned elsewhere" == str(e.value)
