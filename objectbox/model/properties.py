@@ -182,6 +182,9 @@ class Property:
         self._flags = 0
         self._set_flags()
 
+        self._fb_slot = None
+        self._fb_v_offset = None
+
     @property
     def id(self):
         return self.iduid.id
@@ -195,6 +198,11 @@ class Property:
 
     def is_id(self) -> bool:
         return isinstance(self, Id)
+
+    def on_sync(self):
+        """ Method called once ID/UID are synced with the model file. """
+        self._fb_slot = self.id - 1
+        self._fb_v_offset = 4 + 2 * self._fb_slot
 
     def _determine_ob_type(self) -> OBXPropertyType:
         """ Tries to infer the OBX property type from the Python type. """

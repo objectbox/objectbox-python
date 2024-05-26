@@ -285,6 +285,8 @@ class IdSync:
             logger.info(f"Model changed, writing model.json: {self.model_filepath}")
             self._save_model_json()
 
+        self.model.on_sync()  # Notify model synced
+
         return write_json
 
 

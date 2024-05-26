@@ -53,6 +53,11 @@ class _Entity(object):
     def has_uid(self) -> bool:
         return self.iduid.uid != 0
 
+    def on_sync(self):
+        """ Method called once ID/UID are synced with the model file. """
+        for prop in self.properties:
+            prop.on_sync()
+
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
         object_ = self.user_type()
@@ -198,9 +203,7 @@ class _Entity(object):
                     val = date_value_to_int(val, 1000000000)  # convert to nanoseconds
                 builder.Prepend(prop._fb_type, val)
 
-            fb_slot = prop_id - 1
-            # fb_v_offset = 4 + 2 * fb_slot
-            builder.Slot(fb_slot)
+            builder.Slot(prop._fb_slot)
 
         builder.Finish(builder.EndObject())
         return builder.Output()
@@ -216,10 +219,7 @@ class _Entity(object):
 
         # fill it with the data read from FlatBuffers
         for prop in self.properties:
-            fb_slot = prop.id - 1
-            fb_v_offset = 4 + 2 * fb_slot
-            # 4 + 2 * fb_slot
-            o = table.Offset(fb_v_offset)
+            o = table.Offset(prop._fb_v_offset)
             val = None
             ob_type = prop._ob_type
             if not o:

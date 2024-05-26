@@ -30,6 +30,11 @@ class Model:
 
         self._c_model = None
 
+    def on_sync(self):
+        """ Method called once ID/UID are synced with the model file. """
+        for entity in self.entities:
+            entity.on_sync()
+
     def entity(self, entity: _Entity):
         if not isinstance(entity, _Entity):
             raise Exception(f"The given type is not an Entity: {type(entity)}. "
