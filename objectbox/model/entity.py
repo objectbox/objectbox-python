@@ -146,8 +146,6 @@ class _Entity(object):
         setattr(obj, self.id_property.name, id_)
 
     def marshal(self, object, id: int) -> bytearray:
-        # TODO _assert_ids_assigned
-
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
         builder = self._tl.builder
@@ -209,8 +207,6 @@ class _Entity(object):
         return builder.Output()
 
     def unmarshal(self, data: bytes):
-        # TODO _assert_ids_assigned
-
         pos = flatbuffers.encode.Get(flatbuffers.packer.uoffset, data, 0)
         table = flatbuffers.Table(data, pos)
 
