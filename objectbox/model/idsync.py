@@ -165,9 +165,11 @@ class IdSync:
         except ValueError as error:
             raise ValueError(f"Property {entity.name}.{prop.name} mismatches property found in JSON file: {error}")
 
-    def _load_or_assign_index(self, entity: _Entity, prop: Property, prop_json: Optional[Dict[str, Any]]):
+    def _load_or_assign_index(self, entity: _Entity, prop: Property, prop_json: Optional[Dict[str, Any]]) -> bool:
         assert prop.index is not None
         index = prop.index
+
+        write_json = False
 
         # Fetch index ID/UID from JSON file
         iduid_json = None
@@ -187,8 +189,13 @@ class IdSync:
         else:  # Assign new ID to new index
             index.iduid = IdUid(self.model.last_index_iduid.id + 1, index.uid)
             self.model.last_index_iduid = index.iduid
+            write_json = True
 
-    def _load_or_assign_property(self, entity: _Entity, prop: Property, entity_json: Optional[Dict[str, Any]]):
+        return write_json
+
+    def _load_or_assign_property(self, entity: _Entity, prop: Property, entity_json: Optional[Dict[str, Any]]) -> bool:
+        write_json = False
+
         prop_json = None
         if prop.has_uid():
             if entity_json is not None:
@@ -197,6 +204,8 @@ class IdSync:
                 # User provided a UID not matching any property (within the entity), make sure it's not assigned
                 # elsewhere
                 self._validate_uid_unassigned(prop.uid)
+            else:
+                write_json = prop.name != prop_json["name"]  # If renaming we shall update the JSON
         else:
             if entity_json is not None:
                 prop_json = self._find_property_json_by_name(entity_json, prop.name)
@@ -210,19 +219,30 @@ class IdSync:
                 prop.iduid.uid = self._generate_uid()
             prop.iduid = IdUid(entity.last_property_iduid.id + 1, prop.iduid.uid)
             entity.last_property_iduid = prop.iduid
+            write_json = True
 
         if prop.index is not None:
-            self._load_or_assign_index(entity, prop, prop_json)
+            write_json |= self._load_or_assign_index(entity, prop, prop_json)
 
-    def _load_or_assign_entity(self, entity: _Entity):
+        return write_json
+
+    def _load_or_assign_entity(self, entity: _Entity) -> bool:
+        write_json = False
+
         # entity_json = None
         if entity.has_uid():
             entity_json = self._find_entity_json_by_uid(entity.uid)
             if entity_json is None:
                 # User provided a UID not matching any entity, make sure it's not assigned elsewhere
                 self._validate_uid_unassigned(entity.uid)
+            else:
+                write_json = entity.name != entity_json["name"]  # If renaming we shall update the JSON
         else:
             entity_json = self._find_entity_json_by_name(entity.name)
+
+        # Write JSON if the number of properties differs (to handle removed property)
+        if entity_json is not None:
+            write_json |= len(entity.properties) != len(entity_json["properties"])
 
         if entity_json is not None:  # Load existing IDs from JSON
             entity.iduid = IdUid.from_str(entity_json["id"])
@@ -233,27 +253,42 @@ class IdSync:
             entity.iduid = IdUid(self.model.last_entity_iduid.id + 1, entity.iduid.uid)
             self.model.last_entity_iduid = entity.iduid
             entity.last_property_iduid = IdUid(0, 0)
+            write_json = True
 
         # Load properties
         for prop in entity.properties:
-            self._load_or_assign_property(entity, prop, entity_json)
+            write_json |= self._load_or_assign_property(entity, prop, entity_json)
 
-    def sync(self):
-        """ Syncs the provided model with the model JSON file. """
+        return write_json
+
+    def sync(self) -> bool:
+        """ Syncs the provided model with the model JSON file.
+        Returns True if the model JSON was written. """
 
         if self.model_json is not None:
             self.model.last_entity_iduid = IdUid.from_str(self.model_json["lastEntityId"])
             self.model.last_index_iduid = IdUid.from_str(self.model_json["lastIndexId"])
             # self.model.last_relation_iduid =
 
+        write_json = False
+
+        # Write JSON if the number of entities differs (to handle removed entity)
+        if self.model_json is not None:
+            write_json |= len(self.model_json["entities"]) != len(self.model.entities)
+
         for entity in self.model.entities:
-            self._load_or_assign_entity(entity)
+            write_json |= self._load_or_assign_entity(entity)
 
-        self._save_model_json()
+        if write_json:
+            logger.info(f"Model changed, writing model.json: {self.model_filepath}")
+            self._save_model_json()
+
+        return write_json
 
 
-def sync_model(model: Model, model_filepath: str = "objectbox-model.json"):
-    """ Syncs the provided model with the model JSON file. """
+def sync_model(model: Model, model_filepath: str = "objectbox-model.json") -> bool:
+    """ Syncs the provided model with the model JSON file.
+    Returns True if the model JSON was written. """
 
     id_sync = IdSync(model, model_filepath)
-    id_sync.sync()
+    return id_sync.sync()

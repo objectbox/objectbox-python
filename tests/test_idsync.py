@@ -1,3 +1,4 @@
+from typing import *
 from objectbox import *
 from objectbox.model import *
 from objectbox.model.entity import _Entity
@@ -18,14 +19,19 @@ class _TestEnv:
         self.model_path = 'test.json'
         if os.path.exists(self.model_path):
             os.remove(self.model_path)
+        self.model = None
         self.db_path = 'testdb'
         Store.remove_db_files(self.db_path)
-    def sync(self, model):
+
+    def sync(self, model: Model) -> bool:
         self.model = model
-        sync_model(self.model, self.model_path)
+        return sync_model(self.model, self.model_path)
+
     def json(self):
         return json.load(open(self.model_path))
+
     def store(self):
+        assert self.model is not None
         return Store(model=self.model, directory=self.db_path)
 
 
@@ -367,3 +373,98 @@ def test_prop_rename(env):
     assert box.count() == 1
     assert not hasattr(box.get(1), "name")
     assert box.get(1).renamed_name == "Luca"
+
+
+def test_model_json_updates(env):
+    """ Tests situations where the model JSON should be written/should not be written. """
+
+    def assert_model_json_written(value: bool, *entities: _Entity):
+        model = Model()
+        for entity in entities:
+            model.entity(entity)
+        assert env.sync(model) == value
+
+    # Init
+    @Entity()
+    class EntityA:
+        id = Id()
+        name = String()
+    assert_model_json_written(True, EntityA)
+
+    # Add entity
+    @Entity()
+    class EntityB:
+        id = Id()
+        name = String()
+    assert_model_json_written(True, EntityB)
+
+    entityb_uid = EntityB.uid
+
+    # Rename entity
+    @Entity(uid=entityb_uid)
+    class EntityC:
+        id = Id()
+        name = String()
+    assert_model_json_written(True, EntityC)
+
+    # Noop
+    model = Model()
+    model.entity(EntityC)
+    assert not env.sync(model)
+
+    # Add entity
+    @Entity()
+    class EntityD:
+        id = Id()
+        name = String()
+        age = Int8()
+    assert_model_json_written(True, EntityC, EntityD)
+
+    # Noop
+    assert_model_json_written(False, EntityC, EntityD)
+
+    # Replace entity
+    @Entity()
+    class EntityE:
+        id = Id()
+    assert_model_json_written(True, EntityD, EntityE)
+
+    # Noop
+    assert_model_json_written(False, EntityD, EntityE)
+
+    # Remove entity
+    assert_model_json_written(True, EntityD)
+
+    # Noop
+    assert_model_json_written(False, EntityD)
+
+    # Add property
+    @Entity()
+    class EntityD:
+        id = Id()
+        name = String()
+        age = Int8()
+        my_prop = String()
+    assert_model_json_written(True, EntityD)
+
+    my_prop_uid = EntityD.get_property("my_prop").uid
+
+    # Rename property
+    @Entity()
+    class EntityD:
+        id = Id()
+        name = String()
+        age = Int8()
+        my_prop_renamed = String(uid=my_prop_uid)
+    assert_model_json_written(True, EntityD)
+
+    # Noop
+    assert_model_json_written(False, EntityD)
+
+    # Remove property
+    @Entity()
+    class EntityD:
+        id = Id()
+        name = String()
+        age = Int8()
+    assert_model_json_written(True, EntityD)
