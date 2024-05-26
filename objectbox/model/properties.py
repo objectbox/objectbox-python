@@ -201,6 +201,7 @@ class Property:
 
     def on_sync(self):
         """ Method called once ID/UID are synced with the model file. """
+        assert self.iduid.is_assigned()
         self._fb_slot = self.id - 1
         self._fb_v_offset = 4 + 2 * self._fb_slot
 

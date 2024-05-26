@@ -18,6 +18,8 @@ class IdSync:
 
     def __init__(self, model: Model, model_json_filepath: str):
         self.model = model
+        if len(model.entities) == 0:
+            raise ValueError("A valid model must have at least one entity")
 
         self.model_filepath = model_json_filepath
         self.model_json = None
@@ -42,11 +44,22 @@ class IdSync:
 
     def _load_assigned_uids(self):
         for entity_json in self.model_json["entities"]:
-            self._assigned_uids.add(IdUid.from_str(entity_json["id"]).uid)
+            entity_uid = IdUid.from_str(entity_json["id"]).uid
+            if entity_uid in self._assigned_uids:
+                raise ValueError(f"An entity's UID {entity_uid} has already been used elsewhere")
+            self._assigned_uids.add(entity_uid)
+
             for prop_json in entity_json["properties"]:
-                self._assigned_uids.add(IdUid.from_str(prop_json["id"]).uid)
+                prop_uid = IdUid.from_str(prop_json["id"]).uid
+                if prop_uid in self._assigned_uids:
+                    raise ValueError(f"A property's UID {prop_uid} has already been used elsewhere")
+                self._assigned_uids.add(prop_uid)
+
                 if "indexId" in prop_json:
-                    self._assigned_uids.add(IdUid.from_str(prop_json["indexId"]).uid)
+                    index_uid = IdUid.from_str(prop_json["indexId"]).uid
+                    if index_uid in self._assigned_uids:
+                        raise ValueError(f"An index's UID {index_uid} has already been used elsewhere")
+                    self._assigned_uids.add(index_uid)
 
     def _save_model_json(self):
         """ Replaces model JSON with the serialized model whose ID/UIDs are assigned. """

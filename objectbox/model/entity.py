@@ -55,6 +55,7 @@ class _Entity(object):
 
     def on_sync(self):
         """ Method called once ID/UID are synced with the model file. """
+        assert self.iduid.is_assigned()
         for prop in self.properties:
             prop.on_sync()
 

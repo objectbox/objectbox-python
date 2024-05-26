@@ -54,7 +54,8 @@ def test_empty_model(env):
 
     # JSON file didn't exist, user syncs an empty model -> no JSON file is generated
     model = Model()
-    assert not env.sync(model)
+    with pytest.raises(ValueError):
+        assert not env.sync(model)
     assert not path.exists(env.model_path)
 
     # Init the JSON file with an entity
@@ -65,31 +66,14 @@ def test_empty_model(env):
     model.entity(MyEntity)
     assert env.sync(model)  # Model JSON written
 
-    # JSON file exists, user syncs an empty model -> JSON file is written but entities are cleared (last ID/UID
-    # retained)
+    # JSON file exists, user tries to sync an empty model: must fail with JSON file untouched
     model = Model()
-    assert env.sync(model)
+    with pytest.raises(ValueError):
+       env.sync(model)
 
     doc = env.json()
-    assert doc['_note1']
-    assert doc['_note2']
-    assert doc['_note3']
-    assert len(doc['entities']) == 0
-    # Last entity ID/UID will still be set at MyEntity's ID/UID
-    # assert doc['lastEntityId'] == '0:0'
-    # assert doc['lastIndexId'] == '0:0'  # NOTE: objectbox-generator outputs ""
-    assert doc['modelVersionParserMinimum'] >= 5
-    # debug: pprint(doc)
-    #
-    # TODO: sync with objectbox-generator empty fbs
-    # assert doc['modelVersion'] == 5
-    # assert doc['lastIndex'] == ""
-    # assert doc['lastRelationId'] == ""
-    # assert len(doc['retiredEntityUids']) == 0
-    # assert len(doc['retiredIndexUids']) == 0
-    # assert len(doc['retiredPropertyUids']) == 0
-    # assert len(doc['retiredRelationUids']) == 0
-    # assert len(doc['version']) == 1
+    assert len(doc['entities']) == 1
+    assert doc['entities'][0]['id'] == str(MyEntity.iduid)
 
 
 def test_json(env):
@@ -311,6 +295,8 @@ def test_entity_rename_2(env):
         name = String()  # Add one property also
 
     model = Model()
+    reset_ids(Entity1)
+    reset_ids(Entity3)
     model.entity(Entity1)
     model.entity(Entity3)
     model.entity(Entity4)
