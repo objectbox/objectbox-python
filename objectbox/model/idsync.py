@@ -180,7 +180,7 @@ class IdSync:
         except ValueError as error:
             raise ValueError(f"Property {entity.name}.{prop.name} mismatches property found in JSON file: {error}")
 
-    def _load_or_assign_index(self, entity: _Entity, prop: Property, prop_json: Optional[Dict[str, Any]]) -> bool:
+    def _sync_index(self, entity: _Entity, prop: Property, prop_json: Optional[Dict[str, Any]]) -> bool:
         assert prop.index is not None
         index = prop.index
 
@@ -208,7 +208,7 @@ class IdSync:
 
         return write_json
 
-    def _load_or_assign_property(self, entity: _Entity, prop: Property, entity_json: Optional[Dict[str, Any]]) -> bool:
+    def _sync_property(self, entity: _Entity, prop: Property, entity_json: Optional[Dict[str, Any]]) -> bool:
         write_json = False
 
         prop_json = None
@@ -237,11 +237,11 @@ class IdSync:
             write_json = True
 
         if prop.index is not None:
-            write_json |= self._load_or_assign_index(entity, prop, prop_json)
+            write_json |= self._sync_index(entity, prop, prop_json)
 
         return write_json
 
-    def _load_or_assign_entity(self, entity: _Entity) -> bool:
+    def _sync_entity(self, entity: _Entity) -> bool:
         write_json = False
 
         # entity_json = None
@@ -272,7 +272,7 @@ class IdSync:
 
         # Load properties
         for prop in entity.properties:
-            write_json |= self._load_or_assign_property(entity, prop, entity_json)
+            write_json |= self._sync_property(entity, prop, entity_json)
 
         return write_json
 
@@ -292,7 +292,7 @@ class IdSync:
             write_json |= len(self.model_json["entities"]) != len(self.model.entities)
 
         for entity in self.model.entities:
-            write_json |= self._load_or_assign_entity(entity)
+            write_json |= self._sync_entity(entity)
 
         if write_json:
             logger.info(f"Model changed, writing model.json: {self.model_filepath}")
