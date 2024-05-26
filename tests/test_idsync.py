@@ -283,6 +283,42 @@ def test_entity_rename(env):
     assert box.count() == 2
 
 
+def test_entity_rename_2(env):
+    # Init JSON file
+    @Entity(uid=365)
+    class Entity1:
+        id = Id()
+
+    @Entity(uid=324)
+    class Entity2:
+        id = Id()
+
+    @Entity(uid=890)
+    class Entity3:
+        id = Id()
+
+    model = Model()
+    model.entity(Entity1)
+    model.entity(Entity2)
+    model.entity(Entity3)
+    assert env.sync(model)
+    assert model.last_entity_iduid == IdUid(3, 890)
+
+    # Rename Entity2 -> Entity4 (same UID)
+    @Entity(uid=324)
+    class Entity4:
+        id = Id()
+        name = String()  # Add one property also
+
+    model = Model()
+    model.entity(Entity1)
+    model.entity(Entity3)
+    model.entity(Entity4)
+    assert env.sync(model)
+    assert Entity4.iduid == IdUid(2, 324)  # Same ID/UID of Entity2 (renaming)
+    assert model.last_entity_iduid == IdUid(3, 890)
+
+
 def test_prop_add(env):
 
     @Entity()
