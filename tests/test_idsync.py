@@ -7,6 +7,7 @@ from objectbox.c import CoreException
 import json
 from pprint import pprint
 import os
+from os import path
 import tests.model
 import pytest
 
@@ -17,7 +18,7 @@ class _TestEnv:
     """
     def __init__(self):
         self.model_path = 'test.json'
-        if os.path.exists(self.model_path):
+        if path.exists(self.model_path):
             os.remove(self.model_path)
         self.model = None
         self.db_path = 'testdb'
@@ -47,21 +48,41 @@ def reset_ids(entity: _Entity):
 def env():
     return _TestEnv()
 
-def test_empty(env):
+
+def test_empty_model(env):
+    """ Tests situations where the user attempts to sync an empty model. """
+
+    # JSON file didn't exist, user syncs an empty model -> no JSON file is generated
     model = Model()
-    env.sync(model)
+    assert not env.sync(model)
+    assert not path.exists(env.model_path)
+
+    # Init the JSON file with an entity
+    @Entity()
+    class MyEntity:
+        id = Id()
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)  # Model JSON written
+
+    # JSON file exists, user syncs an empty model -> JSON file is written but entities are cleared (last ID/UID
+    # retained)
+    model = Model()
+    assert env.sync(model)
+
     doc = env.json()
     assert doc['_note1']
     assert doc['_note2']
     assert doc['_note3']
     assert len(doc['entities']) == 0
-    assert doc['lastEntityId'] == '0:0'
-    assert doc['lastIndexId'] == '0:0' # NOTE: objectbox-generator outputs ""
+    # Last entity ID/UID will still be set at MyEntity's ID/UID
+    # assert doc['lastEntityId'] == '0:0'
+    # assert doc['lastIndexId'] == '0:0'  # NOTE: objectbox-generator outputs ""
     assert doc['modelVersionParserMinimum'] >= 5
     # debug: pprint(doc)
     #
     # TODO: sync with objectbox-generator empty fbs
-    # assert doc['modelVersion'] == 5 
+    # assert doc['modelVersion'] == 5
     # assert doc['lastIndex'] == ""
     # assert doc['lastRelationId'] == ""
     # assert len(doc['retiredEntityUids']) == 0
