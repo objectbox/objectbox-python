@@ -1,12 +1,19 @@
-from os import path
+import os
 import pytest
 import objectbox
 from objectbox.logger import logger
 from objectbox.store import Store
-from objectbox.model.idsync import sync_model
 from tests.model import *
 import numpy as np
 from datetime import timezone
+
+
+def remove_json_model_file():
+    path = os.path.dirname(os.path.realpath(__file__))
+    json_file = os.path.join(path, "objectbox-model.json")
+    if os.path.exists(json_file):
+        os.remove(json_file)
+
 
 def create_default_model():
     model = objectbox.Model()
@@ -14,7 +21,6 @@ def create_default_model():
     model.entity(TestEntityDatetime)
     model.entity(TestEntityFlex)
     model.entity(VectorEntity)
-    sync_model(model)  # Assign IDs/UIDs
     return model
 
 
@@ -26,6 +32,7 @@ def create_test_store(db_path: str = "testdata", clear_db: bool = True) -> objec
 
     if clear_db:
         Store.remove_db_files(db_path)
+        remove_json_model_file()
     return objectbox.Store(model=create_default_model(), directory=db_path)
 
 

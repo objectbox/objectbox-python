@@ -12,20 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import flatbuffers
 import flatbuffers.flexbuffers
-from typing import Generic
 import numpy as np
 from datetime import datetime, timezone
-from objectbox.c import *
-from objectbox.model.properties import Property
-from objectbox.utils import date_value_to_int
-import threading
+import logging
 from objectbox.c import *
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
-
+from objectbox.utils import date_value_to_int
+import threading
 
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
@@ -276,11 +272,29 @@ class _Entity(object):
             setattr(obj, prop.name, val)
         return obj
 
+# Dictionary of entity types (metadata) collected by the Entity decorator
+obx_models_by_name: Dict[str, Set[_Entity]] = {}
 
-def Entity(uid: int = 0) -> Callable[[Type], _Entity]:
+
+def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
 
     def wrapper(class_):
-        return _Entity(class_, uid)
+        metadata_set = obx_models_by_name.get(model)
+        if metadata_set is None:
+            metadata_set = set()
+            obx_models_by_name[model] = metadata_set
+
+        metadata = _Entity(class_, uid)
+        for existing in metadata_set:
+            if existing.name == metadata.name:
+                # OK for tests, where multiple models are created with the same entity name
+                logging.warning(f"Model \"{model}\" already contains an entity \"{metadata.name}\"; replacing it.")
+                metadata_set.remove(existing)
+                break
+
+        obx_models_by_name[model].add(metadata)
+        logging.info(f"Entity {metadata.name} added to model {model}")
+        return metadata
 
     return wrapper

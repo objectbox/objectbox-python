@@ -14,8 +14,3 @@ class City:
         distance_type=VectorDistanceType.EUCLIDEAN
     ))
 
-def get_objectbox_model():
-    m = Model()
-    m.entity(City)
-    sync_model(m, os.path.join(os.path.dirname(__file__),"objectbox-model.json") )
-    return m

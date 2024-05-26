@@ -1,7 +1,7 @@
 from cmd import Cmd
 import objectbox
 import time
-from .model import *
+from model import *
 
 
 # objectbox expects date timestamp in milliseconds since UNIX epoch
@@ -15,7 +15,7 @@ def format_date(timestamp_ms: int) -> str:
 
 class TasklistCmd(Cmd):
     prompt = "> "
-    _store = objectbox.Store(model=get_objectbox_model(), directory="tasklist-db")
+    _store = objectbox.Store(directory="tasklist-db")
     _box = _store.box(Task)
 
     def do_ls(self, _):

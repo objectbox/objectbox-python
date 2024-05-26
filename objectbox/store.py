@@ -11,20 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import inspect
+import logging
+import os
+import sys
+from types import ModuleType
 
 import objectbox.c as c
 import objectbox.transaction
+from objectbox.model.idsync import sync_model
 from objectbox.store_options import StoreOptions
 import objectbox
 from objectbox.model.entity import _Entity
+from objectbox.model.model import Model
 from typing import *
 
+
 class Store:
-    def __init__(self, 
-                 model : Optional[objectbox.model.Model] = None, 
-                 directory : Optional[str] = None, 
-                 max_db_size_in_kb : Optional[int] = None,
+    def __init__(self,
+                 model: Optional[Union[Model, str]] = "default",
+                 model_json_file: Optional[str] = None,
+                 directory: Optional[str] = None,
+                 max_db_size_in_kb: Optional[int] = None,
                  max_data_size_in_kb: Optional[int] = None,
                  file_mode: Optional[int] = None,
                  max_readers: Optional[int] = None,
@@ -46,8 +54,8 @@ class Store:
                  async_minor_refill_max_count: Optional[int] = None,
                  async_object_bytes_max_cache_size: Optional[int] = None,
                  async_object_bytes_max_size_to_cache: Optional[int] = None,
-                 c_store : Optional[c.OBX_store_p] = None):
-        
+                 c_store: Optional[c.OBX_store_p] = None):
+
         """Opens an ObjectBox database Store
 
         :param model:
@@ -107,13 +115,14 @@ class Store:
             Maximum size for an object to be cached.
         :param c_store:
             Internal parameter for deprecated ObjectBox interface. Do not use it; other options would be ignored if passed.
-        """ 
-        
+        """
+
         self._c_store = None
         if not c_store:
             options = StoreOptions()
             try:
                 if model is not None:
+                    model = Store._sync_model(model, model_json_file)
                     options.model(model)
                 if directory is not None:
                     options.directory(directory)
@@ -160,18 +169,77 @@ class Store:
                 if async_object_bytes_max_cache_size is not None:
                     options.async_object_bytes_max_cache_size(async_object_bytes_max_cache_size)
                 if async_object_bytes_max_size_to_cache is not None:
-                    options.async_object_bytes_max_size_to_cache(async_object_bytes_max_size_to_cache)    
-                
+                    options.async_object_bytes_max_size_to_cache(async_object_bytes_max_size_to_cache)
+
             except c.CoreException:
                 options._free()
                 raise
-            self._c_store = c.obx_store_open(options._c_handle)                 
+            self._c_store = c.obx_store_open(options._c_handle)
         else:
             self._c_store = c_store
 
+    @staticmethod
+    def _sync_model(model: Optional[Union[Model, str]],
+                    model_json_file: Optional[str]) -> Model:
+        if isinstance(model, str):  # Model name provided; get entities collected via @Entity
+            metadata_set = objectbox.model.entity.obx_models_by_name.get(model)
+            if metadata_set is None:
+                raise ValueError(
+                    f"Model \"{model}\" not found; ensure to set the name attribute on the model class.")
+            model = Model()
+            for metadata in metadata_set:
+                model.entity(metadata)
+        elif not isinstance(model, Model):
+            raise ValueError("Model must be a Model object or a string.")
+
+        if not model_json_file:
+            model_json_file = Store._locate_model_json_file()
+
+        sync_model(model, model_json_file)
+
+        return model
+
+    @staticmethod
+    def _locate_model_json_file():
+        def get_module_path(module: Optional[ModuleType]) -> Optional[str]:
+            if module and hasattr(module, "__file__"):
+                return os.path.dirname(os.path.realpath(module.__file__))
+            return None
+
+        def json_file_inside_module_path(module: Optional[ModuleType]) -> Optional[str]:
+            module_path = get_module_path(module)
+            if module_path:
+                logging.info("Using module path to locate objectbox-model.json: ", module_path)
+                return os.path.join(module_path, "objectbox-model.json")
+            return None
+
+        # The (direct) calling module seems like a good first choice
+        this_module = sys.modules[__name__]
+        this_module_path = get_module_path(this_module)
+        stack = inspect.stack()
+        calling_module: Optional[ModuleType] = None
+        for stack_element in stack:
+            module = inspect.getmodule(stack_element[0])
+            if module is not this_module:
+                path = get_module_path(module)
+                if not path:  # Cannot get the direct caller's path, so do not try further
+                    break
+                if path != this_module_path:  # Not inside the objectbox package
+                    calling_module = module
+                    break
+        model_json_file = json_file_inside_module_path(calling_module)
+
+        if not model_json_file:
+            # Note: the main module seems less reliable,
+            #       e.g. it resulted in a some pycharm dir when running tests from PyCharm.
+            model_json_file = json_file_inside_module_path(sys.modules.get('__main__'))
+            if not model_json_file:
+                model_json_file = "objectbox-model.json"
+        return model_json_file
+
     def __del__(self):
         self.close()
-    
+
     def box(self, entity: _Entity) -> 'objectbox.Box':
         """
         Open a box for an entity.

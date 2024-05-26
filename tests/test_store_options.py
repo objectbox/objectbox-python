@@ -1,7 +1,7 @@
+from objectbox import Store
 from objectbox.c import *  # TODO ideally we wouldn't have to import c.py
 from objectbox.store_options import StoreOptions
-import objectbox
-import tests.common
+from tests.common import *
 
 def test_set_options():
     """ Test setting dummy values for each option.
@@ -50,8 +50,11 @@ def test_set_options():
     del options
 
 def test_store_with_options():
-    store = objectbox.Store(
-        model=tests.common.create_default_model(),
+    Store.remove_db_files("testdata")
+    remove_json_model_file()
+
+    store = Store(
+        model=create_default_model(),
         directory="testdata",
         max_db_size_in_kb=1<<20,
         max_data_size_in_kb=(1<<20)-(1<<10),
@@ -73,5 +76,5 @@ def test_store_with_options():
         async_minor_refill_max_count=100,
         async_object_bytes_max_cache_size=1<<20,
         async_object_bytes_max_size_to_cache=100<<10
-    ) 
+    )
     del store
