@@ -1,6 +1,5 @@
 from cmd import Cmd
-import objectbox
-from objectbox.model import *
+from objectbox import *
 import time
 import csv
 import os
@@ -32,7 +31,7 @@ class VectorSearchCitiesCmd(Cmd):
         Cmd.__init__(self, *args)
         dbdir = "cities-db"
         new_db = not os.path.exists(dbdir)
-        self._store = objectbox.Store(directory=dbdir)
+        self._store = Store(directory=dbdir)
         self._box = self._store.box(City)
         if new_db: 
             with open(os.path.join(os.path.dirname(__file__), 'cities.csv')) as f:

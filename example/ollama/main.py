@@ -2,9 +2,7 @@
 # using objectbox as a vector store
 
 import ollama
-import objectbox
-from objectbox.model import *
-from objectbox.model.properties import *
+from objectbox import *
 
 documents = [
   "Llamas are members of the camelid family meaning they're pretty closely related to vicuñas and camels",
@@ -16,7 +14,7 @@ documents = [
 ]
 
 # Have fresh data for each start
-objectbox.Store.remove_db_files("objectbox")
+Store.remove_db_files("objectbox")
 
 @Entity()
 class DocumentEmbedding:
@@ -27,7 +25,7 @@ class DocumentEmbedding:
         distance_type=VectorDistanceType.COSINE
     ))
 
-store = objectbox.Store()
+store = Store()
 box = store.box(DocumentEmbedding)
 
 print("Documents to embed: ", len(documents))

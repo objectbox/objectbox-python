@@ -1,6 +1,5 @@
 from cmd import Cmd
-import objectbox
-from objectbox.model import *
+from objectbox import *
 import time
 
 @Entity()
@@ -24,7 +23,7 @@ def format_date(timestamp_ms: int) -> str:
 
 class TasklistCmd(Cmd):
     prompt = "> "
-    _store = objectbox.Store(directory="tasklist-db")
+    _store = Store(directory="tasklist-db")
     _box = _store.box(Task)
 
     def do_ls(self, _):

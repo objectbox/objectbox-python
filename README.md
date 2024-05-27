@@ -43,12 +43,15 @@ Feature Highlights
 What does using ObjectBox in Python look like?
 
 ```python
-import objectbox
+from objectbox import *
 
-# from mypackage.model import Person
+@Entity()
+class Person:
+    id = Id
+    name = String
 
 # The ObjectBox Store represents a database; keep it around...
-store = objectbox.Store(model=model)
+store = Store()
 
 # Get a box for the "Person" entity; a Box is the main interaction point with objects and the database.
 box = store.box(Person)

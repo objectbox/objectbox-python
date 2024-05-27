@@ -2,11 +2,10 @@ import os
 import pytest
 import objectbox
 from objectbox.logger import logger
-from objectbox.store import Store
 from tests.model import *
 import numpy as np
-from datetime import timezone
-
+from datetime import datetime, timezone
+from objectbox import *
 
 def remove_json_model_file():
     path = os.path.dirname(os.path.realpath(__file__))
@@ -16,7 +15,7 @@ def remove_json_model_file():
 
 
 def create_default_model():
-    model = objectbox.Model()
+    model = Model()
     model.entity(TestEntity)
     model.entity(TestEntityDatetime)
     model.entity(TestEntityFlex)
