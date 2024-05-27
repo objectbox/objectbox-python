@@ -8,9 +8,8 @@ import time
 from math import floor
 
 
-def test_box_basics():
-    store = create_test_store()
-    box = store.box(TestEntity)
+def test_box_basics(test_store):
+    box = test_store.box(TestEntity)
 
     assert box.is_empty()
     assert box.count() == 0
@@ -94,12 +93,9 @@ def test_box_basics():
     assert box.get(object.id) is None
     assert box.get(1) is None
 
-    store.close()
 
-
-def test_box_bulk():
-    store = create_test_store()
-    box = store.box(TestEntity)
+def test_box_bulk(test_store):
+    box = test_store.box(TestEntity)
 
     box.put(TestEntity(str="first"))
 
@@ -130,12 +126,9 @@ def test_box_bulk():
     assert removed == 4
     assert box.count() == 0
 
-    store.close()
 
-
-def test_datetime():
-    store = create_test_store()
-    box = store.box(TestEntityDatetime)
+def test_datetime(test_store):
+    box = test_store.box(TestEntityDatetime)
 
     assert box.is_empty()
     assert box.count() == 0
@@ -185,12 +178,9 @@ def test_datetime():
     assert box.get(object.id) is None
     assert box.get(1) is None
 
-    store.close()
 
-
-def test_datetime_special_values():
-    store = create_test_store()
-    box = store.box(TestEntityDatetime)
+def test_datetime_special_values(test_store):
+    box = test_store.box(TestEntityDatetime)
     assert box.is_empty()
 
     object = TestEntityDatetime()
@@ -216,7 +206,7 @@ def test_datetime_special_values():
     assert read.date_nano == datetime.fromtimestamp(1.0, timezone.utc)
 
 
-def test_flex():
+def test_flex(test_store):
     def test_put_get(object: TestEntity, box: objectbox.Box, property):
         object.flex = property
         id = box.put(object)
@@ -224,8 +214,7 @@ def test_flex():
         read = box.get(object.id)
         assert read.flex == object.flex
 
-    store = create_test_store()
-    box = store.box(TestEntity)
+    box = test_store.box(TestEntity)
     object = TestEntity()
 
     # Put an empty object
@@ -262,13 +251,9 @@ def test_flex():
     # Update to list inside dict
     test_put_get(object, box, {"a": 1, "b": [1, 2, 3]})
 
-    store.close()
 
-
-def test_flex_values():
-    store = create_test_store()
-
-    box = store.box(TestEntityFlex)
+def test_flex_values(test_store):
+    box = test_store.box(TestEntityFlex)
 
     # Test empty object
     obj_id = box.put(TestEntityFlex())

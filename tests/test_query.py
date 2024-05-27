@@ -8,14 +8,12 @@ from tests.common import *
 from tests.model import *
 
 
-def test_basics():
-    store = create_test_store()
-
-    box_test_entity = store.box(TestEntity)
+def test_basics(test_store):
+    box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(bool=True, str="foo", int64=123))
     id2 = box_test_entity.put(TestEntity(bool=False, str="bar", int64=456))
 
-    box_vector_entity = store.box(VectorEntity)
+    box_vector_entity = test_store.box(VectorEntity)
     box_vector_entity.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector_entity.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
@@ -167,12 +165,8 @@ def test_basics():
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
-    store.close()
-
-def test_integer_scalars():
-    store = create_test_store()
-
-    box_test_entity = store.box(TestEntity)
+def test_integer_scalars(test_store):
+    box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(int8=12, int16=12, int32=12, int64=12))
     id2 = box_test_entity.put(TestEntity(int8=45, int16=45, int32=45, int64=45))
 
@@ -210,10 +204,8 @@ def test_integer_scalars():
         assert query.find()[0].id == id1
         assert query.find()[1].id == id2
 
-def test_float_scalars():
-    store = create_test_store()
-
-    box_test_entity = store.box(TestEntity)
+def test_float_scalars(test_store):
+    box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(float32=12.3, float64=12.3))
     id2 = box_test_entity.put(TestEntity(float32=45.6, float64=45.6))
     id3 = box_test_entity.put(TestEntity(float32=45.7, float64=45.7))
@@ -266,10 +258,8 @@ def test_float_scalars():
         assert query.count() == 2
 
 
-def test_flex_contains_key_value():
-    store = create_test_store()
-
-    box = store.box(TestEntityFlex)
+def test_flex_contains_key_value(test_store):
+    box = test_store.box(TestEntityFlex)
     box.put(TestEntityFlex(flex={"k1": "String", "k2": 2, "k3": "string"}))
     box.put(TestEntityFlex(flex={"k1": "strinG", "k2": 3, "k3": 10, "k4": [1, "foo", 3]}))
     box.put(TestEntityFlex(flex={"k1": "buzz", "k2": 3, "k3": [2, 3], "k4": {"k1": "a", "k2": "inner text"}}))
@@ -310,10 +300,8 @@ def test_flex_contains_key_value():
     assert len(query.find()) == 0
 
 
-def test_offset_limit():
-    store = create_test_store()
-
-    box = store.box(TestEntity)
+def test_offset_limit(test_store):
+    box = test_store.box(TestEntity)
     box.put(TestEntity())
     box.put(TestEntity(str="a"))
     box.put(TestEntity(str="b"))
@@ -339,10 +327,8 @@ def test_offset_limit():
     assert len(query.find()) == 4
 
 
-def test_any_all():
-    store = create_test_store()
-
-    box = store.box(TestEntity)
+def test_any_all(test_store):
+    box = test_store.box(TestEntity)
 
     box.put(TestEntity(str="Foo", int32=10, int8=2, float32=3.14, bool=True))
     box.put(TestEntity(str="FooBar", int32=100, int8=50, float32=2.0, bool=True))
@@ -401,10 +387,8 @@ def test_any_all():
     assert ids == [2, 3]
 
 
-def test_set_parameter():
-    store = create_test_store()
-
-    box_test_entity = store.box(TestEntity)
+def test_set_parameter(test_store):
+    box_test_entity = test_store.box(TestEntity)
     box_test_entity.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
     box_test_entity.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
     box_test_entity.put(TestEntity(str="Bar", int64=10, int32=226, int8=126))
@@ -412,7 +396,7 @@ def test_set_parameter():
     box_test_entity.put(TestEntity(str="Fox", int64=10, int32=157, int8=11))
     box_test_entity.put(TestEntity(str="Barrakuda", int64=4, int32=386, int8=60))
 
-    box_vector_entity = store.box(VectorEntity)
+    box_vector_entity = test_store.box(VectorEntity)
     box_vector_entity.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector_entity.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
@@ -454,14 +438,13 @@ def test_set_parameter():
     assert query.find_ids() == sorted([2, 3])
 
 
-def test_set_parameter_alias():
-    store = create_test_store()
-    box = store.box(TestEntity)
+def test_set_parameter_alias(test_store):
+    box = test_store.box(TestEntity)
 
     box.put(TestEntity(str="Foo", int64=2, int32=703, int8=101))
     box.put(TestEntity(str="FooBar", int64=10, int32=49, int8=45))
 
-    box_vector = store.box(VectorEntity)
+    box_vector = test_store.box(VectorEntity)
     box_vector.put(VectorEntity(name="Object 1", vector_euclidean=[1, 1]))
     box_vector.put(VectorEntity(name="Object 2", vector_euclidean=[2, 2]))
     box_vector.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
@@ -528,12 +511,11 @@ def test_set_parameter_alias():
     assert query.find_ids() == sorted([5, 4, 3])
 
 
-def test_set_parameter_alias_advanced():
+def test_set_parameter_alias_advanced(test_store):
     """ Tests set_parameter_alias in a complex scenario (i.e. multiple query conditions/logical aggregations). """
-    store = create_test_store()
 
     # Setup 1
-    box = store.box(TestEntity)
+    box = test_store.box(TestEntity)
     box.put(TestEntity(str="Apple", bool=False, int64=47, int32=70))
     box.put(TestEntity(str="applE", bool=True, int64=253, int32=798))
     box.put(TestEntity(str="APPLE", bool=False, int64=3456, int32=123))
@@ -592,9 +574,8 @@ def test_set_parameter_alias_advanced():
 
 
 # Bytes query
-def test_bytes():
-    store = create_test_store()
-    box = store.box(TestEntity)
+def test_bytes(test_store):
+    box = test_store.box(TestEntity)
 
     bytes_prop: Property = TestEntity.bytes 
 

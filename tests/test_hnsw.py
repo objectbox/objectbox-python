@@ -34,10 +34,10 @@ def _test_random_points(
 
     points = np.random.rand(num_points, 2).astype(np.float32)
 
-    store = create_test_store()
+    test_store = create_test_store()
 
     # Init and seed DB
-    box = store.box(VectorEntity)
+    box = test_store.box(VectorEntity)
 
     print(f"Seeding DB with {num_points} points...")
     objects = []
@@ -77,6 +77,8 @@ def _test_random_points(
 
     print(f"Done!")
 
+    test_store.close()
+
 
 def test_random_points():
         
@@ -89,14 +91,8 @@ def test_random_points():
     _test_random_points(num_points=100, num_query_points=10, seed=14, distance_type=distance_type, min_score=min_score)
     _test_random_points(num_points=100, num_query_points=10, seed=15, distance_type=distance_type, min_score=min_score)
 
-    # TODO: Cosine and Dot Product may result in 0 score
-
-
-def _test_combined_nn_search(distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN):
-
-    store = create_test_store()
-
-    box = store.box(VectorEntity)
+def _test_combined_nn_search(test_store: Store, distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN):
+    box = test_store.box(VectorEntity)
 
     vector_field_name = "vector_"+distance_type.name.lower()
    
@@ -203,8 +199,8 @@ def _test_combined_nn_search(distance_type: VectorDistanceType = VectorDistanceT
     assert len(numpy_result) == 0
 
 
-def test_combined_nn_search():
+def test_combined_nn_search(test_store):
     """ Tests NN search combined with regular query conditions, offset and limit. """
     distance_type = VectorDistanceType.EUCLIDEAN
-    _test_combined_nn_search(distance_type)
+    _test_combined_nn_search(test_store, distance_type)
     # TODO: Cosine, DotProduct  diverges see below

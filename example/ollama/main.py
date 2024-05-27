@@ -3,6 +3,8 @@
 
 import ollama
 import objectbox
+from objectbox.model import *
+from objectbox.model.properties import *
 
 documents = [
   "Llamas are members of the camelid family meaning they're pretty closely related to vicuñas and camels",
@@ -12,12 +14,6 @@ documents = [
   "Llamas are vegetarians and have very efficient digestive systems",
   "Llamas live to be about 20 years old, though some only live for 15 years and others live to be 30 years old",
 ]
-
-
-from objectbox.model import *
-from objectbox.model.idsync import sync_model
-from objectbox.model.properties import *
-import numpy as np
 
 # Have fresh data for each start
 objectbox.Store.remove_db_files("objectbox")
@@ -31,11 +27,7 @@ class DocumentEmbedding:
         distance_type=VectorDistanceType.COSINE
     ))
 
-model = Model()
-model.entity(DocumentEmbedding)
-sync_model(model, os.path.join(os.path.dirname(__file__),"objectbox-model.json") )
-
-store = objectbox.Store(model=model)
+store = objectbox.Store()
 box = store.box(DocumentEmbedding)
 
 print("Documents to embed: ", len(documents))

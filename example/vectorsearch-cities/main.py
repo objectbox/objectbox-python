@@ -1,9 +1,18 @@
 from cmd import Cmd
 import objectbox
+from objectbox.model import *
 import time
-from .model import *
 import csv
 import os
+
+@Entity()
+class City:
+    id = Id()
+    name = String()
+    location = Float32Vector(index=HnswIndex(
+        dimensions=2,
+        distance_type=VectorDistanceType.EUCLIDEAN
+    ))
 
 def list_cities(cities):
     print("{:3s}  {:25s}  {:>9s}  {:>9s}".format("ID", "Name", "Latitude", "Longitude"))
@@ -23,7 +32,7 @@ class VectorSearchCitiesCmd(Cmd):
         Cmd.__init__(self, *args)
         dbdir = "cities-db"
         new_db = not os.path.exists(dbdir)
-        self._store = objectbox.Store(model=get_objectbox_model(),directory=dbdir)
+        self._store = objectbox.Store(directory=dbdir)
         self._box = self._store.box(City)
         if new_db: 
             with open(os.path.join(os.path.dirname(__file__), 'cities.csv')) as f:

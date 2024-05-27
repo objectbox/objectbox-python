@@ -8,7 +8,7 @@ import shutil
 def test_inmemory():
     # Use default path for persistent store
     db_name = "testdata"
-    store = create_test_store()
+    store = create_test_store(db_name)
     box = store.box(TestEntity)
     object = TestEntity()
     id = box.put(object)
@@ -28,3 +28,4 @@ def test_inmemory():
     assert id == 1
     assert id == object.id
     assert not os.path.exists(db_name)
+    store.close()

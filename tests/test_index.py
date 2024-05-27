@@ -10,9 +10,8 @@ from tests.common import *
 #   Fix tests to verify indices are set in the C model, and not only Python's (i.e. query the C API)!
 
 @pytest.mark.skip(reason="Test indices implementation")
-def test_index_basics():
-    store = create_test_store()
-    box = store.box(TestEntity)
+def test_index_basics(test_store):
+    box = test_store.box(TestEntity)
 
     # create
     object = TestEntity()

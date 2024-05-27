@@ -11,21 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import inspect
 
 import flatbuffers
 import flatbuffers.flexbuffers
-from typing import Generic
 import numpy as np
 from datetime import datetime, timezone
-from objectbox.c import *
-from objectbox.model.properties import Property
-from objectbox.utils import date_value_to_int
-import threading
+import logging
 from objectbox.c import *
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
-
+from objectbox.utils import date_value_to_int
+import threading
 
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
@@ -276,11 +273,38 @@ class _Entity(object):
             setattr(obj, prop.name, val)
         return obj
 
+# Dictionary of entity types (metadata) collected by the Entity decorator.
+# Note: using a list not a set to keep the order of entities as they were defined (set would not be deterministic).
+obx_models_by_name: Dict[str, List[_Entity]] = {}
 
-def Entity(uid: int = 0) -> Callable[[Type], _Entity]:
+
+def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
 
     def wrapper(class_):
-        return _Entity(class_, uid)
+        # Also allow defining properties as class members; we'll instantiate them here
+        class_members = inspect.getmembers(class_, lambda a: (inspect.isclass(a) and issubclass(a, Property)))
+        for name, member_type in class_members:
+            assert issubclass(member_type, Property)
+            # noinspection PyArgumentList
+            obj = member_type()  # Subclasses of Property have no constructor arguments
+            setattr(class_, name, obj)
+
+        types = obx_models_by_name.get(model)
+        if types is None:
+            types = []
+            obx_models_by_name[model] = types
+
+        entity_type = _Entity(class_, uid)
+        for existing in types:
+            if existing._name == entity_type._name:
+                # OK for tests, where multiple models are created with the same entity name
+                logging.warning(f"Model \"{model}\" already contains an entity type \"{entity_type._name}\"; replacing it.")
+                types.remove(existing)
+                break
+
+        obx_models_by_name[model].append(entity_type)
+        logging.info(f"Entity type {entity_type._name} added to model {model}")
+        return entity_type
 
     return wrapper

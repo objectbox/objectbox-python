@@ -13,17 +13,18 @@ pip install --pre objectbox
 
 The following examples are available from this directory:
 
-- `tasks`: CRUD Application Example (see below for details)
-- `vectorsearch-cities`: VectorSearch Application Example (see below for details)
+- `tasks`: CRUD Example (see below for details)
+- `vectorsearch-cities`: VectorSearch Example (see below for details)
 - `ollama`: LLM + VectorSearch Embeddings Script Example (See [ollama/README.md](./ollama/README.md) for details)
 
 
-## Application Example: Tasks
+## Example: Tasks
 
 This is our classic Tasks application using a CLI.
 
 ```
-$ python -m tasks
+cd tasks
+$ python main.py
 
 Welcome to the ObjectBox tasks-list app example. Type help or ? for a list of commands.
 > new buy oat
@@ -45,13 +46,14 @@ Welcome to the ObjectBox tasks-list app example. Type help or ? for a list of co
 > exit
 ```
 
-## Vector-Search Example: Cities
+## Example: Vector-Search 
 
 This example application starts with a pre-defined set of capital cities and their geo coordinates. 
 It allows to search for nearest neighbors of a city (`city_neighbors`) or by coordinates (`neighbors`) as well as adding more locations (`add`).
 
 ```
-$ python -m vectorsearch-cities
+cd example/vector-search-cities
+$ python main.py
 
 Welcome to the ObjectBox vectorsearch-cities example. Type help or ? for a list of commands.
 > ls
