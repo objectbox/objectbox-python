@@ -36,7 +36,7 @@ class Query:
                     # OBX_bytes
                     c_bytes = c_bytes_array.data[i]
                     data = c_voidp_as_bytes(c_bytes.data, c_bytes.size)
-                    result.append(self._box._entity.unmarshal(data))
+                    result.append(self._box._entity._unmarshal(data))
                 return result
             finally:
                 obx_bytes_array_free(c_bytes_array_p)
@@ -67,7 +67,7 @@ class Query:
                     data = c_voidp_as_bytes(c_bytes_score.data, c_bytes_score.size)
                     score = c_bytes_score.score
 
-                    object_ = self._box._entity.unmarshal(data)
+                    object_ = self._box._entity._unmarshal(data)
                     result.append((object_, score))
                 return result
             finally:
@@ -137,13 +137,13 @@ class Query:
         return self
 
     def set_parameter_string(self, prop: Union[int, str, 'Property'], value: str) -> 'Query':
-        prop_id = self._entity.get_property_id(prop)
-        obx_query_param_string(self._c_query, self._entity.id, prop_id, c_str(value))
+        prop_id = self._entity._get_property_id(prop)
+        obx_query_param_string(self._c_query, self._entity._id, prop_id, c_str(value))
         return self
 
     def set_parameter_int(self, prop: Union[int, str, 'Property'], value: int) -> 'Query':
-        prop_id = self._entity.get_property_id(prop)
-        obx_query_param_int(self._c_query, self._entity.id, prop_id, value)
+        prop_id = self._entity._get_property_id(prop)
+        obx_query_param_int(self._c_query, self._entity._id, prop_id, value)
         return self
 
     def set_parameter_vector_f32(self,
@@ -151,10 +151,10 @@ class Query:
                                  value: Union[List[float], np.ndarray]) -> 'Query':
         if isinstance(value, np.ndarray) and value.dtype != np.float32:
             raise Exception(f"value dtype is expected to be np.float32, got: {value.dtype}")
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         c_value = c_array(value, ctypes.c_float)
         num_el = len(value)
-        obx_query_param_vector_float32(self._c_query, self._entity.id, prop_id, c_value, num_el)
+        obx_query_param_vector_float32(self._c_query, self._entity._id, prop_id, c_value, num_el)
         return self
 
     def offset(self, offset: int):

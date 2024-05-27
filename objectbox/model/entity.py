@@ -31,46 +31,53 @@ from objectbox.model.properties import Property
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
     def __init__(self, user_type, uid: int = 0):
-        self.user_type = user_type
-        self.iduid = IdUid(0, uid)
-        self.name = user_type.__name__
-        self.last_property_iduid = IdUid(0, 0)
+        self._user_type = user_type
+        self._iduid = IdUid(0, uid)
+        self._name = user_type.__name__
+        self._last_property_iduid = IdUid(0, 0)
 
-        self.properties: List[Property] = list()  # List[Property]
-        self.offset_properties = list()  # List[Property]
-        self.id_property = None
-        self.fill_properties()
+        self._properties: List[Property] = list()  # List[Property]
+        self._offset_properties = list()  # List[Property]
+        self._id_property = None
+        self._fill_properties()
         self._tl = threading.local()
 
     @property
-    def id(self) -> int:
-        return self.iduid.id
+    def _id(self) -> int:
+        return self._iduid.id
 
     @property
-    def uid(self) -> int:
-        return self.iduid.uid
+    def _uid(self) -> int:
+        return self._iduid.uid
 
-    def has_uid(self) -> bool:
-        return self.iduid.uid != 0
+    def _has_uid(self) -> bool:
+        return self._iduid.uid != 0
 
-    def on_sync(self):
+    def _on_sync(self):
         """ Method called once ID/UID are synced with the model file. """
-        assert self.iduid.is_assigned()
-        for prop in self.properties:
+        assert self._iduid.is_assigned()
+        for prop in self._properties:
             prop.on_sync()
 
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
-        object_ = self.user_type()
+        object_ = self._user_type()
         for prop_name, prop_val in properties.items():
             if not hasattr(object_, prop_name):
-                raise Exception(f"Entity {self.name} has no property \"{prop_name}\"")
+                raise Exception(f"Entity {self._name} has no property \"{prop_name}\"")
             setattr(object_, prop_name, prop_val)
         return object_
 
-    def fill_properties(self):
+    def __getattr__(self, name):
+        """ Overload to get properties via "<Entity>.<Prop>" notation. """
+        for prop in self._properties:
+            if prop.name == name:
+                return prop
+        return self.__getattribute__(name)     
+
+    def _fill_properties(self):
         # TODO allow subclassing and support entities with __slots__ defined
-        variables = dict(vars(self.user_type))
+        variables = dict(vars(self._user_type))
 
         # filter only subclasses of Property
         variables = {k: v for k, v in variables.items(
@@ -78,12 +85,12 @@ class _Entity(object):
 
         for prop_name, prop in variables.items():
             prop.name = prop_name
-            self.properties.append(prop)
+            self._properties.append(prop)
 
             if prop.is_id():
-                if self.id_property:
-                    raise Exception(f"Duplicate ID property: \"{self.id_property.name}\" and \"{prop.name}\"")
-                self.id_property = prop
+                if self._id_property:
+                    raise Exception(f"Duplicate ID property: \"{self._id_property.name}\" and \"{prop.name}\"")
+                self._id_property = prop
 
             if prop._fb_type == flatbuffers.number_types.UOffsetTFlags:
                 assert prop._ob_type in [
@@ -98,34 +105,34 @@ class _Entity(object):
                     OBXPropertyType_DoubleVector,
                     OBXPropertyType_Flex,
                 ], "programming error - invalid type OB & FB type combination"
-                self.offset_properties.append(prop)
+                self._offset_properties.append(prop)
 
-            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self.name, prop.name, prop._py_type, prop._ob_type, prop._fb_type))
+            # print('Property {}.{}: {} (ob:{} fb:{})'.format(self._name, prop.name, prop._py_type, prop._ob_type, prop._fb_type))
 
-        if not self.id_property:
+        if not self._id_property:
             raise Exception("ID property is not defined")
-        elif self.id_property._ob_type != OBXPropertyType_Long:
+        elif self._id_property._ob_type != OBXPropertyType_Long:
             raise Exception("ID property must be an int")
 
-    def get_property(self, name: str):
+    def _get_property(self, name: str):
         """ Gets the property having the given name. """
-        for prop in self.properties:
+        for prop in self._properties:
             if prop.name == name:
                 return prop
-        raise Exception(f"Property \"{name}\" not found in Entity: \"{self.name}\"")
+        raise Exception(f"Property \"{name}\" not found in Entity: \"{self._name}\"")
 
-    def get_property_id(self, prop: Union[int, str, Property]) -> int:
+    def _get_property_id(self, prop: Union[int, str, Property]) -> int:
         """ A convenient way to get the property ID regardless having its ID, name or Property. """
         if isinstance(prop, int):
             return prop  # We already have it!
         elif isinstance(prop, str):
-            return self.get_property(prop).id
+            return self._get_property(prop).id
         elif isinstance(prop, Property):
             return prop.id
         else:
             raise Exception(f"Unsupported Property type: {type(prop)}")
 
-    def get_value(self, object, prop: Property):
+    def _get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop.name)
         if prop._py_type == np.ndarray:
@@ -140,13 +147,13 @@ class _Entity(object):
                 return prop._py_type()  # default (empty) value for the given type
         return val
 
-    def get_object_id(self, obj) -> int:
-        return self.get_value(obj, self.id_property)
+    def _get_object_id(self, obj) -> int:
+        return self._get_value(obj, self._id_property)
 
-    def set_object_id(self, obj, id_: int):
-        setattr(obj, self.id_property.name, id_)
+    def _set_object_id(self, obj, id_: int):
+        setattr(obj, self._id_property.name, id_)
 
-    def marshal(self, object, id: int) -> bytearray:
+    def _marshal(self, object, id: int) -> bytearray:
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
         builder = self._tl.builder
@@ -154,8 +161,8 @@ class _Entity(object):
 
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}
-        for prop in self.offset_properties:
-            val = self.get_value(object, prop)
+        for prop in self._offset_properties:
+            val = self._get_value(object, prop)
             if prop._ob_type == OBXPropertyType_String:
                 offsets[prop.id] = builder.CreateString(val.encode('utf-8'))
             elif prop._ob_type == OBXPropertyType_BoolVector:
@@ -185,17 +192,17 @@ class _Entity(object):
                 assert False, "programming error - invalid type OB & FB type combination"
 
         # start the FlatBuffers object with the largest number of properties that were ever present in the Entity
-        builder.StartObject(self.last_property_iduid.id)
+        builder.StartObject(self._last_property_iduid.id)
 
         # add properties to the FB object
-        for prop in self.properties:
+        for prop in self._properties:
             prop_id = prop.id
             if prop_id in offsets:
                 val = offsets[prop_id]
                 if val:
                     builder.PrependUOffsetTRelative(val)
             else:
-                val = id if prop == self.id_property else self.get_value(object, prop)
+                val = id if prop == self._id_property else self._get_value(object, prop)
                 if prop._ob_type == OBXPropertyType_Date:
                     val = date_value_to_int(val, 1000)  # convert to milliseconds
                 elif prop._ob_type == OBXPropertyType_DateNano:
@@ -207,15 +214,15 @@ class _Entity(object):
         builder.Finish(builder.EndObject())
         return builder.Output()
 
-    def unmarshal(self, data: bytes):
+    def _unmarshal(self, data: bytes):
         pos = flatbuffers.encode.Get(flatbuffers.packer.uoffset, data, 0)
         table = flatbuffers.Table(data, pos)
 
         # initialize an empty object
-        obj = self.user_type()
+        obj = self._user_type()
 
         # fill it with the data read from FlatBuffers
-        for prop in self.properties:
+        for prop in self._properties:
             o = table.Offset(prop._fb_v_offset)
             val = None
             ob_type = prop._ob_type

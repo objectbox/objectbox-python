@@ -27,7 +27,7 @@ class Box:
 
         self._store = store 
         self._entity = entity
-        self._c_box = obx_box(store._c_store, entity.id)
+        self._c_box = obx_box(store._c_store, entity._id)
 
     def is_empty(self) -> bool:
         is_empty = ctypes.c_bool()
@@ -50,16 +50,16 @@ class Box:
             return self._put_one(objects[0])
 
     def _put_one(self, obj) -> int:
-        id = object_id = self._entity.get_object_id(obj)
+        id = object_id = self._entity._get_object_id(obj)
 
         if not id:
             id = obx_box_id_for_put(self._c_box, 0)
 
-        data = self._entity.marshal(obj, id)
+        data = self._entity._marshal(obj, id)
         obx_box_put(self._c_box, id, bytes(data), len(data))
 
         if id != object_id:
-            self._entity.set_object_id(obj, id)
+            self._entity._set_object_id(obj, id)
 
         return id
 
@@ -68,7 +68,7 @@ class Box:
         new = {}
         ids = {}
         for k in range(len(objects)):
-            id = self._entity.get_object_id(objects[k])
+            id = self._entity._get_object_id(objects[k])
             if not id:
                 new[k] = 0
             ids[k] = id
@@ -90,7 +90,7 @@ class Box:
             # we need to keep the data around until put_many is executed because obx_bytes_array_set doesn't do a copy
             data = {}
             for k in range(len(objects)):
-                data[k] = bytes(self._entity.marshal(objects[k], ids[k]))
+                data[k] = bytes(self._entity._marshal(objects[k], ids[k]))
                 key = ctypes.c_size_t(k)
 
                 # OBX_bytes_array.data[k] = data
@@ -106,7 +106,7 @@ class Box:
 
         # assign new IDs on the object
         for k in new.keys():
-            self._entity.set_object_id(objects[k], ids[k])
+            self._entity._set_object_id(objects[k], ids[k])
 
     def get(self, id: int):
         with self._store.read_tx():
@@ -119,7 +119,7 @@ class Box:
             elif code != 0:
                 raise CoreException(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
-            return self._entity.unmarshal(data)
+            return self._entity._unmarshal(data)
 
     def get_all(self) -> list:
         with self._store.read_tx():
@@ -135,15 +135,15 @@ class Box:
                     # OBX_bytes
                     c_bytes = c_bytes_array.data[i]
                     data = c_voidp_as_bytes(c_bytes.data, c_bytes.size)
-                    result.append(self._entity.unmarshal(data))
+                    result.append(self._entity._unmarshal(data))
 
                 return result
             finally:
                 obx_bytes_array_free(c_bytes_array_p)
 
     def remove(self, id_or_object) -> bool:
-        if isinstance(id_or_object, self._entity.user_type):
-            id = self._entity.get_object_id(id_or_object)
+        if isinstance(id_or_object, self._entity._user_type):
+            id = self._entity._get_object_id(id_or_object)
         else:
             id = id_or_object
         code : obx_err = obx_box_remove(self._c_box, id)

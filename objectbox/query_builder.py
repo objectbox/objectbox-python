@@ -13,7 +13,7 @@ class QueryBuilder:
     def __init__(self, store: Store, box: 'Box'):
         self._box = box
         self._entity = box._entity
-        self._c_builder = obx_query_builder(store._c_store, box._entity.id)
+        self._c_builder = obx_query_builder(store._c_store, box._entity._id)
 
     def close(self) -> int:
         return obx_qb_close(self._c_builder)
@@ -25,137 +25,137 @@ class QueryBuilder:
         return obx_qb_error_message(self._c_builder)
 
     def equals_string(self, prop: Union[int, str, Property], value: str, case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_equals_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def not_equals_string(self, prop: Union[int, str, Property], value: str,
                           case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_not_equals_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def contains_string(self, prop: Union[int, str, Property], value: str, case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_contains_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def starts_with_string(self, prop: Union[int, str, Property], value: str,
                            case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_starts_with_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def ends_with_string(self, prop: Union[int, str, Property], value: str, case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_ends_with_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def greater_than_string(self, prop: Union[int, str, Property], value: str,
                             case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_than_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def greater_or_equal_string(self, prop: Union[int, str, Property], value: str,
                                 case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_or_equal_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def less_than_string(self, prop: Union[int, str, Property], value: str, case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_than_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def less_or_equal_string(self, prop: Union[int, str, Property], value: str,
                              case_sensitive: bool = True) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_or_equal_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
     def equals_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_equals_int(self._c_builder, prop_id, value)
         return cond
 
     def not_equals_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_not_equals_int(self._c_builder, prop_id, value)
         return cond
 
     def greater_than_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_than_int(self._c_builder, prop_id, value)
         return cond
     
     def greater_than_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_than_double(self._c_builder, prop_id, value)
         return cond
 
     def greater_or_equal_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_or_equal_int(self._c_builder, prop_id, value)
         return cond
     
     def greater_or_equal_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_or_equal_double(self._c_builder, prop_id, value)
         return cond
 
     def less_than_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_than_int(self._c_builder, prop_id, value)
         return cond
     
     def less_than_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_than_double(self._c_builder, prop_id, value)
         return cond
 
     def less_or_equal_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_or_equal_int(self._c_builder, prop_id, value)
         return cond
     
     def less_or_equal_double(self, prop: Union[int, str, Property], value: float) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_or_equal_double(self._c_builder, prop_id, value)
         return cond
 
     def between_2ints(self, prop: Union[int, str, Property], value_a: int, value_b: int) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_between_2ints(self._c_builder, prop_id, value_a, value_b)
         return cond
     
     def between_2doubles(self, prop: Union[int, str, Property], value_a: float, value_b: float) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_between_2doubles(self._c_builder, prop_id, value_a, value_b)
         return cond
 
     def equals_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_equals_bytes(self._c_builder, prop_id, value, len(value))
         return cond
     
     def greater_than_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_than_bytes(self._c_builder, prop_id, value, len(value))
         return cond
     
     def greater_or_equal_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_or_equal_bytes(self._c_builder, prop_id, value, len(value))
         return cond
     
     def less_than_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_than_bytes(self._c_builder, prop_id, value, len(value))
         return cond
     
     def less_or_equal_bytes(self, prop: Union[int, str, Property], value: bytes) -> obx_qb_cond:
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_less_or_equal_bytes(self._c_builder, prop_id, value, len(value))
         return cond
     
@@ -164,7 +164,7 @@ class QueryBuilder:
                               query_vector: Union[np.ndarray, List[float]],
                               element_count: int):
         check_float_vector(query_vector, "query_vector")
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         c_query_vector = c_array(query_vector, ctypes.c_float)
         cond = obx_qb_nearest_neighbors_f32(self._c_builder, prop_id, c_query_vector, element_count)
         return cond
@@ -177,7 +177,7 @@ class QueryBuilder:
         :param case_sensitive:
             If false, ignore case when matching value
         """
-        prop_id = self._entity.get_property_id(prop)
+        prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_contains_key_value_string(self._c_builder, prop_id, c_str(key), c_str(value), case_sensitive)
         return cond
 

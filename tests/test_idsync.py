@@ -38,9 +38,9 @@ class _TestEnv:
 
 
 def reset_ids(entity: _Entity):
-    entity.iduid = IdUid(0, 0)
-    entity.last_property_iduid = IdUid(0, 0)
-    for prop in entity.properties:
+    entity._iduid = IdUid(0, 0)
+    entity._last_property_iduid = IdUid(0, 0)
+    for prop in entity._properties:
         prop.iduid = IdUid(0, 0)
         if prop.index:
             prop.index.iduid = IdUid(0, 0)
@@ -74,7 +74,7 @@ def test_empty_model(env):
 
     doc = env.json()
     assert len(doc['entities']) == 1
-    assert doc['entities'][0]['id'] == str(MyEntity.iduid)
+    assert doc['entities'][0]['id'] == str(MyEntity._iduid)
 
 
 def test_json(env):
@@ -92,29 +92,29 @@ def test_json(env):
 
     json_e0 = doc['entities'][0]
     e0_id = json_e0['id']
-    assert e0_id == str(MyEntity.iduid)
+    assert e0_id == str(MyEntity._iduid)
     assert e0_id.startswith("1:")
     assert json_e0['name'] == "MyEntity"
 
     json_p0 = json_e0['properties'][0]
     p0_id = json_p0['id']
-    assert p0_id == str(MyEntity.get_property('id').iduid)
+    assert p0_id == str(MyEntity._get_property('id').iduid)
     assert p0_id.startswith("1:")
     assert json_p0['name'] == "id"
     assert json_p0['flags'] == 1
     assert json_p0.get('indexId') is None
 
     json_p1 = json_e0['properties'][1]
-    assert json_p1['id'] == str(MyEntity.get_property('my_string').iduid)
+    assert json_p1['id'] == str(MyEntity._get_property('my_string').iduid)
     assert json_p1['name'] == "my_string"
     assert json_p1.get('flags') is None
     assert json_p1.get('indexId') is None
 
     json_p2 = json_e0['properties'][2]
-    assert json_p2['id'] == str(MyEntity.get_property('my_string_indexed').iduid)
+    assert json_p2['id'] == str(MyEntity._get_property('my_string_indexed').iduid)
     assert json_p2['name'] == "my_string_indexed"
     assert json_p2['flags'] == 8
-    assert json_p2['indexId'] == str(MyEntity.get_property('my_string_indexed').index.iduid)
+    assert json_p2['indexId'] == str(MyEntity._get_property('my_string_indexed').index.iduid)
     assert json_e0['lastPropertyId'] == json_p2['id']
 
     assert doc['lastEntityId'] == e0_id
@@ -130,9 +130,9 @@ def test_basics(env):
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
-    assert MyEntity.id == 1
-    assert MyEntity.uid != 0
-    entity_ids = str(MyEntity.iduid)
+    assert MyEntity._id == 1
+    assert MyEntity._uid != 0
+    entity_ids = str(MyEntity._iduid)
 
     # create new database and populate with two objects
     store = env.store()
@@ -150,9 +150,9 @@ def test_basics(env):
         id = Id()
         name = String()
     model.entity(MyEntity)
-    assert str(model.entities[0].iduid) == "0:0"
+    assert str(model.entities[0]._iduid) == "0:0"
     env.sync(model)
-    assert str(model.entities[0].iduid) == entity_ids
+    assert str(model.entities[0]._iduid) == entity_ids
 
     # open existing database 
     store = env.store()
@@ -167,7 +167,7 @@ def test_entity_add(env):
     model = Model()
     model.entity(MyEntity1)
     env.sync(model)
-    e0_iduid = IdUid(MyEntity1.id, MyEntity1.uid)
+    e0_iduid = IdUid(MyEntity1._id, MyEntity1._uid)
     store = env.store()
     box = store.box(MyEntity1)
     box.put( MyEntity1(name="foo"), MyEntity1(name="bar"))
@@ -184,9 +184,9 @@ def test_entity_add(env):
     reset_ids(MyEntity1)
     model.entity(MyEntity1)
     model.entity(MyEntity2)
-    assert str(model.entities[0].iduid) == "0:0"
+    assert str(model.entities[0]._iduid) == "0:0"
     env.sync(model)
-    assert model.entities[0].iduid == e0_iduid
+    assert model.entities[0]._iduid == e0_iduid
     store = env.store()
     box1 = store.box(MyEntity1)
     assert box1.count() == 2
@@ -243,7 +243,7 @@ def test_entity_rename(env):
     env.sync(model)
 
     # Save uid of entity for renaming purposes..
-    uid = MyEntity.uid # iduid.uid
+    uid = MyEntity._uid # iduid.uid
     assert uid != 0
     # Debug: print("UID: "+ str(uid))
 
@@ -302,7 +302,7 @@ def test_entity_rename_2(env):
     model.entity(Entity3)
     model.entity(Entity4)
     assert env.sync(model)
-    assert Entity4.iduid == IdUid(2, 324)  # Same ID/UID of Entity2 (renaming)
+    assert Entity4._iduid == IdUid(2, 324)  # Same ID/UID of Entity2 (renaming)
     assert model.last_entity_iduid == IdUid(3, 890)
 
 
@@ -383,8 +383,8 @@ def test_prop_rename(env):
     assert box.get(1).name == "Luca"
     assert not hasattr(box.get(1), "renamed_name")
 
-    entity1_iduid = EntityA.iduid
-    name = EntityA.get_property("name")
+    entity1_iduid = EntityA._iduid
+    name = EntityA._get_property("name")
     name_iduid = name.iduid
     print(f"Entity.name ID/UID: {name.iduid}")
 
@@ -405,8 +405,8 @@ def test_prop_rename(env):
     store = env.store()
 
     # Check ID/UID(s) are preserved after renaming
-    entity2_iduid = EntityA.iduid
-    renamed_name = EntityA.get_property("renamed_name")
+    entity2_iduid = EntityA._iduid
+    renamed_name = EntityA._get_property("renamed_name")
     renamed_name_iduid = renamed_name.iduid
     print(f"Entity.renamed_name ID/UID: {renamed_name_iduid}")
     assert entity1_iduid == entity2_iduid
@@ -442,7 +442,7 @@ def test_model_json_updates(env):
         name = String()
     assert sync_entities(EntityB)
 
-    entityb_uid = EntityB.uid
+    entityb_uid = EntityB._uid
 
     # Rename entity
     @Entity(uid=entityb_uid)
@@ -491,7 +491,7 @@ def test_model_json_updates(env):
         my_prop = String()
     assert sync_entities(EntityD)
 
-    my_prop_uid = EntityD.get_property("my_prop").uid
+    my_prop_uid = EntityD._get_property("my_prop").uid
 
     # Rename property
     @Entity()
@@ -526,7 +526,7 @@ def test_model_uid_already_assigned(env):
     model.entity(EntityA)
     env.sync(model)
 
-    entitya_uid = EntityA.uid
+    entitya_uid = EntityA._uid
 
     # Rename property, but use a UID which is already assigned
     @Entity()

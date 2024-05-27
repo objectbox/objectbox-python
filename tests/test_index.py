@@ -19,19 +19,19 @@ def test_index_basics():
     box.put(object)
 
     # string - default index type is hash
-    assert box._entity.properties[1]._index_type == IndexType.hash
+    assert box._entity._properties[1]._index_type == IndexType.hash
 
     # int64 - default index type is value
-    assert box._entity.properties[3]._index_type == IndexType.value
+    assert box._entity._properties[3]._index_type == IndexType.value
 
     # int32 - index type overwritten to hash
-    assert box._entity.properties[4]._index_type == IndexType.hash
+    assert box._entity._properties[4]._index_type == IndexType.hash
 
     # int16 - specify index type w/o explicitly enabling index
-    assert box._entity.properties[5]._index_type == IndexType.hash
+    assert box._entity._properties[5]._index_type == IndexType.hash
 
     # bytes - index type overwritten to hash64
-    assert box._entity.properties[10]._index_type == IndexType.hash64
+    assert box._entity._properties[10]._index_type == IndexType.hash64
 
 
 @pytest.mark.skip(reason="Test indices implementation")

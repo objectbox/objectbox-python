@@ -21,112 +21,113 @@ def test_basics():
     box_vector_entity.put(VectorEntity(name="Object 3", vector_euclidean=[3, 3]))
 
     # Id query
-    id_prop: Property = TestEntity.get_property("id")
-    query = box_test_entity.query(id_prop.equals(id1)).build()
+    query = box_test_entity.query(TestEntity.id.equals(id1)).build()
     assert query.count() == 1
-    query = box_test_entity.query(id_prop.greater_than(id1)).build()
+    query = box_test_entity.query(TestEntity.id.greater_than(id1)).build()
     assert query.count() == 1
-    query = box_test_entity.query(id_prop.greater_or_equal(id1)).build()
+    query = box_test_entity.query(TestEntity.id.greater_or_equal(id1)).build()
     assert query.count() == 2
-    query = box_test_entity.query(id_prop.less_than(id2)).build()
+    query = box_test_entity.query(TestEntity.id.less_than(id2)).build()
     assert query.count() == 1
-    query = box_test_entity.query(id_prop.less_or_equal(id2)).build()
+    query = box_test_entity.query(TestEntity.id.less_or_equal(id2)).build()
     assert query.count() == 2
 
     # Bool query
-    bool_prop: Property = TestEntity.get_property("bool")
-    query = box_test_entity.query(bool_prop.equals(True)).build()
+    query = box_test_entity.query(TestEntity.bool.equals(True)).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box_test_entity.query(bool_prop.equals(False)).build()
+    query = box_test_entity.query(TestEntity.bool.equals(False)).build()
     assert query.count() == 1
     assert query.find()[0].id == id2
 
     # String query
-    str_prop: Property = TestEntity.get_property("str")
+    str_prop: Property = TestEntity.str
 
     # Case Sensitive = True
     query = box_test_entity.query(str_prop.equals("bar", case_sensitive=True)).build()
+    # String query using direct `<entity>.<propname>` notation
+
+    query = box_test_entity.query(TestEntity.str.equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.not_equals("bar", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.not_equals("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.contains("ba", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.contains("ba", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.starts_with("f", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.starts_with("f", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.ends_with("o", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.ends_with("o", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_than("bar", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.greater_than("bar", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_or_equal("bar", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.greater_or_equal("bar", case_sensitive=True)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_than("foo", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.less_than("foo", case_sensitive=True)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_or_equal("foo", case_sensitive=True)).build()
+    query = box_test_entity.query(TestEntity.str.less_or_equal("foo", case_sensitive=True)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
     # Case Sensitive = False
 
-    query = box_test_entity.query(str_prop.equals("Bar", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.equals("Bar", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.not_equals("Bar", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.not_equals("Bar", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.contains("Ba", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.contains("Ba", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.starts_with("F", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.starts_with("F", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.ends_with("O", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.ends_with("O", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_than("BAR", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.greater_than("BAR", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "foo"
 
-    query = box_test_entity.query(str_prop.greater_or_equal("BAR", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.greater_or_equal("BAR", case_sensitive=False)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_than("FOo", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.less_than("FOo", case_sensitive=False)).build()
     assert query.count() == 1
     assert query.find()[0].str == "bar"
 
-    query = box_test_entity.query(str_prop.less_or_equal("FoO", case_sensitive=False)).build()
+    query = box_test_entity.query(TestEntity.str.less_or_equal("FoO", case_sensitive=False)).build()
     assert query.count() == 2
     assert query.find()[0].str == "foo"
     assert query.find()[1].str == "bar"
 
-    # Int queries
-    int_prop: Property = TestEntity.get_property("int64")
+    # Int queries using a reference to property
+    int_prop: Property = TestEntity.int64
 
     query = box_test_entity.query(int_prop.equals(123)).build()
     assert query.count() == 1
@@ -161,10 +162,8 @@ def test_basics():
     #
     assert query.remove() == 1
 
-    # NN query
-    vector_prop: Property = VectorEntity.get_property("vector_euclidean")
-
-    query = box_vector_entity.query(vector_prop.nearest_neighbor([2.1, 2.1], 2)).build()
+    # NN query 
+    query = box_vector_entity.query(VectorEntity.vector_euclidean.nearest_neighbor([2.1, 2.1], 2)).build()
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
@@ -179,7 +178,7 @@ def test_integer_scalars():
 
     props = [ "int8", "int16", "int32", "int64"]
     for p in props:
-        prop = TestEntity.get_property(p)
+        prop = TestEntity._get_property(p)
 
         query = box_test_entity.query(prop.equals(12)).build()
         assert query.count() == 1
@@ -222,7 +221,7 @@ def test_float_scalars():
     # Test int scalar literals
     props = [ "float32", "float64" ]
     for p in props:
-        prop = TestEntity.get_property(p)
+        prop = TestEntity._get_property(p)
 
         # equals/not_equals should not exist 
         with pytest.raises(AttributeError):
@@ -248,7 +247,7 @@ def test_float_scalars():
 
     # Test float scalar literals 
     for p in props:
-        prop = TestEntity.get_property(p)
+        prop = TestEntity._get_property(p)
         query = box_test_entity.query(prop.less_or_equal(12.299999)).build()
         assert query.count() == 0
         query = box_test_entity.query(prop.greater_than(12.3)).build()
@@ -280,8 +279,7 @@ def test_flex_contains_key_value():
     assert box.count() == 5
 
     # Search case-sensitive = False
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("k1", "string", False)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("k1", "string", False)).build()
     results = query.find()
     assert len(results) == 2
     assert results[0].flex["k1"] == "String"
@@ -293,8 +291,7 @@ def test_flex_contains_key_value():
     assert results[1].flex["k4"] == [1, "foo", 3]
 
     # Search case-sensitive = True
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("n1", "string", True)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("n1", "string", True)).build()
     results = query.find()
     assert len(results) == 1
     assert results[0].flex["n1"] == "string"
@@ -305,13 +302,11 @@ def test_flex_contains_key_value():
     # TODO Search using nested key (not supported yet)
 
     # No match (key)
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("missing key", "string", True)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("missing key", "string", True)).build()
     assert len(query.find()) == 0
 
     # No match (value)
-    flex: Property = TestEntityFlex.get_property("flex")
-    query = box.query(flex.contains_key_value("k1", "missing value", True)).build()
+    query = box.query(TestEntityFlex.flex.contains_key_value("k1", "missing value", True)).build()
     assert len(query.find()) == 0
 
 
@@ -325,7 +320,7 @@ def test_offset_limit():
     box.put(TestEntity(str="c"))
     assert box.count() == 4
 
-    int_prop = TestEntity.get_property("int64")
+    int_prop = TestEntity.int64 
 
     query = box.query(int_prop.equals(0)).build()
     assert query.count() == 4
@@ -473,9 +468,9 @@ def test_set_parameter_alias():
     box_vector.put(VectorEntity(name="Object 4", vector_euclidean=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector_euclidean=[5, 5]))
 
-    str_prop: Property = TestEntity.get_property("str")
-    int32_prop: Property = TestEntity.get_property("int32")
-    int64_prop: Property = TestEntity.get_property("int64")
+    str_prop: Property = TestEntity.str 
+    int32_prop: Property = TestEntity.int32 
+    int64_prop: Property = TestEntity.int64
 
     # Test set parameter alias on string
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -522,7 +517,7 @@ def test_set_parameter_alias():
     assert query.count() == 1
 
     # Test set parameter alias on vector
-    vector_prop: Property = VectorEntity.get_property("vector_euclidean")
+    vector_prop: Property = VectorEntity.vector_euclidean
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
     assert query.count() == 3
@@ -549,10 +544,10 @@ def test_set_parameter_alias_advanced():
     box.put(TestEntity(str="Zucchini", bool=False, int64=1234, int32=9))
     assert box.count() == 8
 
-    str_prop = TestEntity.get_property("str")
-    bool_prop = TestEntity.get_property("bool")
-    int32_prop = TestEntity.get_property("int32")
-    int64_prop = TestEntity.get_property("int64")
+    str_prop = TestEntity.str
+    bool_prop = TestEntity.bool
+    int32_prop = TestEntity.int32
+    int64_prop = TestEntity.int64
 
     query = box.query(
         str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
@@ -601,8 +596,7 @@ def test_bytes():
     store = create_test_store()
     box = store.box(TestEntity)
 
-    bytes_prop: Property = TestEntity.get_property("bytes")
-
+    bytes_prop: Property = TestEntity.bytes 
 
     id1 = box.put(TestEntity(bytes=bytes([9])))
     id2 = box.put(TestEntity(bytes=bytes([1,0])))

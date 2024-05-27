@@ -57,10 +57,8 @@ response = ollama.embeddings(
   model="mxbai-embed-large"
 )
 
-
-embedding_prop: Property = DocumentEmbedding.get_property("embedding")
 query = box.query(
-    embedding_prop.nearest_neighbor(response["embedding"], 1)
+    DocumentEmbedding.embedding.nearest_neighbor(response["embedding"], 1)
 ).build()
 
 results = query.find_with_scores()
