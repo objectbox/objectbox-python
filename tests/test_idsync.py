@@ -587,3 +587,39 @@ def test_models_named(env):
     #      This might require to store the (Python) model in the Store.
     # with pytest.raises(ValueError):
     #     store_b.box(EntityA)
+def test_sync_dynamic_entities(env):
+    def create_entity(entity_name: str, dimensions: int, distance_type: VectorDistanceType, uid=0):
+        DynamicEntity = type(entity_name, (), {
+            "id": Id(),
+            "name": String(),
+            "vector": Float32Vector(index=HnswIndex(dimensions=dimensions, distance_type=distance_type))
+        })
+        return Entity(uid=uid)(DynamicEntity)  # Apply @Entity decorator
+
+    CosineVectorEntity = create_entity("CosineVectorEntity",
+                                       dimensions=2,
+                                       distance_type=VectorDistanceType.COSINE)
+    EuclideanVectorEntity = create_entity("EuclideanVectorEntity",
+                                          dimensions=2,
+                                          distance_type=VectorDistanceType.EUCLIDEAN)
+    DotProductEntity = create_entity("DotProductEntity",
+                                     dimensions=2,
+                                     distance_type=VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED)
+    model = Model()
+    model.entity(CosineVectorEntity)
+    model.entity(EuclideanVectorEntity)
+    model.entity(DotProductEntity)
+    assert env.sync(model)
+    CosineVectorEntity_iduid = CosineVectorEntity._iduid
+
+    # Rename CosineVectorEntity to MyCosineVectorEntity
+    MyCosineVectorEntity = create_entity("MyCosineVectorEntity",
+                                         dimensions=2,
+                                         distance_type=VectorDistanceType.COSINE,
+                                         uid=CosineVectorEntity_iduid.uid)
+    model = Model()
+    model.entity(MyCosineVectorEntity)
+    model.entity(EuclideanVectorEntity)
+    model.entity(DotProductEntity)
+    assert env.sync(model)
+    assert CosineVectorEntity_iduid == MyCosineVectorEntity._iduid
