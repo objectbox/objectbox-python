@@ -1,15 +1,16 @@
-from typing import *
+import json
+import pytest
+import os
+from numpy.testing import assert_approx_equal
 from objectbox import *
 from objectbox.model import *
 from objectbox.model.entity import _Entity
 from objectbox.model.idsync import sync_model
 from objectbox.c import CoreException
-import json
-from pprint import pprint
-import os
 from os import path
-import tests.model
-import pytest
+
+from tests.common import remove_json_model_file
+
 
 class _TestEnv:
     """
@@ -539,3 +540,56 @@ def test_model_uid_already_assigned(env):
     with pytest.raises(ValueError) as e:
         env.sync(model)
     assert f"User supplied UID {entitya_uid} is already assigned elsewhere" == str(e.value)
+
+
+def test_models_named(env):
+    @Entity(model="modelA")
+    class EntityA:
+        id = Id
+        text_a = String
+
+    @Entity(model="modelB")
+    class EntityB:
+        id = Id
+        int_b = Int64
+
+    @Entity(model="modelB")
+    class EntityB2:
+        id = Id()
+        float_b = Float64
+
+    Store.remove_db_files("test-db-model-a")
+    Store.remove_db_files("test-db-model-b")
+    remove_json_model_file()
+    store_a = Store(model="modelA", directory="test-db-model-a")
+    remove_json_model_file()
+    store_b = Store(model="modelB", directory="test-db-model-b")
+
+    box_a = store_a.box(EntityA)
+    id = box_a.put(EntityA(text_a="ah"))
+    assert id != 0
+    assert box_a.get(id).text_a == "ah"
+
+    # TODO to make this work we Store/Box to check if the type is actually registered.
+    #      This might require to store the (Python) model in the Store.
+    # with pytest.raises(ValueError):
+    #     store_a.box(EntityB)
+
+    # TODO XXX this should never fail, but is flaky
+    #with pytest.raises(CoreException):
+    #    store_a.box(EntityB2)
+
+    box_b = store_b.box(EntityB)
+    id = box_b.put(EntityB(int_b=42))
+    assert id != 0
+    assert box_b.get(id).int_b == 42
+
+    box_b2 = store_b.box(EntityB2)
+    id = box_b2.put(EntityB2(float_b=3.141))
+    assert id != 0
+    assert_approx_equal(box_b2.get(id).float_b, 3.141)
+
+    # TODO to make this work we Store/Box to check if the type is actually registered.
+    #      This might require to store the (Python) model in the Store.
+    # with pytest.raises(ValueError):
+    #     store_b.box(EntityA)

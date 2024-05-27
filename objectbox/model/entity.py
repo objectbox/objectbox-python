@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import inspect
 
 import flatbuffers
 import flatbuffers.flexbuffers
@@ -280,6 +281,13 @@ def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
     """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
 
     def wrapper(class_):
+        # Also allow defining properties as class members; we'll instantiate them here
+        class_members = inspect.getmembers(class_, lambda a: (inspect.isclass(a) and issubclass(a, Property)))
+        for class_member in class_members:
+            assert issubclass(class_member[1], Property)
+            obj = class_member[1]()
+            setattr(class_, class_member[0], obj)
+
         metadata_set = obx_models_by_name.get(model)
         if metadata_set is None:
             metadata_set = set()
