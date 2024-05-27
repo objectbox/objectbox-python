@@ -284,10 +284,11 @@ def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
     def wrapper(class_):
         # Also allow defining properties as class members; we'll instantiate them here
         class_members = inspect.getmembers(class_, lambda a: (inspect.isclass(a) and issubclass(a, Property)))
-        for class_member in class_members:
-            assert issubclass(class_member[1], Property)
-            obj = class_member[1]()
-            setattr(class_, class_member[0], obj)
+        for name, member_type in class_members:
+            assert issubclass(member_type, Property)
+            # noinspection PyArgumentList
+            obj = member_type()  # Subclasses of Property have no constructor arguments
+            setattr(class_, name, obj)
 
         types = obx_models_by_name.get(model)
         if types is None:
