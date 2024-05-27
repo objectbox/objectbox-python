@@ -1,5 +1,4 @@
 from objectbox import *
-from objectbox.model import *
 from objectbox.model.idsync import sync_model
 
 def test_userclass():

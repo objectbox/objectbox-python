@@ -1,6 +1,5 @@
 import objectbox
 from objectbox import *
-from objectbox.model import *
 from objectbox.c import *
 from objectbox.query import *
 import pytest

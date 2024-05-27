@@ -1,6 +1,4 @@
-from objectbox.model import *
-from datetime import datetime
-
+from objectbox import *
 
 @Entity()
 class TestEntity:
