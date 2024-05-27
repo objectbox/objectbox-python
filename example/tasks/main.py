@@ -1,7 +1,16 @@
 from cmd import Cmd
 import objectbox
+from objectbox.model import *
 import time
-from model import *
+
+@Entity()
+class Task:
+    id = Id()
+    text = String()
+
+    date_created = Date(py_type=int)
+    date_finished = Date(py_type=int)
+
 
 
 # objectbox expects date timestamp in milliseconds since UNIX epoch

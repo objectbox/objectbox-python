@@ -1,9 +1,18 @@
 from cmd import Cmd
 import objectbox
+from objectbox.model import *
 import time
-from model import *
 import csv
 import os
+
+@Entity()
+class City:
+    id = Id()
+    name = String()
+    location = Float32Vector(index=HnswIndex(
+        dimensions=2,
+        distance_type=VectorDistanceType.EUCLIDEAN
+    ))
 
 def list_cities(cities):
     print("{:3s}  {:25s}  {:>9s}  {:>9s}".format("ID", "Name", "Latitude", "Longitude"))

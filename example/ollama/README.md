@@ -33,7 +33,7 @@ based on https://ollama.com/blog/embedding-models
 ## Run Example
         
 ```
-$ python llamas.py 
+$ python main.py 
 
 Llamas are members of the camel family, which includes other large, even-toed ungulates such as camels, dromedaries, and Bactrian camels. Llamas are most closely related to alpacas, which are also native to South America and share many similarities in terms of their physical characteristics and behavior. Both llamas and alpacas belong to the family Camelidae, and are classified as ruminants due to their unique digestive system that allows them to break down cellulose in plant material.
 ```
