@@ -20,6 +20,7 @@ from dataclasses import dataclass
 
 from objectbox.c import *
 from objectbox.condition import PropertyQueryCondition, PropertyQueryConditionOp
+from objectbox.model.iduid import IdUid
 
 class PropertyType(IntEnum):
     bool = OBXPropertyType_Bool
@@ -78,12 +79,24 @@ class IndexType(IntEnum):
     HASH64 = OBXPropertyFlags_INDEX_HASH64
 
 
-@dataclass
 class Index:
-    id: int
-    uid: int
-    # TODO HNSW isn't a type but HASH and HASH64 are, remove type member and make HashIndex and Hash64Index classes?
-    type: IndexType = IndexType.VALUE
+    # TODO HNSW isn't a `type` but HASH and HASH64 are, remove type member and make HashIndex and Hash64Index classes?
+
+    def __init__(self, type: IndexType = IndexType.VALUE, uid: int = 0):
+        self.type = type
+
+        self.iduid = IdUid(0, uid)
+
+    @property
+    def id(self):
+        return self.iduid.id
+
+    @property
+    def uid(self):
+        return self.iduid.uid
+
+    def has_uid(self):
+        return self.iduid.uid != 0
 
 
 class HnswFlags(IntEnum):
@@ -100,6 +113,7 @@ class VectorDistanceType(IntEnum):
     COSINE = OBXVectorDistanceType_COSINE
     DOT_PRODUCT = OBXVectorDistanceType_DOT_PRODUCT
     DOT_PRODUCT_NON_NORMALIZED = OBXVectorDistanceType_DOT_PRODUCT_NON_NORMALIZED
+
 
 VectorDistanceType.UNKNOWN.__doc__ = "Not a real type, just best practice (e.g. forward compatibility)"
 VectorDistanceType.EUCLIDEAN.__doc__ = "The default; typically 'euclidean squared' internally."
@@ -122,39 +136,74 @@ The more negative the dot product, the higher the distance is (the farther the v
 Value range: 0.0 - 2.0 (nonlinear; 0.0: nearest, 1.0: orthogonal, 2.0: farthest)
 """
 
-@dataclass
+
 class HnswIndex:
-    id: int
-    uid: int
-    dimensions: int
-    neighbors_per_node: Optional[int] = None
-    indexing_search_count: Optional[int] = None
-    flags: HnswFlags = HnswFlags.NONE
-    distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN
-    reparation_backlink_probability: Optional[float] = None
-    vector_cache_hint_size_kb: Optional[float] = None
+    def __init__(self,
+                 dimensions: int,
+                 neighbors_per_node: Optional[int] = None,
+                 indexing_search_count: Optional[int] = None,
+                 flags: HnswFlags = HnswFlags.NONE,
+                 distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN,
+                 reparation_backlink_probability: Optional[float] = None,
+                 vector_cache_hint_size_kb: Optional[float] = None,
+                 uid: int = 0):
+        self.dimensions = dimensions
+        self.neighbors_per_node = neighbors_per_node
+        self.indexing_search_count = indexing_search_count
+        self.flags = flags
+        self.distance_type = distance_type
+        self.reparation_backlink_probability = reparation_backlink_probability
+        self.vector_cache_hint_size_kb = vector_cache_hint_size_kb
+
+        self.iduid = IdUid(0, uid)
+
+    @property
+    def id(self):
+        return self.iduid.id
+
+    @property
+    def uid(self):
+        return self.iduid.uid
+
+    def has_uid(self):
+        return self.uid != 0
 
 
 class Property:
-    def __init__(self, pytype: Type, **kwargs):
-        self._id = kwargs['id']
-        self._uid = kwargs['uid']
-        self._name = ""  # set in Entity.fill_properties()
+    def __init__(self, pytype: Type, uid: int = 0, **kwargs):
+        self.iduid = IdUid(0, uid)
+        self.name = ""  # set in Entity.fill_properties()
+        self.index = kwargs.get('index', None)
 
         self._py_type = pytype
         self._ob_type = kwargs['type'] if 'type' in kwargs else self._determine_ob_type()
         self._fb_type = fb_type_map[self._ob_type]
 
-        self._is_id = isinstance(self, Id)
         self._flags = 0
-
-        # FlatBuffers marshalling information
-        self._fb_slot = self._id - 1
-        self._fb_v_offset = 4 + 2 * self._fb_slot
-
-        self._index = kwargs.get('index', None)
-
         self._set_flags()
+
+        self._fb_slot = None
+        self._fb_v_offset = None
+
+    @property
+    def id(self):
+        return self.iduid.id
+
+    @property
+    def uid(self):
+        return self.iduid.uid
+
+    def has_uid(self):
+        return self.uid != 0
+
+    def is_id(self) -> bool:
+        return isinstance(self, Id)
+
+    def on_sync(self):
+        """ Method called once ID/UID are synced with the model file. """
+        assert self.iduid.is_assigned()
+        self._fb_slot = self.id - 1
+        self._fb_v_offset = 4 + 2 * self._fb_slot
 
     def _determine_ob_type(self) -> OBXPropertyType:
         """ Tries to infer the OBX property type from the Python type. """
@@ -175,13 +224,19 @@ class Property:
             raise Exception("unknown property type %s" % ts)
 
     def _set_flags(self):
-        if self._is_id:
+        if self.is_id():
             self._flags |= OBXPropertyFlags_ID
 
-        if self._index is not None:
+        if self.index is not None:
             self._flags |= OBXPropertyFlags_INDEXED
-            if isinstance(self._index, Index):  # Generic index
-                self._flags |= self._index.type
+            if isinstance(self.index, Index):  # Generic index
+                self._flags |= self.index.type
+
+    def _assert_ids_assigned(self):
+        # Using assert(s) so they can be optionally disabled for performance
+        assert self.iduid.is_assigned(), f"Property \"{self.name}\" ID not assigned"
+        if self.index is not None:
+            assert self.index.iduid.is_assigned(), f"Property \"{self.name}\" index ID not assigned"
 
 class _NumericProperty(Property):
     """Common class for numeric conditions.
@@ -191,24 +246,29 @@ class _NumericProperty(Property):
         super(_NumericProperty, self).__init__(py_type, **kwargs)
     
     def greater_than(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
 
     def between(self, a, b) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'a': a, 'b': b}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.BETWEEN, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.BETWEEN, args)
 
 class _IntProperty(_NumericProperty):
     """Integer-based conditions.
@@ -218,12 +278,14 @@ class _IntProperty(_NumericProperty):
         super(_IntProperty, self).__init__(py_type, **kwargs)
         
     def equals(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
 
 
 # ID property (primary key)
@@ -242,40 +304,49 @@ class String(Property):
         super(String, self).__init__(str, type=PropertyType.string, id=id, uid=uid, **kwargs)
         
     def starts_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.STARTS_WITH, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.STARTS_WITH, args)
 
     def ends_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.ENDS_WITH, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ENDS_WITH, args)
     
     def equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NOT_EQ, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
     
     def contains(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.CONTAINS, args)
     
     def greater_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
     
 
  
@@ -317,32 +388,38 @@ class Bytes(_NumericProperty):
         super(Bytes, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
     
     def equals(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.EQ, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
     
     def greater_than(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GT, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.GTE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LT, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'value': value}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.LTE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
 
 # Flex Property
 class Flex(Property):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Flex, self).__init__(Generic, type=PropertyType.flex, id=id, uid=uid, **kwargs)
     def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)
 
 class _VectorProperty(Property):
     def __init__(self, py_type : Type, **kwargs):
@@ -375,8 +452,9 @@ class Float32Vector(_VectorProperty):
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Float32Vector, self).__init__(np.ndarray, type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
     def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
+        self._assert_ids_assigned()
         args = {'query_vector': query_vector, 'element_count': element_count}
-        return PropertyQueryCondition(self._id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
 
 class Float64Vector(_VectorProperty):
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):

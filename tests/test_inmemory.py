@@ -1,5 +1,5 @@
 import objectbox
-from tests.common import load_empty_test_default_store
+from tests.common import create_test_store
 from tests.model import TestEntity
 import os.path
 import shutil
@@ -8,7 +8,7 @@ import shutil
 def test_inmemory():
     # Use default path for persistent store
     db_name = "testdata"
-    store = load_empty_test_default_store()
+    store = create_test_store()
     box = store.box(TestEntity)
     object = TestEntity()
     id = box.put(object)
@@ -21,7 +21,7 @@ def test_inmemory():
 
     # Expect no path for in-memory store
     db_name = "memory:testdata"
-    store = load_empty_test_default_store(db_name)
+    store = create_test_store(db_name)
     box = store.box(TestEntity)
     object = TestEntity()
     id = box.put(object)

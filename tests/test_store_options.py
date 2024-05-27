@@ -52,7 +52,7 @@ def test_set_options():
 def test_store_with_options():
     store = objectbox.Store(
         model=tests.common.create_default_model(),
-        directory=tests.common.test_dir,
+        directory="testdata",
         max_db_size_in_kb=1<<20,
         max_data_size_in_kb=(1<<20)-(1<<10),
         file_mode=int('664',8),

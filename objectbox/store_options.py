@@ -34,8 +34,9 @@ class StoreOptions:
         obx_opt_no_reader_thread_locals(self._c_handle, flag)
 
     def model(self, model: Model):
-        model._finish()
-        obx_opt_model(self._c_handle, model._c_model)
+        model.validate_ids_assigned()
+        c_model = model._create_c_model()
+        obx_opt_model(self._c_handle, c_model)
 
     def model_bytes(self, bytes_: bytes):
         obx_opt_model_bytes(self._c_handle, len(bytes_))

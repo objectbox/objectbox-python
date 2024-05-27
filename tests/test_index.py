@@ -11,7 +11,7 @@ from tests.common import *
 
 @pytest.mark.skip(reason="Test indices implementation")
 def test_index_basics():
-    store = load_empty_test_default_store()
+    store = create_test_store()
     box = store.box(TestEntity)
 
     # create
@@ -36,13 +36,13 @@ def test_index_basics():
 
 @pytest.mark.skip(reason="Test indices implementation")
 def test_index_error():
-    @Entity(id=3, uid=3)
+    @Entity()
     class TestEntityInvalidIndex:
-        id = Id(id=1, uid=3001)
+        id = Id()
 
         # Cannot set index type when index is False
         try:
-            str = Property(str, id=2, uid=3002, index=False, index_type=IndexType.hash)
+            str = Property(str, index=False, index_type=IndexType.hash)
         except Exception:
             assert pytest.raises(Exception,
                                  match='trying to set index type on property of id 2 while index is set to False')

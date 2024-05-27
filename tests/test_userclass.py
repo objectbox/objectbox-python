@@ -1,13 +1,13 @@
 from objectbox import *
 from objectbox.model import *
-
+from objectbox.model.idsync import sync_model
 
 def test_userclass():
-    @Entity(id=1, uid=1)
+    @Entity()
     class Person:
-        id = Id(id=1, uid=1001)
-        firstName = Property(str, id=2, uid=1002)
-        lastName = Property(str, id=3, uid=1003)
+        id = Id()
+        firstName = String()
+        lastName = String()
 
         def __init__(self):
             self.counter = 0
@@ -19,8 +19,8 @@ def test_userclass():
             self.counter += 1
 
     model = Model()
-    model.entity(Person, last_property_id=IdUid(3, 1003))
-    model.last_entity_id = IdUid(1, 1)
+    model.entity(Person)
+    sync_model(model)
     dbpath = "testdb"
     Store.remove_db_files(dbpath)
 

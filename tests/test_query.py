@@ -316,7 +316,7 @@ def test_flex_contains_key_value():
 
 
 def test_offset_limit():
-    store = load_empty_test_default_store()
+    store = create_test_store()
 
     box = store.box(TestEntity)
     box.put(TestEntity())

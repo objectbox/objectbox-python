@@ -4,7 +4,7 @@ from tests.common import *
 
 
 def test_transactions():
-    store = load_empty_test_default_store()
+    store = create_test_store()
     box = store.box(TestEntity)
 
     assert box.is_empty()

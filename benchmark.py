@@ -1,7 +1,8 @@
 import objectbox
 import time
+from objectbox.store import Store
 from tests.model import TestEntity
-from tests.common import remove_test_dir, load_empty_test_default_store
+from tests.common import create_test_store
 
 
 class ObjectBoxPerf:
@@ -10,8 +11,8 @@ class ObjectBoxPerf:
     """
 
     def __init__(self):
-        self.store = load_empty_test_default_store()
-        self.box = store.box(TestEntity)
+        self.store = create_test_store()
+        self.box = self.store.box(TestEntity)
 
     def remove_all(self):
         self.box.remove_all()
@@ -110,10 +111,10 @@ class PerfExecutor:
 
 
 if __name__ == "__main__":
-    remove_test_dir()
+    Store.remove_db_files("testdata")
 
     obPerf = ObjectBoxPerf()
     executor = PerfExecutor(obPerf)
     executor.run(count=10000, runs=20)
 
-    remove_test_dir()
+    Store.remove_db_files("testdata")
