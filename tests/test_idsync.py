@@ -21,21 +21,29 @@ class _TestEnv:
         self.model_path = 'test.json'
         if path.exists(self.model_path):
             os.remove(self.model_path)
-        self.model = None
+        self._model = None
         self.db_path = 'testdb'
         Store.remove_db_files(self.db_path)
+        self._store = None  # Last created store
 
     def sync(self, model: Model) -> bool:
         """ Returns True if changes were made and the model JSON was written. """
-        self.model = model
-        return sync_model(self.model, self.model_path)
+        self._model = model
+        return sync_model(self._model, self.model_path)
 
     def json(self):
         return json.load(open(self.model_path))
 
-    def store(self):
-        assert self.model is not None
-        return Store(model=self.model, directory=self.db_path)
+    def create_store(self):
+        assert self._model is not None, "Model must be set before creating store"
+        if self._store is not None:
+            self._store.close()
+        self._store = Store(model=self._model, directory=self.db_path)
+        return self._store
+
+    def close(self):
+        if self._store is not None:
+            self._store.close()
 
 
 def reset_ids(entity: _Entity):
@@ -48,7 +56,9 @@ def reset_ids(entity: _Entity):
 
 @pytest.fixture
 def env():
-    return _TestEnv()
+    env_ = _TestEnv()
+    yield env_
+    env_.close()
 
 
 def test_empty_model(env):
@@ -136,13 +146,11 @@ def test_basics(env):
     entity_ids = str(MyEntity._iduid)
 
     # create new database and populate with two objects
-    store = env.store()
+    store = env.create_store()
     entityBox = store.box(MyEntity)
     entityBox.put(MyEntity(name="foo"),MyEntity(name="bar"))
     assert entityBox.count() == 2
     del entityBox
-    store.close()
-    del store
 
     # recreate model using existing model json and open existing database 
     model = Model()
@@ -156,7 +164,7 @@ def test_basics(env):
     assert str(model.entities[0]._iduid) == entity_ids
 
     # open existing database 
-    store = env.store()
+    store = env.create_store()
     entityBox = store.box(MyEntity)
     assert entityBox.count() == 2
 
@@ -169,12 +177,10 @@ def test_entity_add(env):
     model.entity(MyEntity1)
     env.sync(model)
     e0_iduid = IdUid(MyEntity1._id, MyEntity1._uid)
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyEntity1)
     box.put( MyEntity1(name="foo"), MyEntity1(name="bar"))
     assert box.count() == 2
-    store.close()
-    del store
 
     @Entity()
     class MyEntity2:
@@ -188,7 +194,7 @@ def test_entity_add(env):
     assert str(model.entities[0]._iduid) == "0:0"
     env.sync(model)
     assert model.entities[0]._iduid == e0_iduid
-    store = env.store()
+    store = env.create_store()
     box1 = store.box(MyEntity1)
     assert box1.count() == 2
     box2 = store.box(MyEntity2)
@@ -209,7 +215,7 @@ def test_entity_remove(env):
     model.entity(MyEntity1)
     model.entity(MyEntity2)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box1 = store.box(MyEntity1)
     box1.put( MyEntity1(name="foo"), MyEntity1(name="bar"))
     box2 = store.box(MyEntity2)
@@ -217,16 +223,13 @@ def test_entity_remove(env):
     assert box1.count() == 2
     assert box2.count() == 2
 
-    store.close()
-    del store
-
     # Re-create a model without MyEntity2 
 
     model = Model()
     reset_ids(MyEntity1)
     model.entity(MyEntity1)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box1 = store.box(MyEntity1)
     assert box1.count() == 2
 
@@ -248,13 +251,11 @@ def test_entity_rename(env):
     assert uid != 0
     # Debug: print("UID: "+ str(uid))
 
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyEntity)
     box.put(MyEntity(name="foo"),MyEntity(name="bar"))
     assert box.count() == 2
     del box
-    store.close()
-    del store
 
     @Entity(uid=uid)
     class MyRenamedEntity:
@@ -264,7 +265,7 @@ def test_entity_rename(env):
     model = Model()
     model.entity(MyRenamedEntity)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyRenamedEntity)
     assert box.count() == 2
 
@@ -316,12 +317,10 @@ def test_prop_add(env):
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyEntity)
     box.put( MyEntity(name="foo"), MyEntity(name="bar"))
     del box
-    store.close()
-    del store
 
     @Entity()
     class MyEntity:
@@ -332,7 +331,7 @@ def test_prop_add(env):
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyEntity)
 
     assert box.count() == 2
@@ -348,12 +347,10 @@ def test_prop_remove(env):
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyEntity)
     box.put( MyEntity(name="foo"), MyEntity(name="bar"))
     del box
-    store.close()
-    del store
 
     @Entity()
     class MyEntity:
@@ -363,7 +360,7 @@ def test_prop_remove(env):
     model = Model()
     model.entity(MyEntity)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box = store.box(MyEntity)
     assert box.count() == 2
 
@@ -377,7 +374,7 @@ def test_prop_rename(env):
     model = Model()
     model.entity(EntityA)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
     box = store.box(EntityA)
     box.put(EntityA(name="Luca"))
     assert box.count() == 1
@@ -390,8 +387,6 @@ def test_prop_rename(env):
     print(f"Entity.name ID/UID: {name.iduid}")
 
     del box  # Close store
-    store.close()
-    del store
 
     # *** Rename ***
 
@@ -403,7 +398,7 @@ def test_prop_rename(env):
     model = Model()
     model.entity(EntityA)
     env.sync(model)
-    store = env.store()
+    store = env.create_store()
 
     # Check ID/UID(s) are preserved after renaming
     entity2_iduid = EntityA._iduid

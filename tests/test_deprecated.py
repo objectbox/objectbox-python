@@ -20,6 +20,7 @@ def test_deprecated_ObjectBox():
         ob = ObjectBox(c_store)
     box = objectbox.Box(ob, TestEntity)
     assert box.count() == 0
+    ob.close()  # TODO The store shall be closed even if the test fails
 
 
 def test_deprecated_Builder():
@@ -29,3 +30,4 @@ def test_deprecated_Builder():
     model = tests.common.create_default_model()
     with pytest.deprecated_call():
         ob = objectbox.Builder().model(model).directory("testdata").build()
+    ob.close()

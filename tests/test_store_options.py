@@ -77,4 +77,4 @@ def test_store_with_options():
         async_object_bytes_max_cache_size=1<<20,
         async_object_bytes_max_size_to_cache=100<<10
     )
-    del store
+    store.close()

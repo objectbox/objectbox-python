@@ -12,3 +12,10 @@ def cleanup_db():
     # Not needed: every test clears the DB on start, without deleting it on exit (not necessary)
     # Also, here we have no information regarding the DB path being used (although usually is "testdata")
     pass
+
+
+@pytest.fixture
+def test_store():
+    store = create_test_store()
+    yield store
+    store.close()

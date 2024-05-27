@@ -3,20 +3,19 @@ from tests.model import TestEntity
 from tests.common import *
 
 
-def test_transactions():
-    store = create_test_store()
-    box = store.box(TestEntity)
+def test_transactions(test_store):
+    box = test_store.box(TestEntity)
 
     assert box.is_empty()
 
-    with store.write_tx():
+    with test_store.write_tx():
         box.put(TestEntity(str="first"))
         box.put(TestEntity(str="second"))
 
     assert box.count() == 2
 
     try:
-        with store.write_tx():
+        with test_store.write_tx():
             box.put(TestEntity(str="third"))
             box.put(TestEntity(str="fourth"))
             raise Exception("mission abort!")
@@ -31,7 +30,7 @@ def test_transactions():
 
     # can't write in a read TX
     try:
-        with store.read_tx():
+        with test_store.read_tx():
             box.put(TestEntity(str="third"))
 
         # exception must be propagated so this line must not execute
@@ -39,4 +38,4 @@ def test_transactions():
     except Exception as err:
         assert "Cannot start a write transaction inside a read only transaction" in str(err)
     finally:
-        store.close()
+        test_store.close()

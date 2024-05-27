@@ -30,4 +30,5 @@ def test_version():
 
 
 def test_open():
-    create_test_store()
+    store = create_test_store()
+    store.close()
