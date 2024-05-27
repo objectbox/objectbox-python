@@ -273,8 +273,9 @@ class _Entity(object):
             setattr(obj, prop.name, val)
         return obj
 
-# Dictionary of entity types (metadata) collected by the Entity decorator
-obx_models_by_name: Dict[str, Set[_Entity]] = {}
+# Dictionary of entity types (metadata) collected by the Entity decorator.
+# Note: using a list not a set to keep the order of entities as they were defined (set would not be deterministic).
+obx_models_by_name: Dict[str, List[_Entity]] = {}
 
 
 def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
@@ -288,21 +289,21 @@ def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
             obj = class_member[1]()
             setattr(class_, class_member[0], obj)
 
-        metadata_set = obx_models_by_name.get(model)
-        if metadata_set is None:
-            metadata_set = set()
-            obx_models_by_name[model] = metadata_set
+        types = obx_models_by_name.get(model)
+        if types is None:
+            types = []
+            obx_models_by_name[model] = types
 
-        metadata = _Entity(class_, uid)
-        for existing in metadata_set:
-            if existing.name == metadata.name:
+        entity_type = _Entity(class_, uid)
+        for existing in types:
+            if existing.name == entity_type.name:
                 # OK for tests, where multiple models are created with the same entity name
-                logging.warning(f"Model \"{model}\" already contains an entity \"{metadata.name}\"; replacing it.")
-                metadata_set.remove(existing)
+                logging.warning(f"Model \"{model}\" already contains an entity type \"{entity_type.name}\"; replacing it.")
+                types.remove(existing)
                 break
 
-        obx_models_by_name[model].add(metadata)
-        logging.info(f"Entity {metadata.name} added to model {model}")
-        return metadata
+        obx_models_by_name[model].append(entity_type)
+        logging.info(f"Entity type {entity_type.name} added to model {model}")
+        return entity_type
 
     return wrapper

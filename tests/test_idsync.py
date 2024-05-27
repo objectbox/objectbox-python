@@ -575,9 +575,8 @@ def test_models_named(env):
     # with pytest.raises(ValueError):
     #     store_a.box(EntityB)
 
-    # TODO XXX this should never fail, but is flaky
-    #with pytest.raises(CoreException):
-    #    store_a.box(EntityB2)
+    with pytest.raises(CoreException):
+        store_a.box(EntityB2)
 
     box_b = store_b.box(EntityB)
     id = box_b.put(EntityB(int_b=42))
