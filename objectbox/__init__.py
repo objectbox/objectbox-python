@@ -15,7 +15,7 @@
 
 from objectbox.box import Box
 from objectbox.builder import Builder
-from objectbox.model import Model
+from objectbox.model import Model, Entity, Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, HnswIndex, VectorDistanceType
 from objectbox.store import Store
 from objectbox.objectbox import ObjectBox
 from objectbox.c import NotFoundException, version_core, DebugFlags
@@ -25,6 +25,39 @@ __all__ = [
     'Box',
     'Builder',
     'Model',
+    'Entity',
+    'Id',
+    'Bool',
+    'Int8',
+    'Int16',
+    'Int32',
+    'Int64',
+    'Float32',
+    'Float64',
+    'Bytes',
+    'String',
+    'BoolVector',
+    'Int8Vector',
+    'Int16Vector',
+    'Int32Vector',
+    'Int64Vector',
+    'Float32Vector',
+    'Float64Vector',
+    'CharVector',
+    'BoolList',
+    'Int8List',
+    'Int16List',
+    'Int32List',
+    'Int64List',
+    'Float32List',
+    'Float64List',
+    'CharList',
+    'Date',
+    'DateNano',
+    'Flex',
+    'Index',
+    'HnswIndex',
+    'VectorDistanceType',
     'Store',
     'ObjectBox',
     'NotFoundException',
