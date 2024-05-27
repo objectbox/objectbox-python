@@ -296,14 +296,14 @@ def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
 
         entity_type = _Entity(class_, uid)
         for existing in types:
-            if existing.name == entity_type.name:
+            if existing._name == entity_type._name:
                 # OK for tests, where multiple models are created with the same entity name
-                logging.warning(f"Model \"{model}\" already contains an entity type \"{entity_type.name}\"; replacing it.")
+                logging.warning(f"Model \"{model}\" already contains an entity type \"{entity_type._name}\"; replacing it.")
                 types.remove(existing)
                 break
 
         obx_models_by_name[model].append(entity_type)
-        logging.info(f"Entity type {entity_type.name} added to model {model}")
+        logging.info(f"Entity type {entity_type._name} added to model {model}")
         return entity_type
 
     return wrapper
