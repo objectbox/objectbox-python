@@ -50,7 +50,7 @@ setuptools.setup(
 
     install_requires=[
        'flatbuffers==24.3.25',
-       'numpy'
+       'numpy <2'
     ],
 
     packages=setuptools.find_packages(exclude=['exampl*']), 
