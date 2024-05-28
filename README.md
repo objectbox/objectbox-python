@@ -4,8 +4,7 @@ ObjectBox Python
 Store Python objects and vectors directly with an easy-to-use CRUD API while enjoying exceptional speed and efficiency.
 And because it's an embedded database, there's no setup required.
 
-Its advanced vector search empowers AI for a variety of applications, including RAG AI, generative AI,
-and similarity searches.
+Its advanced vector search empowers AI applications including RAG, generative AI, and similarity searches.
 
 Designed for high performance, the ObjectBox database runs locally on-device.
 As an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
@@ -67,12 +66,12 @@ box.remove(person)    # Delete
 
 Getting started
 ---------------
-Latest version: 4.0.0a0 (2024-05-15)
+Latest version: 4.0.0 (2024-05-28)
 
 To install or update the latest version of ObjectBox, run this:
 
 ```bash
-pip install --upgrade --pre objectbox  # "--pre" because you want to get the 4.0.0 alpha version
+pip install --upgrade objectbox
 ```
 Now you are ready to use ObjectBox in your Python project.
 
@@ -82,18 +81,11 @@ and learn how to setup your first entity classes.
 ### Examples
 
 Do you prefer to dive right into working examples?
-We have you covered in the [example](example/) folder.
+We have you covered in the [example](https://github.com/objectbox/objectbox-python/tree/main/example) folder.
 It comes with a task list application and a vector search example using cities.
 Additionally, for AI enthusiasts, we provide an "ollama" example,
 which integrates a local LLM (via [ollama](https://ollama.com))
 with ObjectBox to manage and search embeddings effectively.
-
-Alpha Notes
------------
-While ObjectBox Python is powered by a rock stable core written in C/C++, we label our Python binding still "alpha."
-We do this to manage expectations as some quality of life improvements are yet to come to our Python binding.
-This is mostly about "model management," which still requires you to do some manual coding setup, e.g. for model IDs.
-The final release will take care of this for you automatically.
 
 Help wanted
 -----------

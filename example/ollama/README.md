@@ -23,7 +23,7 @@ based on https://ollama.com/blog/embedding-models
  4. Install Python Bindings and ObjectBox: 
 
         pip install ollama
-        pip install --pre objectbox~=0.7.0a
+        pip install objectbox
 
     Or: 
 
