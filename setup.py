@@ -19,7 +19,7 @@ setuptools.setup(
     python_requires='>=3.4, <4',
     license='Apache 2.0',
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable"
 
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.4",
