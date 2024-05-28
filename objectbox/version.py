@@ -18,12 +18,14 @@ from typing import *
 class Version:
     def __init__(self, major: int, minor: int, patch: int,
                  alpha: Optional[int] = None,
-                 beta: Optional[int] = None):
+                 beta: Optional[int] = None,
+                 rc: Optional[int] = None):
         self.major = major
         self.minor = minor
         self.patch = patch
         self.alpha = alpha
         self.beta = beta
+        self.rc = rc
 
     def __str__(self):
         result = ".".join(map(str, [self.major, self.minor, self.patch]))
@@ -31,4 +33,6 @@ class Version:
             result += f"a{self.alpha}"
         if self.beta is not None:
             result += f"b{self.beta}"
+        if self.rc is not None:
+            result += f"rc{self.rc}"
         return result
