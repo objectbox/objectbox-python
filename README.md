@@ -43,7 +43,7 @@ Code Example: CRUD (Create, Read, Update, Delete)
 What does using ObjectBox in Python look like?
 
 ```python
-from objectbox import *
+from objectbox import Entity, Id, Store, String
 
 @Entity()
 class Person:
