@@ -4,8 +4,7 @@ ObjectBox Python
 Store Python objects and vectors directly with an easy-to-use CRUD API while enjoying exceptional speed and efficiency.
 And because it's an embedded database, there's no setup required.
 
-Its advanced vector search empowers AI for a variety of applications, including RAG AI, generative AI,
-and similarity searches.
+Its advanced vector search empowers AI applications including RAG, generative AI, and similarity searches.
 
 Designed for high performance, the ObjectBox database runs locally on-device.
 As an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
