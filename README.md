@@ -1,13 +1,13 @@
 ObjectBox Python
 ================
-[ObjectBox](https://objectbox.io) Python is a lightweight yet powerful on-device database & vector database.
+[ObjectBox](https://objectbox.io) Python is a lightweight yet powerful on-device object and vector database.
 Store Python objects and vectors directly with an easy-to-use CRUD API while enjoying exceptional speed and efficiency.
 And because it's an embedded database, there's no setup required.
 
-Its advanced vector search empowers AI applications including RAG, generative AI, and similarity searches.
+Its advanced vector search empowers on-device AI applications including RAG, generative AI, and similarity searches.
 
-Designed for high performance, the ObjectBox database runs locally on-device.
-As an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
+The ObjectBox database delivers high-performance on commodity hardware - locally, on-device.
+On top, as an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
 (via [Sync](https://objectbox.io/sync/)).
 
 _Table of Contents_
