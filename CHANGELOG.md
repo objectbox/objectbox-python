@@ -1,7 +1,7 @@
 ObjectBox Python ChangeLog
 ==========================
 
-4.0.0 (2024-05-16)
+4.0.0 (2024-05-28)
 ------------------
 
 * ObjectBox now supports vector search ("vector database") to enable efficient similarity searches.
