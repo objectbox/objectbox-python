@@ -13,7 +13,7 @@ As an offline-first solution, ObjectBox makes sure your app reliably works offli
 _Table of Contents_
 
 - [Feature Highlights](#feature-highlights)
-- [Code Example (CRUD - Create, Read, Update, Delete)](#code-example-crud---create-read-update-delete)
+- [Code Example (CRUD - Create, Read, Update, Delete)](#code-example-crud-create-read-update-delete)
 - [Getting Started](#getting-started)
 - [Alpha Notes](#alpha-notes)
 - [Help wanted](#help-wanted)
@@ -37,7 +37,8 @@ Feature Highlights
 * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
 * Windows x86-64 (64-bit)
 
-#### Code Example (CRUD - Create, Read, Update, Delete)
+Code Example: CRUD (Create, Read, Update, Delete)
+-------------------------------------------------
 
 What does using ObjectBox in Python look like?
 
@@ -55,14 +56,15 @@ store = Store()
 # Get a box for the "Person" entity; a Box is the main interaction point with objects and the database.
 box = store.box(Person)
 
-person = Person()
-person.name = "Joe Green"
+person = Person(name = "Joe Green")
 id = box.put(person)  # Create
 person = box.get(id)  # Read
 person.name = "Joe Black"
 box.put(person)       # Update
 box.remove(person)    # Delete
 ```
+
+Ready for more? Check the [example folder](https://github.com/objectbox/objectbox-python/tree/main/example).
 
 Getting started
 ---------------
@@ -82,9 +84,8 @@ and learn how to setup your first entity classes.
 
 Do you prefer to dive right into working examples?
 We have you covered in the [example](https://github.com/objectbox/objectbox-python/tree/main/example) folder.
-It comes with a task list application and a vector search example using cities.
-Additionally, for AI enthusiasts, we provide an "ollama" example,
-which integrates a local LLM (via [ollama](https://ollama.com))
+It comes with a task list application and a vector search example using cities (CLI app and Jupyter notebook).
+For AI developers , we provide an "ollama" example, which integrates a local LLM (via [ollama](https://ollama.com))
 with ObjectBox to manage and search embeddings effectively.
 
 Help wanted
