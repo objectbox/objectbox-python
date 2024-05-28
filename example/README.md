@@ -46,7 +46,12 @@ Welcome to the ObjectBox tasks-list app example. Type help or ? for a list of co
 > exit
 ```
 
-## Example: Vector-Search 
+## Example: Vector-Search with Cities
+
+We have two formats of this example available:
+
+ * [Jupyter notebook](vectorsearch-cities-notebook/Vector-Search-City.ipynb)
+ * CLI application; see below for details
 
 This example application starts with a pre-defined set of capital cities and their geo coordinates. 
 It allows to search for nearest neighbors of a city (`city_neighbors`) or by coordinates (`neighbors`) as well as adding more locations (`add`).
