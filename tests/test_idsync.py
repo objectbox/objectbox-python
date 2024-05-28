@@ -587,3 +587,65 @@ def test_models_named(env):
     #      This might require to store the (Python) model in the Store.
     # with pytest.raises(ValueError):
     #     store_b.box(EntityA)
+def test_sync_dynamic_entities(env):
+    def create_entity(entity_name: str, dimensions: int, distance_type: VectorDistanceType, uid=0):
+        DynamicEntity = type(entity_name, (), {
+            "id": Id(),
+            "name": String(),
+            "vector": Float32Vector(index=HnswIndex(dimensions=dimensions, distance_type=distance_type))
+        })
+        return Entity(uid=uid)(DynamicEntity)  # Apply @Entity decorator
+
+    CosineVectorEntity = create_entity("CosineVectorEntity",
+                                       dimensions=2,
+                                       distance_type=VectorDistanceType.COSINE)
+    EuclideanVectorEntity = create_entity("EuclideanVectorEntity",
+                                          dimensions=2,
+                                          distance_type=VectorDistanceType.EUCLIDEAN)
+    DotProductEntity = create_entity("DotProductEntity",
+                                     dimensions=2,
+                                     distance_type=VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED)
+    model = Model()
+    model.entity(CosineVectorEntity)
+    model.entity(EuclideanVectorEntity)
+    model.entity(DotProductEntity)
+    assert env.sync(model)
+    CosineVectorEntity_iduid = CosineVectorEntity._iduid
+
+    store = env.create_store()
+    cosine_box = store.box(CosineVectorEntity)
+    cosine_box.put(CosineVectorEntity(name="CosineObj1", vector=[2, 1]))
+    cosine_box.put(CosineVectorEntity(name="CosineObj2", vector=[-6, 0]))
+    euclidean_box = store.box(EuclideanVectorEntity)
+    euclidean_box.put(EuclideanVectorEntity(name="EuclideanObj1", vector=[5, 4]))
+    euclidean_box.put(EuclideanVectorEntity(name="EuclideanObj2", vector=[2, -6]))
+    dot_product_box = store.box(DotProductEntity)
+    dot_product_box.put(DotProductEntity(name="DotProductObj1", vector=[10, 0]))
+    assert cosine_box.get(1).name == "CosineObj1"
+    assert cosine_box.get(2).name == "CosineObj2"
+    assert euclidean_box.get(1).name == "EuclideanObj1"
+    assert euclidean_box.get(2).name == "EuclideanObj2"
+    assert dot_product_box.get(1).name == "DotProductObj1"
+
+    del cosine_box
+    del euclidean_box
+    del dot_product_box
+    del store
+
+    # Rename CosineVectorEntity to MyCosineVectorEntity
+    MyCosineVectorEntity = create_entity("MyCosineVectorEntity",
+                                         dimensions=2,
+                                         distance_type=VectorDistanceType.COSINE,
+                                         uid=CosineVectorEntity_iduid.uid)
+    model = Model()
+    model.entity(MyCosineVectorEntity)
+    model.entity(EuclideanVectorEntity)
+    model.entity(DotProductEntity)
+    assert env.sync(model)
+    assert CosineVectorEntity_iduid == MyCosineVectorEntity._iduid
+
+    # Check MyCosineVectorEntity objects are preserved after renaming
+    store = env.create_store()
+    cosine_box = store.box(MyCosineVectorEntity)
+    assert cosine_box.get(1).name == "CosineObj1"
+    assert cosine_box.get(2).name == "CosineObj2"
