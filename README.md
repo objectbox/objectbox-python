@@ -87,13 +87,6 @@ Additionally, for AI enthusiasts, we provide an "ollama" example,
 which integrates a local LLM (via [ollama](https://ollama.com))
 with ObjectBox to manage and search embeddings effectively.
 
-Alpha Notes
------------
-While ObjectBox Python is powered by a rock stable core written in C/C++, we label our Python binding still "alpha."
-We do this to manage expectations as some quality of life improvements are yet to come to our Python binding.
-This is mostly about "model management," which still requires you to do some manual coding setup, e.g. for model IDs.
-The final release will take care of this for you automatically.
-
 Help wanted
 -----------
 ObjectBox for Python is open to contributions.
