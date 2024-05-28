@@ -81,7 +81,7 @@ and learn how to setup your first entity classes.
 ### Examples
 
 Do you prefer to dive right into working examples?
-We have you covered in the [example](example/) folder.
+We have you covered in the [example](https://github.com/objectbox/objectbox-python/tree/main/example) folder.
 It comes with a task list application and a vector search example using cities.
 Additionally, for AI enthusiasts, we provide an "ollama" example,
 which integrates a local LLM (via [ollama](https://ollama.com))
