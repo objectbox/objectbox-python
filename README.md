@@ -67,12 +67,12 @@ box.remove(person)    # Delete
 
 Getting started
 ---------------
-Latest version: 4.0.0a0 (2024-05-15)
+Latest version: 4.0.0 (2024-05-28)
 
 To install or update the latest version of ObjectBox, run this:
 
 ```bash
-pip install --upgrade --pre objectbox  # "--pre" because you want to get the 4.0.0 alpha version
+pip install --upgrade objectbox
 ```
 Now you are ready to use ObjectBox in your Python project.
 
