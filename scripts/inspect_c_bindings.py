@@ -1,6 +1,10 @@
 # Script used to inspect differences between objectbox/lib/objectbox.h and c.py (e.g. missing function declarations)
 # Usage:
-# python inspect_c_bindings.py
+#   python inspect_c_bindings.py
+# Requirements:
+# - pycparser
+# - pycparser-fake-libc
+# - objectbox or project root in PYTHONPATH
 
 from os import path
 from pycparser import c_ast, parse_file
