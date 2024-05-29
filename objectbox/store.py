@@ -61,6 +61,10 @@ class Store:
 
         :param model:
             Database schema model.
+        :param model_json_file:
+            ObjectBox model JSON file. If not set defaults to locate 
+            user-module (from call stack) and use its directory location to 
+            use `objectbox-model.json` file.
         :param directory:
             Store directory. Defaults to "objectbox". 
             Use prefix "memory:" to open an in-memory database, e.g. "memory:myapp"
@@ -72,7 +76,7 @@ class Store:
             Recommended only if stricter accurate limit is required.
             Data size must be below database size. 
         :param file_mode:
-            Unix-style file mode options. Defaults to "int('644',8)". 
+            Unix-style file mode options. Defaults to ``int('644',8)``. 
             This option is ignored on Windows platforms.
         :param max_readers:
             Maximum number of readers (related to read transactions).
@@ -247,6 +251,7 @@ class Store:
         Open a box for an entity.
         
         :param entity:
+        :type entity: _Entity
             Entity type of the model
         """
         return objectbox.Box(self, entity)

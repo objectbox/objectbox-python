@@ -91,10 +91,12 @@ class Index:
 
     @property
     def id(self):
+        """ Index Id """
         return self.iduid.id
 
     @property
     def uid(self):
+        """ Index UId """
         return self.iduid.uid
 
     def has_uid(self):
@@ -102,44 +104,78 @@ class Index:
 
 
 class HnswFlags(IntEnum):
+    """
+    Vector-Search HNSW Index Flags
+    """
+    
     NONE = 0
+    """
+    
+    """
+    
     DEBUG_LOGS = 1
+    """
+    Enables debug logs.
+    """
+    
     DEBUG_LOGS_DETAILED = 2
+    """
+    Enables "high volume" debug logs, e.g. individual gets/puts.
+    """
+    
     VECTOR_CACHE_SIMD_PADDING_OFF = 4
+    """
+    Padding for SIMD is enabled by default, which uses more memory but may be faster. This flag turns it off.
+    """
+    
     REPARATION_LIMIT_CANDIDATES = 8
-
+    """
+    If the speed of removing nodes becomes a concern in your use case, you can speed it up by setting this flag.
+    By default, repairing the graph after node removals creates more connections to improve the graph's quality.
+    The extra costs for this are relatively low (e.g. vs. regular indexing), and thus the default is recommended.
+    """
 
 class VectorDistanceType(IntEnum):
+    """
+    Vector-search distance computation strategy type
+    """
+    
     UNKNOWN = OBXVectorDistanceType_UNKNOWN
+    """
+    Not a real type, just best practice (e.g. forward compatibility)
+    """
+    
     EUCLIDEAN = OBXVectorDistanceType_EUCLIDEAN
+    """
+    The default; typically 'euclidean squared' internally."
+    """
+    
     COSINE = OBXVectorDistanceType_COSINE
+    """
+    Cosine similarity compares two vectors irrespective of their magnitude (compares the angle of two vectors).
+    Often used for document or semantic similarity.
+    Value range: 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
+    """
+    
     DOT_PRODUCT = OBXVectorDistanceType_DOT_PRODUCT
+    """
+    For normalized vectors (vector length == 1.0), the dot product is equivalent to the cosine similarity.
+    Because of this, the dot product is often preferred as it performs better.
+    Value range (normalized vectors): 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
+    """
+    
     DOT_PRODUCT_NON_NORMALIZED = OBXVectorDistanceType_DOT_PRODUCT_NON_NORMALIZED
-
-
-VectorDistanceType.UNKNOWN.__doc__ = "Not a real type, just best practice (e.g. forward compatibility)"
-VectorDistanceType.EUCLIDEAN.__doc__ = "The default; typically 'euclidean squared' internally."
-VectorDistanceType.COSINE.__doc__ = """
-Cosine similarity compares two vectors irrespective of their magnitude (compares the angle of two vectors).
-Often used for document or semantic similarity.
-Value range: 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
-"""
-VectorDistanceType.DOT_PRODUCT.__doc__ = """
-For normalized vectors (vector length == 1.0), the dot product is equivalent to the cosine similarity.
-Because of this, the dot product is often preferred as it performs better.
-Value range (normalized vectors): 0.0 - 2.0 (0.0: same direction, 1.0: orthogonal, 2.0: opposite direction)
-"""
-VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED.__doc__ = """
-A custom dot product similarity measure that does not require the vectors to be normalized.
-Note: this is no replacement for cosine similarity (like DotProduct for normalized vectors is).
-The non-linear conversion provides a high precision over the entire float range (for the raw dot product).
-The higher the dot product, the lower the distance is (the nearer the vectors are).
-The more negative the dot product, the higher the distance is (the farther the vectors are).
-Value range: 0.0 - 2.0 (nonlinear; 0.0: nearest, 1.0: orthogonal, 2.0: farthest)
-"""
+    """
+    A custom dot product similarity measure that does not require the vectors to be normalized.
+    Note: this is no replacement for cosine similarity (like DotProduct for normalized vectors is).
+    The non-linear conversion provides a high precision over the entire float range (for the raw dot product).
+    The higher the dot product, the lower the distance is (the nearer the vectors are).
+    The more negative the dot product, the higher the distance is (the farther the vectors are).
+    Value range: 0.0 - 2.0 (nonlinear; 0.0: nearest, 1.0: orthogonal, 2.0: farthest)
+    """
 
 class HnswIndex:
-    """HNSW Index for Vector-Search"""
+    """Vector-Search HNSW Property Index"""
     def __init__(self,
                  dimensions: int,
                  neighbors_per_node: Optional[int] = None,
@@ -149,6 +185,30 @@ class HnswIndex:
                  reparation_backlink_probability: Optional[float] = None,
                  vector_cache_hint_size_kb: Optional[float] = None,
                  uid: int = 0):
+        """
+        :param dimensions:
+            Vector dimensionality.
+        :param neighbors_per_node:
+            Maximum number of neighbors per node (aka "M").
+            Higher number increases the graph connectivity which can lead to better results, but higher resources usage.
+            If no value is set, a default value taken (currently 30).
+            Try e.g. 16 for faster but less accurate results, or 64 for more accurate results.           
+        :param indexing_search_count:
+            Maximum number of neighbors searched while indexing (aka "efConstruction").
+            If not set, internally default value is currently set to 100, which can change in future version.
+            The default value serves as a starting point that can likely be optimized for specific datasets and use cases.
+            The higher the value, the more accurate the search, but the longer the indexing will take. 
+            If indexing time is not a major concern, a value of at least 200 is recommended to improve search quality.           blah.
+        :param flags:
+            Set flags.
+        :param distance_type:
+            Set distance strategy type.
+        :param reparation_backlink_probability:
+            When repairing the graph after a node was removed, this gives the probability of adding backlinks to the repaired
+            neighbors. The default is 1.0 (aka "always") as this should be worth a bit of extra costs as it improves the graph's quality.
+        :param vector_cache_hint_size_kb:
+            Vector cache hint size. This is a non-binding hint of the maximum size of the vector cache in KB (default: 2097152 or 2 GB/GiB).   
+        """
         self.dimensions = dimensions
         self.neighbors_per_node = neighbors_per_node
         self.indexing_search_count = indexing_search_count
@@ -161,13 +221,16 @@ class HnswIndex:
 
     @property
     def id(self):
+        """ Index Id """
         return self.iduid.id
 
     @property
     def uid(self):
+        """ Index Uid """
         return self.iduid.uid
 
     def has_uid(self):
+        """ Returns true if Uid is set. """
         return self.uid != 0
 
 
@@ -189,16 +252,20 @@ class Property:
 
     @property
     def id(self):
+        """ Property Id """
         return self.iduid.id
 
     @property
     def uid(self):
+        """ Property Uid """
         return self.iduid.uid
 
     def has_uid(self):
+        """ Returns true if property has a valid Uid """
         return self.uid != 0
 
     def is_id(self) -> bool:
+        """ Check if Property is an Id Property. """
         return isinstance(self, Id)
 
     def on_sync(self):
@@ -248,26 +315,31 @@ class _NumericProperty(Property):
         super(_NumericProperty, self).__init__(py_type, **kwargs)
     
     def greater_than(self, value) -> PropertyQueryCondition:
+        """ *Greater-than* (``>``) condition to be passed to :func:`objectbox.Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value) -> PropertyQueryCondition:
+        """ *Greater-or-equal* (``>=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value) -> PropertyQueryCondition:
+        """ *Less-than* (``<``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value) -> PropertyQueryCondition:
+        """ *Less-or-equal* (``<=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
 
     def between(self, a, b) -> PropertyQueryCondition:
+        """ *Between* a and b (``a <= x <= b``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'a': a, 'b': b}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.BETWEEN, args)
@@ -280,11 +352,13 @@ class _IntProperty(_NumericProperty):
         super(_IntProperty, self).__init__(py_type, **kwargs)
         
     def equals(self, value) -> PropertyQueryCondition:
+        """ *Equals* (``==``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value) -> PropertyQueryCondition:
+        """ *Not equals* (``!=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
@@ -309,46 +383,55 @@ class String(Property):
         super(String, self).__init__(str, type=PropertyType.string, id=id, uid=uid, **kwargs)
         
     def starts_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *starts with* (string-prefix) condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.STARTS_WITH, args)
 
     def ends_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *ends with* (string-suffix) condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ENDS_WITH, args)
     
     def equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *equals* (``==``) condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *not-equals* (``~=``) condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
     
     def contains(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *contains string* condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.CONTAINS, args)
     
     def greater_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *greater-than* condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *greater-or-equal* condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *less-than* condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *less-or-equal* condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
@@ -402,26 +485,31 @@ class Bytes(_NumericProperty):
         super(Bytes, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
     
     def equals(self, value) -> PropertyQueryCondition:
+        """ *byte-string equals* (``==``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
     
     def greater_than(self, value) -> PropertyQueryCondition:
+        """ *byte-string greater-than* (``==``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value) -> PropertyQueryCondition:
+        """ *byte-string greater-or-equal* (``>=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value) -> PropertyQueryCondition:
+        """ *byte-string less-than* (``<``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value) -> PropertyQueryCondition:
+        """ *byte-string less-or-equal* (``<``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
@@ -432,6 +520,7 @@ class Flex(Property):
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Flex, self).__init__(Generic, type=PropertyType.flex, id=id, uid=uid, **kwargs)
     def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *contains key/valuel* condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
         args = {'key': key, 'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.CONTAINS_KEY_VALUE, args)

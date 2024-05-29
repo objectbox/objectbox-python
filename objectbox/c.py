@@ -86,15 +86,33 @@ OBXValidateOnOpenKvFlags = ctypes.c_int
 OBXBackupRestoreFlags = ctypes.c_int
 
 class DebugFlags(IntEnum):
+    """Debug flags"""
+    
     NONE = 0,
+    
     LOG_TRANSACTIONS_READ = 1,
+    """ Log read transactions """
+    
     LOG_TRANSACTIONS_WRITE = 2,
+    """ Log write transactions """
+    
     LOG_QUERIES = 3,
+    """ Log queries """
+    
     LOG_QUERY_PARAMETERS = 8,
+    """ Log query parameters """
+    
     LOG_ASYNC_QUEUE = 16,
+    """ Log async queue """
+    
     LOG_CACHE_HITS = 32,
+    """ Log cache hits """
+    
     LOG_CACHE_ALL = 64,
+    """ Log cache hits """
+    
     LOG_TREE = 128
+    """ Log tree operations """
 
 
 class OBX_model(ctypes.Structure):

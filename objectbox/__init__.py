@@ -12,14 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""ObjectBox Python Bindings Public API"""
 
 from objectbox.store import Store
 from objectbox.box import Box
 from objectbox.model.entity import Entity
-from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, HnswIndex, VectorDistanceType
+from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, HnswIndex, VectorDistanceType, HnswFlags
 from objectbox.model.model import Model
 from objectbox.c import NotFoundException, version_core, DebugFlags
 from objectbox.version import Version
+from objectbox.condition import PropertyQueryCondition
 from objectbox.builder import Builder
 from objectbox.objectbox import ObjectBox
 
@@ -65,7 +67,9 @@ __all__ = [
     'NotFoundException',
     'version',
     'version_info',
-    'DebugFlags'
+    'DebugFlags',
+    'PropertyQueryCondition',
+    'HnswFlags',
 ]
 
 # Python binding version

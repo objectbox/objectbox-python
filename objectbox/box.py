@@ -31,11 +31,13 @@ class Box:
         self._c_box = obx_box(store._c_store, entity._id)
 
     def is_empty(self) -> bool:
+        """Returns true if box is empty (i.e. no objects of entity type are available)."""
         is_empty = ctypes.c_bool()
         obx_box_is_empty(self._c_box, ctypes.byref(is_empty))
         return bool(is_empty.value)
 
     def count(self, limit: int = 0) -> int:
+        """Returns the count of existing objects."""
         count = ctypes.c_uint64()
         obx_box_count(self._c_box, limit, ctypes.byref(count))
         return int(count.value)
@@ -110,6 +112,7 @@ class Box:
             self._entity._set_object_id(objects[k], ids[k])
 
     def get(self, id: int):
+        """Get object by given Id or None if not found."""
         with self._store.read_tx():
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
@@ -123,6 +126,7 @@ class Box:
             return self._entity._unmarshal(data)
 
     def get_all(self) -> list:
+        """Get all objects."""
         with self._store.read_tx():
             # OBX_bytes_array*
             c_bytes_array_p = obx_box_get_all(self._c_box)
@@ -143,6 +147,7 @@ class Box:
                 obx_bytes_array_free(c_bytes_array_p)
 
     def remove(self, id_or_object) -> bool:
+        """Remove object by id or object."""
         if isinstance(id_or_object, self._entity._user_type):
             id = self._entity._get_object_id(id_or_object)
         else:
@@ -155,6 +160,7 @@ class Box:
         return True
 
     def remove_all(self) -> int:
+        """Removes all objects and returns number of removed."""
         count = ctypes.c_uint64()
         obx_box_remove_all(self._c_box, ctypes.byref(count))
         return int(count.value)
@@ -166,7 +172,7 @@ class Box:
             If given, applies the given high-level condition to the new QueryBuilder object.
             Useful for a user-friendly API design; for example:
             
-            ``box.query(name_property.equals("Johnny")).build()``
+            ``box.query(MyEntity.name.equals("Johnny")).build()``
         """
         qb = QueryBuilder(self._store, self)
         if condition is not None:

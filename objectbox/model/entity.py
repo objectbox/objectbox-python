@@ -282,8 +282,15 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
     """
     Entity decorator for user classes using syntax ``@Entity([uid=])`` 
     
-    Wraps user classes and returns a ``_Entity`` wrapper.
-    Use allow @Entity(id=, uid=); i.e. no class arguments. 
+    Example::
+    
+        @Entity()
+        class MyEntity:
+            id = Id
+            name = String(index=Index)
+
+       
+    Wraps the given user classes as an ``_Entity`` helper class.
     """
 
     def wrapper(class_) -> Callable[[Type], _Entity]:

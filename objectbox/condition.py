@@ -11,10 +11,12 @@ if TYPE_CHECKING:
 
 class QueryCondition:
     def and_(self, other: QueryCondition) -> QueryCondition:
+        """*and* logic condition or using ``&`` operator"""
         return LogicQueryCondition(self, other, LogicQueryConditionOp.AND)
     __and__ = and_
 
     def or_(self, other: QueryCondition) -> QueryCondition:
+        """*or* logic condition or using ``|`` operator"""
         return LogicQueryCondition(self, other, LogicQueryConditionOp.OR)
     __or__ = or_
 
@@ -74,7 +76,11 @@ class PropertyQueryConditionOp(Enum):
 
 
 class PropertyQueryCondition(QueryCondition):
-    """ A QueryCondition describing an operation to be applied on a property (e.g. name == "John", age == 24) """
+    """
+    Query condition 
+    
+    Query conditions describe operations to be applied on a property (e.g. name == "John", age == 24)
+    """
 
     _OP_MAP: Dict[PropertyQueryConditionOp, str] = {
         PropertyQueryConditionOp.EQ: "_apply_eq",
