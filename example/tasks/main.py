@@ -1,20 +1,19 @@
+import time
 from cmd import Cmd
 from objectbox import *
-import time
+
 
 @Entity()
 class Task:
     id = Id()
     text = String()
-
     date_created = Date(py_type=int)
     date_finished = Date(py_type=int)
 
 
-
-# objectbox expects date timestamp in milliseconds since UNIX epoch
+# Objectbox expects date timestamp in milliseconds since UNIX epoch
 def now_ms() -> int:
-    return time.time_ns() / 1000000
+    return int(time.time_ns() / 1000000)
 
 
 def format_date(timestamp_ms: int) -> str:
@@ -23,34 +22,63 @@ def format_date(timestamp_ms: int) -> str:
 
 class TasklistCmd(Cmd):
     prompt = "> "
-    _store = Store(directory="tasklist-db")
-    _box = _store.box(Task)
+
+    def __init__(self):
+        super().__init__()
+        self._store = Store(directory="tasklist-db")
+        self._task_box = self._store.box(Task)
+        self._query = self._task_box.query().build()
+
+    def add_task(self, text: str):
+        task = Task(text=text, date_created=now_ms())
+        self._task_box.put(task)
+
+    def remove_task(self, task_id: int) -> bool:
+        is_removed = self._task_box.remove(task_id)
+        return is_removed
+
+    def find_tasks(self):
+        query = self._task_box.query().build()
+        return query.find()
+
+    # *** Command line ***
 
     def do_ls(self, _):
-        """list tasks"""
-
-        tasks = self._box.get_all()
+        """ Lists all the tasks created. """
+        tasks = self.find_tasks()
 
         print("%3s  %-29s  %-29s  %s" % ("ID", "Created", "Finished", "Text"))
         for task in tasks:
             print("%3d  %-29s  %-29s  %s" % (
-            task.id, format_date(task.date_created), format_date(task.date_finished), task.text))
+                task.id, format_date(task.date_created), format_date(task.date_finished), task.text))
 
     def do_new(self, text: str):
-        """create a new task with the given text (all arguments concatenated)"""
-        task = Task()
-        task.text = text
-        task.date_created = now_ms()
-        self._box.put(task)
+        """ Creates a new task with the given text (all arguments concatenated). """
+        self.add_task(text)
 
-    def do_done(self, id: str):
-        """mark task with the given ID as done"""
-        task = self._box.get(int(id))
+    def do_done(self, task_id: str):
+        """ Marks the task with the given ID as done. """
+        if not task_id.isdigit() or int(task_id) <= 0:
+            print(f"Invalid task ID: \"{task_id}\"")
+            return
+        task = self._task_box.get(int(task_id))
+        if task is None:
+            print(f"Task {task_id} not found")
+            return
         task.date_finished = now_ms()
-        self._box.put(task)
+        self._task_box.put(task)
+
+    def do_rm(self, task_id: str):
+        """ Removes a task given its ID. """
+        if not task_id.isdigit() or int(task_id) <= 0:
+            print(f"Invalid task ID: \"{task_id}\"")
+            return
+        is_removed = self.remove_task(int(task_id))
+        if not is_removed:
+            print(f"Task {task_id} not found")
 
     def do_exit(self, _):
-        """close the program"""
+        """ Closes the program. """
         raise SystemExit()
 
 
