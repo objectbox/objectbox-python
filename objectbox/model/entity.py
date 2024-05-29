@@ -278,10 +278,15 @@ class _Entity(object):
 obx_models_by_name: Dict[str, List[_Entity]] = {}
 
 
-def Entity(uid: int = 0, model: str = "default") -> Callable[[Type], _Entity]:
-    """ Entity decorator that wraps _Entity to allow @Entity(id=, uid=); i.e. no class arguments. """
+def Entity(uid: int = 0, model: str = "default") -> _Entity:
+    """
+    Entity decorator for user classes using syntax ``@Entity([uid=])`` 
+    
+    Wraps user classes and returns a ``_Entity`` wrapper.
+    Use allow @Entity(id=, uid=); i.e. no class arguments. 
+    """
 
-    def wrapper(class_):
+    def wrapper(class_) -> Callable[[Type], _Entity]:
         # Also allow defining properties as class members; we'll instantiate them here
         class_members = inspect.getmembers(class_, lambda a: (inspect.isclass(a) and issubclass(a, Property)))
         for name, member_type in class_members:
