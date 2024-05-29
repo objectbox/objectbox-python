@@ -164,7 +164,8 @@ class Box:
         :param condition:
             If given, applies the given high-level condition to the new QueryBuilder object.
             Useful for a user-friendly API design; for example:
-                ``box.query(name_property.equals("Johnny")).build()``
+            
+            ``box.query(name_property.equals("Johnny")).build()``
         """
         qb = QueryBuilder(self._store, self)
         if condition is not None:
