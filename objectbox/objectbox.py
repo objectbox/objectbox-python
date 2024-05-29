@@ -17,6 +17,7 @@ import objectbox.store
 from warnings import warn
 
 class ObjectBox(objectbox.store.Store):
+    """*Deprecated Interface*"""
     def __init__(self, c_store):
         """This throws a deprecation warning on initialization."""
         warn(f'{self.__class__.__name__} will be deprecated, use Store from objectbox.store.', DeprecationWarning, stacklevel=2)

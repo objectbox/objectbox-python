@@ -68,7 +68,8 @@ __all__ = [
 
 # Python binding version
 version = Version(4, 0, 0)
-
+"""ObjectBox Python version"""
 
 def version_info():
+    """Returns a string with Python and core version information."""
     return "ObjectBox Python version " + str(version) + " using dynamic library version " + str(version_core)

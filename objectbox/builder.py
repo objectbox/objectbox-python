@@ -20,6 +20,7 @@ from objectbox.store_options import StoreOptions
 from warnings import warn
 
 class Builder:
+    """*Deprecated Interface*"""
     def __init__(self):
         """This throws a deprecation warning on initialization."""
         warn(f'Using {self.__class__.__name__} is deprecated, please use Store(model=, directory= ...) from objectbox.store.', DeprecationWarning, stacklevel=2)

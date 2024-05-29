@@ -28,6 +28,7 @@ from typing import *
 
 
 class Store:
+    """ObjectBox Database"""
     def __init__(self,
                  model: Optional[Union[Model, str]] = "default",
                  model_json_file: Optional[str] = None,
@@ -238,6 +239,7 @@ class Store:
         return model_json_file
 
     def __del__(self):
+        """Destructor closes database."""
         self.close()
 
     def box(self, entity: _Entity) -> 'objectbox.Box':
@@ -250,12 +252,15 @@ class Store:
         return objectbox.Box(self, entity)
 
     def read_tx(self):
+        """Returns a read-only transaction."""
         return objectbox.transaction.read(self)
 
     def write_tx(self):
+        """Returns a write transaction."""
         return objectbox.transaction.write(self)
 
     def close(self):
+        """Close database."""
         c_store_to_close = self._c_store
         if c_store_to_close:
             self._c_store = None

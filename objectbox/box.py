@@ -21,6 +21,7 @@ from objectbox.c import *
 
 
 class Box:
+    """Interface to Entities"""
     def __init__(self, store: Store, entity: _Entity):
         if not isinstance(entity, _Entity):
             raise Exception("Given type is not an Entity")

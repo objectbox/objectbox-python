@@ -80,6 +80,8 @@ class IndexType(IntEnum):
 
 
 class Index:
+    """Property Index"""
+
     # TODO HNSW isn't a `type` but HASH and HASH64 are, remove type member and make HashIndex and Hash64Index classes?
 
     def __init__(self, type: IndexType = IndexType.VALUE, uid: int = 0):
@@ -136,8 +138,8 @@ The more negative the dot product, the higher the distance is (the farther the v
 Value range: 0.0 - 2.0 (nonlinear; 0.0: nearest, 1.0: orthogonal, 2.0: farthest)
 """
 
-
 class HnswIndex:
+    """HNSW Index for Vector-Search"""
     def __init__(self,
                  dimensions: int,
                  neighbors_per_node: Optional[int] = None,
@@ -290,16 +292,19 @@ class _IntProperty(_NumericProperty):
 
 # ID property (primary key)
 class Id(_IntProperty):
+    """Id Property"""
     def __init__(self, id : int = 0, uid : int = 0, py_type: type = int):
         super(Id, self).__init__(py_type, id=id, uid=uid)
 
 # Bool property
 class Bool(_IntProperty):
+    """Boolean Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Bool, self).__init__(bool, type=PropertyType.bool, id=id, uid=uid, **kwargs)
 
 # String property with starts/ends_with
 class String(Property):
+    """String Property"""
     def __init__(self, id: int = 0, uid : int = 0, **kwargs):
         super(String, self).__init__(str, type=PropertyType.string, id=id, uid=uid, **kwargs)
         
@@ -352,38 +357,47 @@ class String(Property):
  
 # Signed Integer Numeric Properties
 class Int8(_IntProperty):
+    """Integer 8-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int8, self).__init__(int, type=PropertyType.byte, id=id, uid=uid, **kwargs)
 class Int16(_IntProperty):
+    """Integer 16-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int16, self).__init__(int, type=PropertyType.short, id=id, uid=uid, **kwargs)
 class Int32(_IntProperty):
+    """Integer 32-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int32, self).__init__(int, type=PropertyType.int, id=id, uid=uid, **kwargs)
 class Int64(_IntProperty):
+    """Integer 64-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int64, self).__init__(int, type=PropertyType.long, id=id, uid=uid, **kwargs)
         
 # Floating-Point Numeric Properties
 class Float32(_NumericProperty):
+    """Floating-point 32-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Float32, self).__init__(float, type=PropertyType.float, id=id, uid=uid, **kwargs)
 
 class Float64(_NumericProperty):
+    """Floating-point 64-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Float64, self).__init__(float, type=PropertyType.double, id=id, uid=uid, **kwargs)
 
 # Date Properties
 class Date(_IntProperty):
+    """Date Property"""
     def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
         super(Date, self).__init__(py_type, type=PropertyType.date, id=id, uid=uid, **kwargs)
 
 class DateNano(_IntProperty):
+    """Date (nano-second resolution) Property"""
     def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
         super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
 
 # Bytes Property
 class Bytes(_NumericProperty):
+    """Bytes blob Property"""
     def __init__(self, id: int = 0, uid : int = 0, **kwargs):
         super(Bytes, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
     
@@ -414,6 +428,7 @@ class Bytes(_NumericProperty):
 
 # Flex Property
 class Flex(Property):
+    """Flex dictionary-compatible Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Flex, self).__init__(Generic, type=PropertyType.flex, id=id, uid=uid, **kwargs)
     def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
@@ -426,29 +441,36 @@ class _VectorProperty(Property):
         super(_VectorProperty, self).__init__(py_type, **kwargs)
 
 class BoolVector(_VectorProperty):
+    """Boolean Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(BoolVector, self).__init__(np.ndarray, type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
 class Int8Vector(_VectorProperty):
+    """Integer 8-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int8Vector, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
 
 class Int16Vector(_VectorProperty):
+    """Integer 16-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int16Vector, self).__init__(np.ndarray, type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
 
 class CharVector(_VectorProperty):
+    """Char 16-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(CharVector, self).__init__(np.ndarray, type=PropertyType.charVector, id=id, uid=uid, **kwargs)
  
 class Int32Vector(_VectorProperty):
+    """Integer 32-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int32Vector, self).__init__(np.ndarray, type=PropertyType.intVector, id=id, uid=uid, **kwargs)
 
 class Int64Vector(_VectorProperty):
+    """Integer 64-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int64Vector, self).__init__(np.ndarray, type=PropertyType.longVector, id=id, uid=uid, **kwargs)
 
 class Float32Vector(_VectorProperty):
+    """Floating-point 32-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Float32Vector, self).__init__(np.ndarray, type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
     def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
@@ -457,6 +479,7 @@ class Float32Vector(_VectorProperty):
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
 
 class Float64Vector(_VectorProperty):
+    """Floating-point 64-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Float64Vector, self).__init__(np.ndarray, type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
 
@@ -465,33 +488,41 @@ class _ListProperty(Property):
         super(_ListProperty, self).__init__(list, **kwargs)
 
 class BoolList(_ListProperty):
+    """Boolean List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(BoolList, self).__init__(type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
 
 class Int8List(_ListProperty):
+    """Integer 8-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int8List, self).__init__(type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
 
 class Int16List(_ListProperty):
+    """Integer 16-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int16List, self).__init__(type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
 
 class Int32List(_ListProperty):
+    """Integer 32-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int32List, self).__init__(type=PropertyType.intVector, id=id, uid=uid, **kwargs)
 
 class Int64List(_ListProperty):
+    """Integer 64-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Int64List, self).__init__(type=PropertyType.longVector, id=id, uid=uid, **kwargs)
 
 class Float32List(_ListProperty):
+    """Floating-point 32-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Float32List, self).__init__(type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
 
 class Float64List(_ListProperty):
+    """Floating-point 64-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(Float64List, self).__init__(type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
 
 class CharList(_ListProperty):
+    """Char 16-bit List Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
         super(CharList, self).__init__(type=PropertyType.charVector, id=id, uid=uid, **kwargs)

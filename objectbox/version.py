@@ -16,6 +16,7 @@ from typing import *
 
 
 class Version:
+    """Version"""
     def __init__(self, major: int, minor: int, patch: int,
                  alpha: Optional[int] = None,
                  beta: Optional[int] = None,
