@@ -1,7 +1,6 @@
 import time
 from cmd import Cmd
-from objectbox import *
-
+from objectbox import Entity, Date, Id, String, Store
 
 @Entity()
 class Task:

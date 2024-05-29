@@ -2,7 +2,7 @@
 # using objectbox as a vector store
 
 import ollama
-from objectbox import *
+from objectbox import Entity, Store, Id, String, Float32Vector, HnswIndex, VectorDistanceType
 
 documents = [
   "Llamas are members of the camelid family meaning they're pretty closely related to vicuñas and camels",
