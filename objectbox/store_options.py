@@ -1,5 +1,5 @@
 from objectbox.c import *
-from objectbox.model import Model
+from objectbox.model.model import Model
 
 
 class StoreOptions:

@@ -36,7 +36,7 @@ def create_test_store(db_path: str = "testdata", clear_db: bool = True) -> objec
 
 
 def assert_equal_prop(actual, expected, default):
-    if isinstance(expected, objectbox.model.Property):
+    if isinstance(expected, objectbox.model.properties.Property):
         assert (actual == default)
     else:
         assert (actual == expected)
@@ -49,7 +49,7 @@ def assert_equal_prop_vector(actual, expected, default):
 
 # compare approx values
 def assert_equal_prop_approx(actual, expected, default):
-    if isinstance(expected, objectbox.model.Property):
+    if isinstance(expected, objectbox.model.properties.Property):
         assert (actual == default)
     else:
         assert (pytest.approx(actual) == expected)

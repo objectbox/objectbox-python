@@ -14,7 +14,7 @@
 
 
 from objectbox.c import *
-from objectbox.model import Model
+from objectbox.model.model import Model
 from objectbox.store import Store
 from objectbox.store_options import StoreOptions
 from warnings import warn

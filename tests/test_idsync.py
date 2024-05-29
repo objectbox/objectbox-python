@@ -4,8 +4,10 @@ import os
 from numpy.testing import assert_approx_equal
 from objectbox import *
 from objectbox.model import *
+from objectbox.model.properties import Property, PropertyType
 from objectbox.model.entity import _Entity
 from objectbox.model.idsync import sync_model
+from objectbox.model.iduid import IdUid
 from objectbox.c import CoreException
 from os import path
 
