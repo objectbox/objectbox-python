@@ -41,7 +41,7 @@ autoapi_options = [
 ]
 # autoapi_ignore = ['*migrations']
 # autoapi_root = 'autoapi'
-# autoapi_add_toctree_entry = True
+autoapi_add_toctree_entry = False # default: True
 autoapi_python_class_content = "both" # default: "class"
 # autoapi_member_order = 'bysource' 
 # autoapi_python_use_implicit_namespaces = False
