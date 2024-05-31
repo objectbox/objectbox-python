@@ -449,7 +449,7 @@ def py_str(ptr: ctypes.c_char_p) -> str:
 
 
 def c_str(string: str) -> ctypes.c_char_p:
-    return string.encode('utf-8')
+    return ctypes.c_char_p(string.encode('utf-8'))
 
 
 def c_voidp_as_bytes(voidp, size) -> bytes:

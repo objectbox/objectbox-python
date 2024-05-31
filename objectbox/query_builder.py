@@ -101,6 +101,17 @@ class QueryBuilder:
         cond = obx_qb_less_or_equal_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond
 
+    def in_strings(self, prop: Union[int, str, Property], values: List[str], case_sensitive: bool) -> obx_qb_cond:
+        """Checks whether the property is contained in the given string list."""
+        c_values_array_p = None
+        if values:
+            c_values_list = [c_str(value) for value in values]
+            c_values_array = c_array(c_values_list, ctypes.c_char_p)
+            c_values_array_p = ctypes.cast(c_values_array, ctypes.POINTER(ctypes.c_char_p))
+        prop_id = self._entity._get_property_id(prop)
+        cond = obx_qb_in_strings(self._c_builder, prop_id, c_values_array_p, len(values), case_sensitive)
+        return cond
+
     def equals_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
         prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_equals_int(self._c_builder, prop_id, value)

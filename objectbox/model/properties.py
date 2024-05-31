@@ -466,8 +466,12 @@ class String(Property):
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
-    
 
+    def in_(self, values: List[str], case_sensitive: bool = True):
+        """*in-string* condition (opt-in: case-sensitive) to be passed to :func:`Box.query`"""
+        self._assert_ids_assigned()
+        args = {'values': values, 'case_sensitive': case_sensitive}
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.IN_STRINGS, args)
  
 # Signed Integer Numeric Properties
 class Int8(_IntProperty):

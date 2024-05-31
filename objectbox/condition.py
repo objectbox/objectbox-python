@@ -88,6 +88,7 @@ class PropertyQueryConditionOp(Enum):
     CONTAINS_KEY_VALUE = 12
     IS_NULL = 13
     NOT_NULL = 14
+    IN_STRINGS = 15
 
 
 class PropertyQueryCondition(QueryCondition):
@@ -112,6 +113,7 @@ class PropertyQueryCondition(QueryCondition):
         PropertyQueryConditionOp.CONTAINS_KEY_VALUE: "_contains_key_value",
         PropertyQueryConditionOp.IS_NULL: "_apply_is_null",
         PropertyQueryConditionOp.NOT_NULL: "_apply_not_null",
+        PropertyQueryConditionOp.IN_STRINGS: "_in_strings",
         # ... new property query conditions here ... :)
     }
 
@@ -273,6 +275,11 @@ class PropertyQueryCondition(QueryCondition):
 
     def _apply_not_null(self, qb: QueryBuilder) -> obx_qb_cond:
         return qb.not_null(self._property_id)
+
+    def _in_strings(self, qb: QueryBuilder) -> obx_qb_cond:
+        values = self._args['values']
+        case_sensitive = self._args['case_sensitive']
+        return qb.in_strings(self._property_id, values, case_sensitive)
 
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         c_cond = self._op_func(qb)
