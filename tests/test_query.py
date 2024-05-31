@@ -710,3 +710,19 @@ def test_order(test_store):
     assert objects[4].str == "mango"
 
     # TODO test NULLS_LAST/NULLS_ZERO when None values will be supported (i.e. optional properties)
+
+
+def test_remove(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put(TestEntity(str="Object 1", int64=3))
+    box.put(TestEntity(str="Object 2", int64=43))
+    box.put(TestEntity(str="Object 3", int64=534))
+    box.put(TestEntity(str="Object 4", int64=234))
+    box.put(TestEntity(str="Object 5", int64=56))
+    assert box.count() == 5
+
+    query = box.query(TestEntity.int64.less_than(500)).build()
+    assert query.remove() == 4
+
+    assert box.count() == 1

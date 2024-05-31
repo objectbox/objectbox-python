@@ -138,7 +138,10 @@ class Query:
         return int(count.value)
 
     def remove(self) -> int:
-        """ Removes the objects that are matched by this query. """
+        """ Removes the objects that are matched by this query.
+
+        :return: Number of objects removed.
+        """
         count = ctypes.c_uint64()
         obx_query_remove(self._c_query, ctypes.byref(count))
         return int(count.value)
