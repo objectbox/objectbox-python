@@ -5,7 +5,8 @@ ObjectBox Python API
    :maxdepth: 1
    :caption: Contents:
 
-   Python API Reference <autoapi/objectbox/index>
+   overview
+   API Reference <autoapi/objectbox/index>
    ObjectBox Homepage <https://objectbox.io>
    ObjectBox docs <https://docs.objectbox.io>
    GitHub <https://github.com/objectbox/objectbox-python>
