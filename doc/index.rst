@@ -1,5 +1,5 @@
-ObjectBox Python Bindings
-=========================
+ObjectBox Python API
+====================
 
 .. toctree::
    :maxdepth: 1

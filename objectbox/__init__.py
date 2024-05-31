@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""ObjectBox Python Bindings Public API"""
+"""ObjectBox Python API"""
 
 from objectbox.store import Store
 from objectbox.box import Box

@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'ObjectBox Python Bindings'
+project = 'ObjectBox Python API' 
 copyright = '2024, ObjectBox Ltd.'
 author = 'ObjectBox Ltd.'
 release = '4.0.0'
@@ -74,4 +74,5 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '.venv']
 
 html_theme = 'sphinx_rtd_theme'
 
-# html_static_path = ['_static']
+html_static_path = ['_static']
+html_logo = '_static/logo-white-500px.png'
