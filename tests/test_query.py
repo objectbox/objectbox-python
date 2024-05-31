@@ -39,7 +39,7 @@ def test_basics(test_store):
     assert query.find()[0].id == id2
 
     # String query
-    str_prop: Property = TestEntity.str
+    str_prop = TestEntity.str
 
     # Case Sensitive = True
     query = box_test_entity.query(str_prop.equals("bar", case_sensitive=True)).build()
@@ -124,7 +124,7 @@ def test_basics(test_store):
     assert query.find()[1].str == "bar"
 
     # Int queries using a reference to property
-    int_prop: Property = TestEntity.int64
+    int_prop = TestEntity.int64
 
     query = box_test_entity.query(int_prop.equals(123)).build()
     assert query.count() == 1
@@ -482,9 +482,9 @@ def test_set_parameter_alias(test_store):
     box_vector.put(VectorEntity(name="Object 4", vector_euclidean=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector_euclidean=[5, 5]))
 
-    str_prop: Property = TestEntity.str 
-    int32_prop: Property = TestEntity.int32 
-    int64_prop: Property = TestEntity.int64
+    str_prop = TestEntity.str
+    int32_prop = TestEntity.int32
+    int64_prop = TestEntity.int64
 
     # Test set parameter alias on string
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -531,7 +531,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
 
     # Test set parameter alias on vector
-    vector_prop: Property = VectorEntity.vector_euclidean
+    vector_prop = VectorEntity.vector_euclidean
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
     assert query.count() == 3
@@ -608,7 +608,7 @@ def test_set_parameter_alias_advanced(test_store):
 def test_bytes(test_store):
     box = test_store.box(TestEntity)
 
-    bytes_prop: Property = TestEntity.bytes 
+    bytes_prop = TestEntity.bytes
 
     id1 = box.put(TestEntity(bytes=bytes([9])))
     id2 = box.put(TestEntity(bytes=bytes([1,0])))
