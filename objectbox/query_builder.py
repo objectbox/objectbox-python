@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+from enum import IntEnum
 from typing import *
 
 from objectbox.c import *
@@ -11,6 +12,25 @@ from objectbox.utils import check_float_vector
 
 if TYPE_CHECKING:
     import numpy as np
+
+
+class OrderFlags(IntEnum):
+    DESCENDING = OBXOrderFlags_DESCENDING
+    """Reverses the order from ascending (default) to descending."""
+
+    CASE_SENSITIVE = OBXOrderFlags_CASE_SENSITIVE
+    """Sorts upper case letters before lower case letters.
+    If not specified, the default is case insensitive for ASCII characters."""
+
+    UNSIGNED = OBXOrderFlags_UNSIGNED
+    """For scalars only: changes the comparison to unsigned (default is signed)."""
+
+    NULLS_LAST = OBXOrderFlags_NULLS_LAST
+    """Null values will be put last.
+    If not specified, by default null values will be put first."""
+
+    NULLS_ZERO = OBXOrderFlags_NULLS_ZERO
+    """Null values should be treated equal to zero (scalars only)."""
 
 
 class QueryBuilder:
@@ -205,6 +225,12 @@ class QueryBuilder:
         c_conditions = c_array_pointer(conditions, obx_qb_cond)
         cond = obx_qb_all(self._c_builder, c_conditions, len(conditions))
         return cond
+
+    def order(self, prop: Union[int, str, Property], order_flags: OrderFlags = 0) -> 'QueryBuilder':
+        """Configures an order for results in the query."""
+        prop_id = self._entity._get_property_id(prop)
+        obx_qb_order(self._c_builder, prop_id, order_flags)
+        return self
 
     def build(self) -> Query:
         c_query = obx_query(self._c_builder)

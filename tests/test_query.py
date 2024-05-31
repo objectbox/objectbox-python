@@ -647,3 +647,66 @@ def test_bytes(test_store):
     # bytes does not support not equals
     with pytest.raises(AttributeError):
         bytes_prop.not_equals(bytes([]))
+
+
+def test_order(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put(TestEntity(str="mango", int64=-423))
+    box.put(TestEntity(str="apricot", int64=456))
+    box.put(TestEntity(str="Apple", int64=5))
+    box.put(TestEntity(str="Banana", int64=67))
+    box.put(TestEntity(str="coconut", int64=2859))
+    assert box.count() == 5
+
+    # Order by int64 (ascending)
+    query = box.query().order(TestEntity.int64).build()
+    assert query.count() == 5
+    objects = query.find()
+    assert objects[0].id == 1
+    assert objects[1].id == 3
+    assert objects[2].id == 4
+    assert objects[3].id == 2
+    assert objects[4].id == 5
+
+    # Order by int64 (descending)
+    query = box.query().order(TestEntity.int64, OrderFlags.DESCENDING).build()
+    assert query.count() == 5
+    objects = query.find()
+    assert objects[0].id == 5
+    assert objects[1].id == 2
+    assert objects[2].id == 4
+    assert objects[3].id == 3
+    assert objects[4].id == 1
+
+    # Order by int64 (unsigned ordering)
+    query = box.query().order(TestEntity.int64, OrderFlags.UNSIGNED).build()
+    assert query.count() == 5
+    objects = query.find()
+    assert objects[0].id == 3
+    assert objects[1].id == 4
+    assert objects[2].id == 2
+    assert objects[3].id == 5
+    assert objects[4].id == 1  # -423
+
+    # Order by str (case-insensitive)
+    query = box.query().order(TestEntity.str).build()
+    assert query.count() == 5
+    objects = query.find()
+    assert objects[0].str == "Apple"
+    assert objects[1].str == "apricot"
+    assert objects[2].str == "Banana"
+    assert objects[3].str == "coconut"
+    assert objects[4].str == "mango"
+
+    # Order by str (case-sensitive)
+    query = box.query().order(TestEntity.str, OrderFlags.CASE_SENSITIVE).build()
+    assert query.count() == 5
+    objects = query.find()
+    assert objects[0].str == "Apple"
+    assert objects[1].str == "Banana"
+    assert objects[2].str == "apricot"
+    assert objects[3].str == "coconut"
+    assert objects[4].str == "mango"
+
+    # TODO test NULLS_LAST/NULLS_ZERO when None values will be supported (i.e. optional properties)
