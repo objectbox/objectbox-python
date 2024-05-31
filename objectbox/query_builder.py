@@ -63,6 +63,7 @@ class QueryBuilder:
         return cond
 
     def contains_string(self, prop: Union[int, str, Property], value: str, case_sensitive: bool = True) -> obx_qb_cond:
+        """Checks if value is contained by the given string property."""
         prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_contains_string(self._c_builder, prop_id, c_str(value), case_sensitive)
         return cond

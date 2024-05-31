@@ -164,12 +164,13 @@ def test_basics(test_store):
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
+
 def test_integer_scalars(test_store):
     box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(int8=12, int16=12, int32=12, int64=12))
     id2 = box_test_entity.put(TestEntity(int8=45, int16=45, int32=45, int64=45))
 
-    props = [ "int8", "int16", "int32", "int64"]
+    props = ["int8", "int16", "int32", "int64"]
     for p in props:
         prop = TestEntity._get_property(p)
 
@@ -203,6 +204,7 @@ def test_integer_scalars(test_store):
         assert query.find()[0].id == id1
         assert query.find()[1].id == id2
 
+
 def test_float_scalars(test_store):
     box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(float32=12.3, float64=12.3))
@@ -210,7 +212,7 @@ def test_float_scalars(test_store):
     id3 = box_test_entity.put(TestEntity(float32=45.7, float64=45.7))
 
     # Test int scalar literals
-    props = [ "float32", "float64" ]
+    props = ["float32", "float64"]
     for p in props:
         prop = TestEntity._get_property(p)
 
@@ -307,7 +309,7 @@ def test_offset_limit(test_store):
     box.put(TestEntity(str="c"))
     assert box.count() == 4
 
-    int_prop = TestEntity.int64 
+    int_prop = TestEntity.int64
 
     query = box.query(int_prop.equals(0)).build()
     assert query.count() == 4
@@ -584,8 +586,8 @@ def test_set_parameter_alias_advanced(test_store):
         str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
         & bool_prop.equals(False).alias("bool_filter")
         & (
-            int64_prop.greater_than(0).alias("int64_filter")
-            | int32_prop.less_than(100).alias("int32_filter")
+                int64_prop.greater_than(0).alias("int64_filter")
+                | int32_prop.less_than(100).alias("int32_filter")
         )
     ).build()
     assert len(query.find_ids()) == 0
@@ -611,8 +613,8 @@ def test_bytes(test_store):
     bytes_prop = TestEntity.bytes
 
     id1 = box.put(TestEntity(bytes=bytes([9])))
-    id2 = box.put(TestEntity(bytes=bytes([1,0])))
-    id3 = box.put(TestEntity(bytes=bytes([0,1])))
+    id2 = box.put(TestEntity(bytes=bytes([1, 0])))
+    id3 = box.put(TestEntity(bytes=bytes([0, 1])))
     query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build()
     assert query.count() == 3
     query = box.query(bytes_prop.greater_or_equal(bytes([1]))).build()
@@ -621,27 +623,27 @@ def test_bytes(test_store):
     assert query.count() == 1
 
     assert box.remove_all() == 3
-    id1 = box.put(TestEntity(bytes=bytes([1,2,3,4])))
-    id2 = box.put(TestEntity(bytes=bytes([5,6,7,8,9,10,11])))
-    query = box.query(bytes_prop.equals(bytes([1,2,3,4]))).build()
+    id1 = box.put(TestEntity(bytes=bytes([1, 2, 3, 4])))
+    id2 = box.put(TestEntity(bytes=bytes([5, 6, 7, 8, 9, 10, 11])))
+    query = box.query(bytes_prop.equals(bytes([1, 2, 3, 4]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box.query(bytes_prop.greater_than(bytes([1,2,3,4]))).build()
+    query = box.query(bytes_prop.greater_than(bytes([1, 2, 3, 4]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id2
 
-    query = box.query(bytes_prop.greater_or_equal(bytes([1,2,3,4]))).build()
+    query = box.query(bytes_prop.greater_or_equal(bytes([1, 2, 3, 4]))).build()
     assert query.count() == 2
 
     query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build()
     assert query.count() == 2
 
-    query = box.query(bytes_prop.less_than(bytes([5,6,7,8,9,10,11]))).build()
+    query = box.query(bytes_prop.less_than(bytes([5, 6, 7, 8, 9, 10, 11]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box.query(bytes_prop.less_or_equal(bytes([5,6,7,8,9,10,11]))).build()
+    query = box.query(bytes_prop.less_or_equal(bytes([5, 6, 7, 8, 9, 10, 11]))).build()
     assert query.count() == 2
 
     # bytes does not support not equals
@@ -757,4 +759,30 @@ def test_in_strings(test_store):
     assert objects[0].str == "MANGO"
 
     query = box.query(TestEntity.str.in_([])).build()
+    assert query.count() == 0
+
+
+def test_contains_string(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put(TestEntity(str="Green apple"))
+    box.put(TestEntity(str="Red Apple"))
+    box.put(TestEntity(str="Rotten apple"))
+    box.put(TestEntity(str="Banana"))
+    assert box.count() == 4
+
+    query = box.query(TestEntity.str.contains("apple")).build()
+    objects = query.find()
+    assert len(objects) == 2
+    assert objects[0].str == "Green apple"
+    assert objects[1].str == "Rotten apple"
+
+    query = box.query(TestEntity.str.contains("apple", case_sensitive=False)).build()
+    objects = query.find()
+    assert len(objects) == 3
+    assert objects[0].str == "Green apple"
+    assert objects[1].str == "Red Apple"
+    assert objects[2].str == "Rotten apple"
+
+    query = box.query(TestEntity.str.contains("pear")).build()
     assert query.count() == 0
