@@ -166,13 +166,20 @@ class Box:
         return int(count.value)
 
     def query(self, condition: Optional[QueryCondition] = None) -> QueryBuilder:
-        """ Creates a QueryBuilder for the Entity that is managed by the Box.
+        """ Initiates Query creation for the Entity associated by this Box.
+        Technically, it creates a QueryBuilder object, and you have to call build() on it to get the Query object.
 
         :param condition:
-            If given, applies the given high-level condition to the new QueryBuilder object.
-            Useful for a user-friendly API design; for example:
+            Applies the given condition(s) to the new QueryBuilder object.
+            For example, assuming you defined an @Entity called "MyEntity" with a string property "name":
             
-            ``box.query(MyEntity.name.equals("Johnny")).build()``
+            ``query = box.query(MyEntity.name.equals("Johnny")).build()``
+
+            It's also possible to pass multiple conditions:
+
+            ``query = box.query(MyEntity.name.equals("Johnny") & MyEntity.age.greater(21)).build()``
+
+            Note: ``&`` is the logical AND operator, and ``|`` is the logical OR operator.
         """
         qb = QueryBuilder(self._store, self)
         if condition is not None:
