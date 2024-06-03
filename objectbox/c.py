@@ -246,7 +246,15 @@ C.obx_last_error_message.restype = ctypes.c_char_p
 C.obx_last_error_code.restype = obx_err
 
 
-class CoreException(Exception):
+class DbException(Exception):
+    """ Base class for database exceptions. """
+    pass
+
+
+# TODO rename?
+class CoreException(DbException):
+    """ A database exception having a ``code`` attribute for error details. """
+
     codes = {
         0: "SUCCESS",
         404: "NOT_FOUND",
@@ -287,8 +295,11 @@ class CoreException(Exception):
         return CoreException(C.obx_last_error())
 
 
-class NotFoundException(Exception):
-    pass
+class NotFoundException(CoreException):
+    """ Raised when an object is not found. """
+
+    def __init__(self):
+        super().__init__(404)
 
 
 def check_obx_err(code: obx_err, func, args) -> obx_err:

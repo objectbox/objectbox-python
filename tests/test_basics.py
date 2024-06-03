@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import objectbox
+from objectbox.c import NotFoundException, CoreException
 from tests.common import create_test_store
 
 
@@ -32,3 +33,10 @@ def test_version():
 def test_open():
     store = create_test_store()
     store.close()
+
+
+def test_not_found_exception():
+    try:
+        raise NotFoundException()
+    except CoreException as e:
+        assert e.code == 404
