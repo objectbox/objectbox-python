@@ -46,7 +46,6 @@ These are the main classes to interact with:
         
         Store
         Box
-        QueryBuilder
         Query
 
 What's next
