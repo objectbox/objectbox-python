@@ -22,6 +22,8 @@ from objectbox.model.model import Model
 from objectbox.c import NotFoundException, version_core, DebugFlags
 from objectbox.version import Version
 from objectbox.condition import PropertyQueryCondition
+from objectbox.query import Query
+from objectbox.query_builder import QueryBuilder
 from objectbox.builder import Builder
 from objectbox.objectbox import ObjectBox
 
@@ -70,6 +72,8 @@ __all__ = [
     'DebugFlags',
     'PropertyQueryCondition',
     'HnswFlags',
+    'Query',
+    'QueryBuilder'
 ]
 
 # Python binding version

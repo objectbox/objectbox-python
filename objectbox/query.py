@@ -16,6 +16,9 @@ from objectbox.c import *
 
 
 class Query:
+    """
+    Query expression
+    """
     def __init__(self, c_query, box: 'Box'):
         self._c_query = c_query
         self._box = box
