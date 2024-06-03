@@ -1,7 +1,7 @@
 import random
 from typing import *
 from objectbox.logger import logger
-from objectbox.model import Model
+from objectbox.model.model import Model
 from objectbox.model.entity import _Entity
 from objectbox.model.properties import Property, Index, HnswIndex
 from objectbox.model.iduid import IdUid

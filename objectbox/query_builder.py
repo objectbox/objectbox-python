@@ -10,6 +10,9 @@ from objectbox.utils import check_float_vector
 
 
 class QueryBuilder:
+    """
+    Query builder
+    """
     def __init__(self, store: Store, box: 'Box'):
         self._box = box
         self._entity = box._entity

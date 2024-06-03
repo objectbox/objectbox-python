@@ -16,7 +16,13 @@ from objectbox.c import *
 
 
 class Query:
+    """
+    Query is a reusable object that allows you to find objects in the database.
+    It is created by calling ``Box.query()`` with conditions inside and finalizing with ``build()``.
+    Note: Query objects are not thread-safe and should not be shared between threads.
+    """
     def __init__(self, c_query, box: 'Box'):
+        """ This is an internal constructor. Use ``Box.query()`` instead. """
         self._c_query = c_query
         self._box = box
         self._entity = self._box._entity
@@ -119,20 +125,31 @@ class Query:
             obx_id_array_free(c_id_array_p)
 
     def count(self) -> int:
+        """ Counts the objects that are matched by this query.
+        In other words, it gives the size of the result set). """
         count = ctypes.c_uint64()
         obx_query_count(self._c_query, ctypes.byref(count))
         return int(count.value)
 
     def remove(self) -> int:
+        """ Removes the objects that are matched by this query. """
         count = ctypes.c_uint64()
         obx_query_remove(self._c_query, ctypes.byref(count))
         return int(count.value)
 
     def offset(self, offset: int) -> 'Query':
+        """ Configure an offset for this query.
+         All methods that support offset will return/process objects starting at this offset.
+         Example use case: use together with limit to get a slice of the whole result, e.g. for "result paging".
+         Call with offset=0 to reset to the default behavior, i.e. starting from the first element. """
         obx_query_offset(self._c_query, offset)
         return self
 
     def limit(self, limit: int) -> 'Query':
+        """ Configure a limit for this query.
+         All methods that support limit will return/process only the given number of objects.
+         Example use case: use together with offset to get a slice of the whole result, e.g. for "result paging".
+         Call with limit=0 to reset to the default behavior - zero limit means no limit applied. """
         obx_query_limit(self._c_query, limit)
         return self
 

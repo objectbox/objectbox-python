@@ -21,6 +21,11 @@ from objectbox.model.properties import *
 
 
 class Model:
+    """
+    Database schema 
+    
+    A model specifies available entities in the database. Amongst others it uses this information to supports migration over time.
+    """
     def __init__(self):
         self.entities: List[_Entity] = []
 
