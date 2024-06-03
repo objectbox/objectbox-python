@@ -8,7 +8,7 @@ ObjectBox Python API
    overview
    API Reference <autoapi/objectbox/index>
    ObjectBox Homepage <https://objectbox.io>
-   ObjectBox docs <https://docs.objectbox.io>
+   ObjectBox Docs <https://docs.objectbox.io>
    GitHub <https://github.com/objectbox/objectbox-python>
 
 
