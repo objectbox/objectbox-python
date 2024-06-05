@@ -87,6 +87,8 @@ OBXBackupRestoreFlags = ctypes.c_int
 OBXLogLevel = ctypes.c_int
 
 from enum import IntEnum
+
+
 class LogLevel(IntEnum):
     Verbose = 10
     Debug   = 20
@@ -581,7 +583,7 @@ obx_opt_async_object_bytes_max_cache_size = c_fn('obx_opt_async_object_bytes_max
 obx_opt_async_object_bytes_max_size_to_cache = c_fn('obx_opt_async_object_bytes_max_size_to_cache', None,
                                                     [OBX_store_options_p, ctypes.c_uint64])
 
-#typedef void obx_log_callback(OBXLogLevel log_level, const char* message, size_t message_size, void* user_data);
+# typedef void obx_log_callback(OBXLogLevel log_level, const char* message, size_t message_size, void* user_data);
 obx_log_callback_fn = ctypes.CFUNCTYPE(None, OBXLogLevel, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_voidp)
 
 # OBX_C_API void obx_opt_log_callback(OBX_store_options* opt, obx_log_callback* callback, void* user_data);
@@ -633,9 +635,15 @@ obx_txn_success = c_fn_rc('obx_txn_success', [OBX_txn_p])
 # OBX_box* (OBX_store* store, obx_schema_id entity_id);
 obx_box = c_fn('obx_box', OBX_box_p, [OBX_store_p, obx_schema_id])
 
+# OBX_C_API obx_err obx_box_contains(OBX_box* box, obx_id id, bool* out_contains);
+obx_box_contains = c_fn_rc('obx_box_contains', [OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_bool)])
+
 # obx_err (OBX_box* box, obx_id id, const void** data, size_t* size);
 obx_box_get = c_fn_nocheck('obx_box_get', obx_err, [
     OBX_box_p, obx_id, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+
+# OBX_C_API OBX_bytes_array* obx_box_get_many(OBX_box* box, const OBX_id_array* ids);
+obx_box_get_many = c_fn('obx_box_get_many', OBX_bytes_array_p, [OBX_box_p, OBX_id_array_p])
 
 # OBX_bytes_array* (OBX_box* box);
 obx_box_get_all = c_fn('obx_box_get_all', OBX_bytes_array_p, [OBX_box_p])
@@ -650,24 +658,29 @@ obx_box_ids_for_put = c_fn_rc('obx_box_ids_for_put', [
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size);
 obx_box_put = c_fn_rc('obx_box_put', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
+# OBX_C_API obx_err obx_box_insert(OBX_box* box, obx_id id, const void* data, size_t size);
+obx_box_insert = c_fn_rc('obx_box_insert', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
+
+# OBX_C_API obx_err obx_box_update(OBX_box* box, obx_id id, const void* data, size_t size);
+obx_box_update = c_fn_rc('obx_box_update', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
+
 # obx_err (OBX_box* box, const OBX_bytes_array* objects, const obx_id* ids, OBXPutMode mode);
-obx_box_put_many = c_fn_rc('obx_box_put_many', [
-    OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
+obx_box_put_many = c_fn_rc('obx_box_put_many', [OBX_box_p, OBX_bytes_array_p, ctypes.POINTER(obx_id), OBXPutMode])
 
 # obx_err (OBX_box* box, obx_id id);
 obx_box_remove = c_fn_nocheck('obx_box_remove', obx_err, [OBX_box_p, obx_id])
 
-# obx_err (OBX_box* box, uint64_t* out_count);
-obx_box_remove_all = c_fn_rc('obx_box_remove_all', [
-    OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
+# OBX_C_API obx_err obx_box_remove_many(OBX_box* box, const OBX_id_array* ids, uint64_t* out_count);
+obx_box_remove_many = c_fn_rc('obx_box_remove_many', [OBX_id_array_p, ctypes.POINTER(ctypes.c_uint64)])
 
-# obx_err (OBX_box* box, bool* out_is_empty);
-obx_box_is_empty = c_fn_rc('obx_box_is_empty', [
-    OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
+# OBX_C_API obx_err obx_box_remove_all(OBX_box* box, uint64_t* out_count);
+obx_box_remove_all = c_fn_rc('obx_box_remove_all', [OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
 
-# obx_err obx_box_count(OBX_box* box, uint64_t limit, uint64_t* out_count);
-obx_box_count = c_fn_rc('obx_box_count', [
-    OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+# OBX_C_API obx_err obx_box_is_empty(OBX_box* box, bool* out_is_empty);
+obx_box_is_empty = c_fn_rc('obx_box_is_empty', [OBX_box_p, ctypes.POINTER(ctypes.c_bool)])
+
+# OBX_C_API obx_err obx_box_count(OBX_box* box, uint64_t limit, uint64_t* out_count);
+obx_box_count = c_fn_rc('obx_box_count', [OBX_box_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
 
 # OBX_query_builder* obx_query_builder(OBX_store* store, obx_schema_id entity_id);
 obx_query_builder = c_fn('obx_query_builder', OBX_query_builder_p, [OBX_store_p, obx_schema_id])
