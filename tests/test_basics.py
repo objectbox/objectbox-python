@@ -12,7 +12,8 @@
 # limitations under the License.
 
 import objectbox
-from objectbox.c import NotFoundException, CoreException
+from objectbox.c import CoreException
+from objectbox.exceptions import NotFoundException
 from tests.common import create_test_store
 
 
