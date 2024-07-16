@@ -19,7 +19,8 @@ from objectbox.box import Box
 from objectbox.model.entity import Entity
 from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, HnswIndex, VectorDistanceType, HnswFlags
 from objectbox.model.model import Model
-from objectbox.c import DbException, CoreException, version_core, DebugFlags
+from objectbox.c import version_core, DebugFlags
+from objectbox.exceptions import StorageException
 from objectbox.version import Version
 from objectbox.condition import PropertyQueryCondition
 from objectbox.query import Query
@@ -66,7 +67,7 @@ __all__ = [
     'VectorDistanceType',
     'Store',
     'ObjectBox',
-    'CoreException',
+    'StorageException',
     'version',
     'version_info',
     'DebugFlags',

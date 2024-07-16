@@ -18,6 +18,7 @@ from objectbox.store import Store
 from objectbox.query_builder import QueryBuilder
 from objectbox.condition import QueryCondition
 from objectbox.c import *
+from objectbox.exceptions import StorageException
 
 
 class Box:
@@ -121,7 +122,7 @@ class Box:
             if code == 404:
                 return None
             elif code != 0:
-                raise CoreException(code)
+                raise StorageException.from_code(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
             return self._entity._unmarshal(data)
 
@@ -156,7 +157,7 @@ class Box:
         if code == 404:
             return False
         elif code != 0:
-            raise CoreException(code)
+            raise StorageException.from_code(code)
         return True
 
     def remove_all(self) -> int:

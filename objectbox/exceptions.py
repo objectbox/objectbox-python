@@ -1,206 +1,223 @@
 from typing import Dict, Type
 
-from objectbox.c import CoreException, CoreExceptionCode
+from objectbox.c import py_str, C, StorageErrorCode
 
 
-class NotFoundException(CoreException):
+class ObjectBoxException(Exception):
+    """The base class for all exceptions thrown by ObjectBox."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class StorageException(ObjectBoxException):
+    """The base class for all exceptions thrown by ObjectBox core.
+    Every exception has a code attribute for identification."""
+
+    code = StorageErrorCode.OBX_NO_SUCCESS  # Re-defined by derived classes
+
+    def __init__(self):
+        self.message = py_str(C.obx_last_error_message())
+        super().__init__("%d (%s) - %s" % (self.code.value, self.code.name, self.message))
+
+    @staticmethod
+    def from_code(code: int):
+        """Creates a StorageException of the given error code."""
+        return create_storage_exception(code)
+
+    @staticmethod
+    def last():
+        """Creates a StorageException of the last error that was generated in core."""
+        return StorageException.from_code(C.obx_last_error())
+
+
+class NotFoundException(StorageException):
     """Raised when an object is not found."""
-    code = CoreExceptionCode.OBX_NOT_FOUND
+    code = StorageErrorCode.OBX_NOT_FOUND
 
 
-class NoSuccessException(CoreException):
-    code = CoreExceptionCode.OBX_NO_SUCCESS
+class NoSuccessException(StorageException):
+    code = StorageErrorCode.OBX_NO_SUCCESS
 
 
-class TimeoutException(CoreException):
-    code = CoreExceptionCode.OBX_TIMEOUT
+class TimeoutException(StorageException):
+    code = StorageErrorCode.OBX_TIMEOUT
 
 
-class IllegalStateError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_ILLEGAL_STATE
+class IllegalStateError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_ILLEGAL_STATE
 
 
-class IllegalArgumentError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_ILLEGAL_ARGUMENT
+class IllegalArgumentError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_ILLEGAL_ARGUMENT
 
 
-class AllocationError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_ALLOCATION
+class AllocationError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_ALLOCATION
 
 
-class NumericOverflowError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_NUMERIC_OVERFLOW
+class NumericOverflowError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_NUMERIC_OVERFLOW
 
 
-class FeatureNotAvailable(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_FEATURE_NOT_AVAILABLE
+class FeatureNotAvailable(StorageException):
+    code = StorageErrorCode.OBX_ERROR_FEATURE_NOT_AVAILABLE
 
 
-class ShuttingDownError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_SHUTTING_DOWN
+class ShuttingDownError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_SHUTTING_DOWN
 
 
-class IoError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_IO
+class IoError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_IO
 
 
-class BackupFileInvalidError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_BACKUP_FILE_INVALID
+class BackupFileInvalidError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_BACKUP_FILE_INVALID
 
 
-class NoErrorInfoError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_NO_ERROR_INFO
+class NoErrorInfoError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_NO_ERROR_INFO
 
 
-class GeneralError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_GENERAL
+class GeneralError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_GENERAL
 
 
-class UnknownError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_UNKNOWN
+class UnknownError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_UNKNOWN
 
 
-class DbFullError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_DB_FULL
+class DbFullError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_DB_FULL
 
 
-class MaxReadersExceededError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_MAX_READERS_EXCEEDED
+class MaxReadersExceededError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_MAX_READERS_EXCEEDED
 
 
-class StoreMustShutdownError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STORE_MUST_SHUTDOWN
+class StoreMustShutdownError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STORE_MUST_SHUTDOWN
 
 
-class MaxDataSizeExceededError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_MAX_DATA_SIZE_EXCEEDED
+class MaxDataSizeExceededError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_MAX_DATA_SIZE_EXCEEDED
 
 
-class DbGeneralError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_DB_GENERAL
+class DbGeneralError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_DB_GENERAL
 
 
-class StorageGeneralError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STORAGE_GENERAL
+class StorageGeneralError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STORAGE_GENERAL
 
 
-class UniqueViolatedError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_UNIQUE_VIOLATED
+class UniqueViolatedError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_UNIQUE_VIOLATED
 
 
-class NonUniqueResultError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_NON_UNIQUE_RESULT
+class NonUniqueResultError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_NON_UNIQUE_RESULT
 
 
-class PropertyTypeMismatchError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_PROPERTY_TYPE_MISMATCH
+class PropertyTypeMismatchError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_PROPERTY_TYPE_MISMATCH
 
 
-class IdAlreadyExistsError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_ID_ALREADY_EXISTS
+class IdAlreadyExistsError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_ID_ALREADY_EXISTS
 
 
-class IdNotFoundError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_ID_NOT_FOUND
+class IdNotFoundError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_ID_NOT_FOUND
 
 
-class TimeSeriesError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_TIME_SERIES
+class TimeSeriesError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_TIME_SERIES
 
 
-class ConstraintViolatedError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_CONSTRAINT_VIOLATED
+class ConstraintViolatedError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_CONSTRAINT_VIOLATED
 
 
-class StdIllegalArgumentError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_ILLEGAL_ARGUMENT
+class StdIllegalArgumentError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_ILLEGAL_ARGUMENT
 
 
-class StdOutOfRangeError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_OUT_OF_RANGE
+class StdOutOfRangeError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_OUT_OF_RANGE
 
 
-class StdLengthError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_LENGTH
+class StdLengthError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_LENGTH
 
 
-class StdBadAllocError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_BAD_ALLOC
+class StdBadAllocError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_BAD_ALLOC
 
 
-class StdRangeError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_RANGE
+class StdRangeError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_RANGE
 
 
-class StdOverflowError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_OVERFLOW
+class StdOverflowError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_OVERFLOW
 
 
-class StdOtherError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_STD_OTHER
+class StdOtherError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_STD_OTHER
 
 
-class SchemaError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_SCHEMA
+class SchemaError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_SCHEMA
 
 
-class FileCorruptError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_FILE_CORRUPT
+class FileCorruptError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_FILE_CORRUPT
 
 
-class FilePagesCorruptError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_FILE_PAGES_CORRUPT
+class FilePagesCorruptError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_FILE_PAGES_CORRUPT
 
 
-class SchemaObjectNotFoundError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_SCHEMA_OBJECT_NOT_FOUND
+class SchemaObjectNotFoundError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_SCHEMA_OBJECT_NOT_FOUND
 
 
-class TreeModelInvalidError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_TREE_MODEL_INVALID
+class TreeModelInvalidError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_TREE_MODEL_INVALID
 
 
-class TreeValueTypeMismatchError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_TREE_VALUE_TYPE_MISMATCH
+class TreeValueTypeMismatchError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_TREE_VALUE_TYPE_MISMATCH
 
 
-class TreePathNonUniqueError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_TREE_PATH_NON_UNIQUE
+class TreePathNonUniqueError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_TREE_PATH_NON_UNIQUE
 
 
-class TreePathIllegalError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_TREE_PATH_ILLEGAL
+class TreePathIllegalError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_TREE_PATH_ILLEGAL
 
 
-class TreeOtherError(CoreException):
-    code = CoreExceptionCode.OBX_ERROR_TREE_OTHER
+class TreeOtherError(StorageException):
+    code = StorageErrorCode.OBX_ERROR_TREE_OTHER
 
 
-obx_core_exceptions_map: Dict[int, Type] = {}
+obx_storage_exceptions_map: Dict[int, Type] = {}
 
 
-def _init_core_exceptions_map():
-    import inspect
-    import sys
+def _init_storage_exceptions_map():
+    for subclass in StorageException.__subclasses__():
+        obx_storage_exceptions_map[subclass.code] = subclass
 
-    def is_core_exception_subclass(element_) -> bool:
-        valid = True
-        valid &= inspect.isclass(element_)
-        valid &= hasattr(element_, "code")
-        return valid
 
-    this_module = sys.modules[__name__]
-    for name, element in inspect.getmembers(this_module):
-        if is_core_exception_subclass(element):
-            obx_core_exceptions_map[element.code] = element
+_init_storage_exceptions_map()
 
 
-_init_core_exceptions_map()
-
-
-def create_core_exception(code: int) -> CoreException:
-    if code == CoreExceptionCode.OBX_SUCCESS:
-        raise Exception(f"Can't create a CoreException for code: OBX_SUCCESS")
-    elif code not in obx_core_exceptions_map:
-        raise Exception(f"Unrecognized CoreException code: {code}")
-    return obx_core_exceptions_map[code]()
+def create_storage_exception(code: int) -> StorageException:
+    if code == StorageErrorCode.OBX_SUCCESS:
+        raise Exception(f"Can't create a StorageException for code: OBX_SUCCESS")
+    elif code not in obx_storage_exceptions_map:
+        raise Exception(f"Unrecognized StorageException code: {code}")
+    return obx_storage_exceptions_map[code]()
