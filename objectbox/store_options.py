@@ -112,7 +112,10 @@ class StoreOptions:
     def async_object_bytes_max_size_to_cache(self, value: int):
         obx_opt_async_object_bytes_max_size_to_cache(self._c_handle, value)
 
-    # TODO def log_callback(self):
+    def log_callback(self, value: Callable[[OBXLogLevel, str],None]):
+        self._c_log_cb = obx_log_callback_fn(lambda level, message, size, userdata: value(level, message.decode('utf-8')))
+        obx_opt_log_callback(self._c_handle, self._c_log_cb, None)
+        return self
 
     def backup_restore(self, backup_file: str, flags: OBXBackupRestoreFlags):
         raise NotImplementedError  # TODO

@@ -55,6 +55,7 @@ class Store:
                  async_minor_refill_max_count: Optional[int] = None,
                  async_object_bytes_max_cache_size: Optional[int] = None,
                  async_object_bytes_max_size_to_cache: Optional[int] = None,
+                 log_callback: Callable[[c.OBXLogLevel, str],None] = None,
                  c_store: Optional[c.OBX_store_p] = None):
 
         """Opens an ObjectBox database Store
@@ -118,6 +119,8 @@ class Store:
             Total cache size. Defaults to 0.5 mega bytes.
         :param async_object_bytes_max_size_to_cache:
             Maximum size for an object to be cached.
+        :param log_callback:
+            Callback function for logging with the parameters, OBXLogLevel and message.
         :param c_store:
             Internal parameter for deprecated ObjectBox interface. Do not use it; other options would be ignored if passed.
         """
@@ -175,6 +178,8 @@ class Store:
                     options.async_object_bytes_max_cache_size(async_object_bytes_max_cache_size)
                 if async_object_bytes_max_size_to_cache is not None:
                     options.async_object_bytes_max_size_to_cache(async_object_bytes_max_size_to_cache)
+                if log_callback is not None:
+                    options.log_callback(log_callback)
 
             except c.CoreException:
                 options._free()

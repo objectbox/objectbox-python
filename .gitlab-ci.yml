@@ -58,6 +58,13 @@ test:linux:aarch64:
 
 test:mac:x64:
   extends: .test
+  script:
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+    - python3 -m pip install pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - pip3 install --force-reinstall dist/*.whl  # Artifacts from the previous stage (downloaded by default)
+    - python -m pytest
   tags: [mac, x64, shell, python3]
 
 test:windows:x64:

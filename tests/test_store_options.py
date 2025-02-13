@@ -78,3 +78,30 @@ def test_store_with_options():
         async_object_bytes_max_size_to_cache=100<<10
     )
     store.close()
+
+def test_log_callback():
+    Store.remove_db_files("testdata")
+    remove_json_model_file()
+    
+    log_entries = []
+
+    def mylog(level: OBXLogLevel, message: str):
+        levelText = "?"
+        if level == LogLevel.Debug:
+            levelText = "DEBUG"
+        print(f"MYLOG: {levelText} {message}")
+        log_entries.append( (level, message) )        
+
+    store = Store(
+        model=create_default_model(),
+        directory="testdata",
+        log_callback=mylog
+    )
+    
+    box = store.box(TestEntity)
+    assert len(log_entries) == 2
+    assert log_entries[0][0] == LogLevel.Debug
+    assert log_entries[0][1].startswith("Opening store:")
+    assert log_entries[1][0] == LogLevel.Debug
+    assert log_entries[1][1].startswith("Opening store:")
+    
