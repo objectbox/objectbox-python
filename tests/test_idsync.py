@@ -8,7 +8,7 @@ from objectbox.model.properties import Property, PropertyType
 from objectbox.model.entity import _Entity
 from objectbox.model.idsync import sync_model
 from objectbox.model.iduid import IdUid
-from objectbox.exceptions import StorageException
+from objectbox.exceptions import DbError
 from os import path
 
 from tests.common import remove_json_model_file
@@ -236,7 +236,7 @@ def test_entity_remove(env):
     assert box1.count() == 2
 
     # MyEntity2 is gone and should raise StorageException
-    with pytest.raises(StorageException):
+    with pytest.raises(DbError):
         box2 = store.box(MyEntity2)
 
 def test_entity_rename(env):
@@ -572,7 +572,7 @@ def test_models_named(env):
     # with pytest.raises(ValueError):
     #     store_a.box(EntityB)
 
-    with pytest.raises(StorageException):
+    with pytest.raises(DbError):
         store_a.box(EntityB2)
 
     box_b = store_b.box(EntityB)

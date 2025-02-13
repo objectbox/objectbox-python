@@ -256,7 +256,7 @@ C.obx_last_error_message.restype = ctypes.c_char_p
 C.obx_last_error_code.restype = obx_err
 
 
-class StorageErrorCode(IntEnum):
+class DbErrorCode(IntEnum):
     OBX_SUCCESS = 0
     OBX_NOT_FOUND = 404
     OBX_NO_SUCCESS = 1001
@@ -305,25 +305,25 @@ class StorageErrorCode(IntEnum):
 
 def check_obx_err(code: obx_err, func, args) -> obx_err:
     """ Raises an exception if obx_err is not successful. """
-    if code != StorageErrorCode.OBX_SUCCESS:
-        from objectbox.exceptions import create_storage_exception
-        raise create_storage_exception(code)
+    if code != DbErrorCode.OBX_SUCCESS:
+        from objectbox.exceptions import create_db_error
+        raise create_db_error(code)
     return code
 
 
 def check_obx_qb_cond(qb_cond: obx_qb_cond, func, args) -> obx_qb_cond:
     """ Raises an exception if obx_qb_cond is not successful. """
     if qb_cond == 0:
-        from objectbox.exceptions import create_storage_exception
-        raise create_storage_exception(C.obx_last_error_code())
+        from objectbox.exceptions import create_db_error
+        raise create_db_error(C.obx_last_error_code())
     return qb_cond
 
 
 # assert that the returned pointer/int is non-empty
 def check_result(result, func, args):
     if not result:
-        from objectbox.exceptions import create_storage_exception
-        raise create_storage_exception(C.obx_last_error_code())
+        from objectbox.exceptions import create_db_error
+        raise create_db_error(C.obx_last_error_code())
     return result
 
 
