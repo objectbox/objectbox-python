@@ -22,6 +22,7 @@ import objectbox.transaction
 from objectbox.model.idsync import sync_model
 from objectbox.store_options import StoreOptions
 import objectbox
+from objectbox.exceptions import DbError
 from objectbox.model.entity import _Entity
 from objectbox.model.model import Model
 from typing import *
@@ -181,7 +182,7 @@ class Store:
                 if log_callback is not None:
                     options.log_callback(log_callback)
 
-            except c.CoreException:
+            except DbError:
                 options._free()
                 raise
             self._c_store = c.obx_store_open(options._c_handle)

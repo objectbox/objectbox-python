@@ -94,32 +94,33 @@ class LogLevel(IntEnum):
     Warn    = 40
     Error   = 50
 
+
 class DebugFlags(IntEnum):
     """Debug flags"""
-    
+
     NONE = 0,
-    
+
     LOG_TRANSACTIONS_READ = 1,
     """ Log read transactions """
-    
+
     LOG_TRANSACTIONS_WRITE = 2,
     """ Log write transactions """
-    
+
     LOG_QUERIES = 3,
     """ Log queries """
-    
+
     LOG_QUERY_PARAMETERS = 8,
     """ Log query parameters """
-    
+
     LOG_ASYNC_QUEUE = 16,
     """ Log async queue """
-    
+
     LOG_CACHE_HITS = 32,
     """ Log cache hits """
-    
+
     LOG_CACHE_ALL = 64,
     """ Log cache hits """
-    
+
     LOG_TREE = 128
     """ Log tree operations """
 
@@ -255,82 +256,74 @@ C.obx_last_error_message.restype = ctypes.c_char_p
 C.obx_last_error_code.restype = obx_err
 
 
-class DbException(Exception):
-    """ Base class for database exceptions. """
-    pass
-
-
-# TODO rename?
-class CoreException(DbException):
-    """ A database exception having a ``code`` attribute for error details. """
-
-    codes = {
-        0: "SUCCESS",
-        404: "NOT_FOUND",
-        10001: "ILLEGAL_STATE",
-        10002: "ILLEGAL_ARGUMENT",
-        10003: "ALLOCATION",
-        10097: "NO_ERROR_INFO",
-        10098: "GENERAL",
-        10099: "UNKNOWN",
-        10101: "DB_FULL",
-        10102: "MAX_READERS_EXCEEDED",
-        10103: "STORE_MUST_SHUTDOWN",
-        10199: "STORAGE_GENERAL",
-        10201: "UNIQUE_VIOLATED",
-        10202: "NON_UNIQUE_RESULT",
-        10203: "PROPERTY_TYPE_MISMATCH",
-        10299: "CONSTRAINT_VIOLATED",
-        10301: "STD_ILLEGAL_ARGUMENT",
-        10302: "STD_OUT_OF_RANGE",
-        10303: "STD_LENGTH",
-        10304: "STD_BAD_ALLOC",
-        10305: "STD_RANGE",
-        10306: "STD_OVERFLOW",
-        10399: "STD_OTHER",
-        10501: "SCHEMA",
-        10502: "FILE_CORRUPT"
-    }
-
-    def __init__(self, code: int):
-        self.code = code
-        self.message = py_str(C.obx_last_error_message())
-        name = self.codes[code] if code in self.codes else "n/a"
-        super(CoreException, self).__init__("%d (%s) - %s" % (code, name, self.message))
-
-    @staticmethod
-    def last():
-        """ Creates a CoreException of the last error that was generated in core. """
-        return CoreException(C.obx_last_error())
-
-
-class NotFoundException(CoreException):
-    """ Raised when an object is not found. """
-
-    def __init__(self):
-        super().__init__(404)
+class DbErrorCode(IntEnum):
+    OBX_SUCCESS = 0
+    OBX_NOT_FOUND = 404
+    OBX_NO_SUCCESS = 1001
+    OBX_TIMEOUT = 1002
+    OBX_ERROR_ILLEGAL_STATE = 10001
+    OBX_ERROR_ILLEGAL_ARGUMENT = 10002
+    OBX_ERROR_ALLOCATION = 10003
+    OBX_ERROR_NUMERIC_OVERFLOW = 10004
+    OBX_ERROR_FEATURE_NOT_AVAILABLE = 10005
+    OBX_ERROR_SHUTTING_DOWN = 10006
+    OBX_ERROR_IO = 10007
+    OBX_ERROR_BACKUP_FILE_INVALID = 10008
+    OBX_ERROR_NO_ERROR_INFO = 10097
+    OBX_ERROR_GENERAL = 10098
+    OBX_ERROR_UNKNOWN = 10099
+    OBX_ERROR_DB_FULL = 10101
+    OBX_ERROR_MAX_READERS_EXCEEDED = 10102
+    OBX_ERROR_STORE_MUST_SHUTDOWN = 10103
+    OBX_ERROR_MAX_DATA_SIZE_EXCEEDED = 10104
+    OBX_ERROR_DB_GENERAL = 10198
+    OBX_ERROR_STORAGE_GENERAL = 10199
+    OBX_ERROR_UNIQUE_VIOLATED = 10201
+    OBX_ERROR_NON_UNIQUE_RESULT = 10202
+    OBX_ERROR_PROPERTY_TYPE_MISMATCH = 10203
+    OBX_ERROR_ID_ALREADY_EXISTS = 10210
+    OBX_ERROR_ID_NOT_FOUND = 10211
+    OBX_ERROR_TIME_SERIES = 10212
+    OBX_ERROR_CONSTRAINT_VIOLATED = 10299
+    OBX_ERROR_STD_ILLEGAL_ARGUMENT = 10301
+    OBX_ERROR_STD_OUT_OF_RANGE = 10302
+    OBX_ERROR_STD_LENGTH = 10303
+    OBX_ERROR_STD_BAD_ALLOC = 10304
+    OBX_ERROR_STD_RANGE = 10305
+    OBX_ERROR_STD_OVERFLOW = 10306
+    OBX_ERROR_STD_OTHER = 10399
+    OBX_ERROR_SCHEMA = 10501
+    OBX_ERROR_FILE_CORRUPT = 10502
+    OBX_ERROR_FILE_PAGES_CORRUPT = 10503
+    OBX_ERROR_SCHEMA_OBJECT_NOT_FOUND = 10504
+    OBX_ERROR_TREE_MODEL_INVALID = 10601
+    OBX_ERROR_TREE_VALUE_TYPE_MISMATCH = 10602
+    OBX_ERROR_TREE_PATH_NON_UNIQUE = 10603
+    OBX_ERROR_TREE_PATH_ILLEGAL = 10604
+    OBX_ERROR_TREE_OTHER = 10699
 
 
 def check_obx_err(code: obx_err, func, args) -> obx_err:
     """ Raises an exception if obx_err is not successful. """
-    if code == 404:
-        raise NotFoundException()
-    elif code != 0:
-        raise CoreException(code)
+    if code != DbErrorCode.OBX_SUCCESS:
+        from objectbox.exceptions import create_db_error
+        raise create_db_error(code)
     return code
 
 
-def check_obx_qb_cond(code: obx_qb_cond, func, args) -> obx_qb_cond:
+def check_obx_qb_cond(qb_cond: obx_qb_cond, func, args) -> obx_qb_cond:
     """ Raises an exception if obx_qb_cond is not successful. """
-    if code == 0:
-        raise CoreException(code)
-    return code
+    if qb_cond == 0:
+        from objectbox.exceptions import create_db_error
+        raise create_db_error(C.obx_last_error_code())
+    return qb_cond
 
 
 # assert that the returned pointer/int is non-empty
 def check_result(result, func, args):
     if not result:
-        raise CoreException(C.obx_last_error_code())
+        from objectbox.exceptions import create_db_error
+        raise create_db_error(C.obx_last_error_code())
     return result
 
 
@@ -411,10 +404,13 @@ def c_array_pointer(py_list: Union[List[Any], np.ndarray], c_type):
 
 
 # OBX_C_API float obx_vector_distance_float32(OBXVectorDistanceType type, const float* vector1, const float* vector2, size_t dimension);
-obx_vector_distance_float32 = c_fn("obx_vector_distance_float32", ctypes.c_float, [OBXVectorDistanceType, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
+obx_vector_distance_float32 = c_fn("obx_vector_distance_float32", ctypes.c_float,
+                                   [OBXVectorDistanceType, ctypes.POINTER(ctypes.c_float),
+                                    ctypes.POINTER(ctypes.c_float), ctypes.c_size_t])
 
 # OBX_C_API float obx_vector_distance_to_relevance(OBXVectorDistanceType type, float distance);
-obx_vector_distance_to_relevance = c_fn("obx_vector_distance_to_relevance", ctypes.c_float, [OBXVectorDistanceType, ctypes.c_float])
+obx_vector_distance_to_relevance = c_fn("obx_vector_distance_to_relevance", ctypes.c_float,
+                                        [OBXVectorDistanceType, ctypes.c_float])
 
 # OBX_model* (void);
 obx_model = c_fn('obx_model', OBX_model_p, [])
@@ -450,7 +446,8 @@ obx_model_property_index_hnsw_flags = \
     c_fn_rc('obx_model_property_index_hnsw_flags', [OBX_model_p, OBXHnswFlags])
 
 # obx_err obx_model_property_index_hnsw_distance_type(OBX_model* model, OBXVectorDistanceType value)
-obx_model_property_index_hnsw_distance_type = c_fn_rc('obx_model_property_index_hnsw_distance_type', [OBX_model_p, OBXVectorDistanceType])
+obx_model_property_index_hnsw_distance_type = c_fn_rc('obx_model_property_index_hnsw_distance_type',
+                                                      [OBX_model_p, OBXVectorDistanceType])
 
 # obx_err obx_model_property_index_hnsw_reparation_backlink_probability(OBX_model* model, float value)
 obx_model_property_index_hnsw_reparation_backlink_probability = \
@@ -504,10 +501,12 @@ obx_opt_model = c_fn_rc('obx_opt_model', [OBX_store_options_p, OBX_model_p])
 obx_opt_model_bytes = c_fn_rc('obx_opt_model_bytes', [OBX_store_options_p, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_opt_model_bytes_direct(OBX_store_options* opt, const void* bytes, size_t size);
-obx_opt_model_bytes_direct = c_fn_rc('obx_opt_model_bytes_direct', [OBX_store_options_p, ctypes.c_void_p, ctypes.c_size_t])
+obx_opt_model_bytes_direct = c_fn_rc('obx_opt_model_bytes_direct',
+                                     [OBX_store_options_p, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API void obx_opt_validate_on_open_pages(OBX_store_options* opt, size_t page_limit, uint32_t flags);
-obx_opt_validate_on_open_pages = c_fn('obx_opt_validate_on_open_pages', None, [OBX_store_options_p, ctypes.c_size_t, OBXValidateOnOpenPagesFlags])
+obx_opt_validate_on_open_pages = c_fn('obx_opt_validate_on_open_pages', None,
+                                      [OBX_store_options_p, ctypes.c_size_t, OBXValidateOnOpenPagesFlags])
 
 # OBX_C_API void obx_opt_validate_on_open_kv(OBX_store_options* opt, uint32_t flags);
 obx_opt_validate_on_open_kv = c_fn('obx_opt_validate_on_open_kv', None, [OBX_store_options_p, OBXValidateOnOpenKvFlags])
@@ -534,43 +533,53 @@ obx_opt_add_debug_flags = c_fn('obx_opt_add_debug_flags', None, [OBX_store_optio
 obx_opt_async_max_queue_length = c_fn('obx_opt_async_max_queue_length', None, [OBX_store_options_p, ctypes.c_size_t])
 
 # OBX_C_API void obx_opt_async_throttle_at_queue_length(OBX_store_options* opt, size_t value);
-obx_opt_async_throttle_at_queue_length = c_fn('obx_opt_async_throttle_at_queue_length', None, [OBX_store_options_p, ctypes.c_size_t])
+obx_opt_async_throttle_at_queue_length = c_fn('obx_opt_async_throttle_at_queue_length', None,
+                                              [OBX_store_options_p, ctypes.c_size_t])
 
 # OBX_C_API void obx_opt_async_throttle_micros(OBX_store_options* opt, uint32_t value);
 obx_opt_async_throttle_micros = c_fn('obx_opt_async_throttle_micros', None, [OBX_store_options_p, ctypes.c_uint32])
 
 # OBX_C_API void obx_opt_async_max_in_tx_duration(OBX_store_options* opt, uint32_t micros);
-obx_opt_async_max_in_tx_duration = c_fn('obx_opt_async_max_in_tx_duration', None, [OBX_store_options_p, ctypes.c_uint32])
+obx_opt_async_max_in_tx_duration = c_fn('obx_opt_async_max_in_tx_duration', None,
+                                        [OBX_store_options_p, ctypes.c_uint32])
 
 # OBX_C_API void obx_opt_async_max_in_tx_operations(OBX_store_options* opt, uint32_t value);
-obx_opt_async_max_in_tx_operations = c_fn('obx_opt_async_max_in_tx_operations', None, [OBX_store_options_p, ctypes.c_uint32])
+obx_opt_async_max_in_tx_operations = c_fn('obx_opt_async_max_in_tx_operations', None,
+                                          [OBX_store_options_p, ctypes.c_uint32])
 
 # OBX_C_API void obx_opt_async_pre_txn_delay(OBX_store_options* opt, uint32_t delay_micros);
 obx_opt_async_pre_txn_delay = c_fn('obx_opt_async_pre_txn_delay', None, [OBX_store_options_p, ctypes.c_uint32])
 
 # OBX_C_API void obx_opt_async_pre_txn_delay4(OBX_store_options* opt, uint32_t delay_micros, uint32_t delay2_micros, size_t min_queue_length_for_delay2);
-obx_opt_async_pre_txn_delay4 = c_fn('obx_opt_async_pre_txn_delay4', None, [OBX_store_options_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_size_t])
+obx_opt_async_pre_txn_delay4 = c_fn('obx_opt_async_pre_txn_delay4', None,
+                                    [OBX_store_options_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_size_t])
 
 # OBX_C_API void obx_opt_async_post_txn_delay(OBX_store_options* opt, uint32_t delay_micros);
 obx_opt_async_post_txn_delay = c_fn('obx_opt_async_post_txn_delay', None, [OBX_store_options_p, ctypes.c_uint32])
 
 # OBX_C_API void obx_opt_async_post_txn_delay5(OBX_store_options* opt, uint32_t delay_micros, uint32_t delay2_micros, size_t min_queue_length_for_delay2, bool subtract_processing_time);
-obx_opt_async_post_txn_delay5 = c_fn('obx_opt_async_post_txn_delay5', None, [OBX_store_options_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_size_t, ctypes.c_bool])
+obx_opt_async_post_txn_delay5 = c_fn('obx_opt_async_post_txn_delay5', None,
+                                     [OBX_store_options_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_size_t,
+                                      ctypes.c_bool])
 
 # OBX_C_API void obx_opt_async_minor_refill_threshold(OBX_store_options* opt, size_t queue_length);
-obx_opt_async_minor_refill_threshold = c_fn('obx_opt_async_minor_refill_threshold', None, [OBX_store_options_p, ctypes.c_size_t])
+obx_opt_async_minor_refill_threshold = c_fn('obx_opt_async_minor_refill_threshold', None,
+                                            [OBX_store_options_p, ctypes.c_size_t])
 
 # OBX_C_API void obx_opt_async_minor_refill_max_count(OBX_store_options* opt, uint32_t value);
-obx_opt_async_minor_refill_max_count = c_fn('obx_opt_async_minor_refill_max_count', None, [OBX_store_options_p, ctypes.c_uint32])
+obx_opt_async_minor_refill_max_count = c_fn('obx_opt_async_minor_refill_max_count', None,
+                                            [OBX_store_options_p, ctypes.c_uint32])
 
 # OBX_C_API void obx_opt_async_max_tx_pool_size(OBX_store_options* opt, size_t value);
 obx_opt_async_max_tx_pool_size = c_fn('obx_opt_async_max_tx_pool_size', None, [OBX_store_options_p, ctypes.c_size_t])
 
 # OBX_C_API void obx_opt_async_object_bytes_max_cache_size(OBX_store_options* opt, uint64_t value);
-obx_opt_async_object_bytes_max_cache_size = c_fn('obx_opt_async_object_bytes_max_cache_size', None, [OBX_store_options_p, ctypes.c_uint64])
+obx_opt_async_object_bytes_max_cache_size = c_fn('obx_opt_async_object_bytes_max_cache_size', None,
+                                                 [OBX_store_options_p, ctypes.c_uint64])
 
 # OBX_C_API void obx_opt_async_object_bytes_max_size_to_cache(OBX_store_options* opt, uint64_t value);
-obx_opt_async_object_bytes_max_size_to_cache = c_fn('obx_opt_async_object_bytes_max_size_to_cache', None, [OBX_store_options_p, ctypes.c_uint64])
+obx_opt_async_object_bytes_max_size_to_cache = c_fn('obx_opt_async_object_bytes_max_size_to_cache', None,
+                                                    [OBX_store_options_p, ctypes.c_uint64])
 
 #typedef void obx_log_callback(OBXLogLevel log_level, const char* message, size_t message_size, void* user_data);
 obx_log_callback_fn = ctypes.CFUNCTYPE(None, OBXLogLevel, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_voidp)
@@ -579,7 +588,8 @@ obx_log_callback_fn = ctypes.CFUNCTYPE(None, OBXLogLevel, ctypes.c_char_p, ctype
 obx_opt_log_callback = c_fn('obx_opt_log_callback', None, [OBX_store_options_p, obx_log_callback_fn, ctypes.c_voidp])
 
 # OBX_C_API void obx_opt_backup_restore(OBX_store_options* opt, const char* backup_file, uint32_t flags);
-obx_opt_backup_restore = c_fn('obx_opt_backup_restore', None, [OBX_store_options_p, ctypes.c_char_p, OBXBackupRestoreFlags])
+obx_opt_backup_restore = c_fn('obx_opt_backup_restore', None,
+                              [OBX_store_options_p, ctypes.c_char_p, OBXBackupRestoreFlags])
 
 # OBX_C_API const char* obx_opt_get_directory(OBX_store_options* opt);
 obx_opt_get_directory = c_fn('obx_opt_get_directory', ctypes.c_char_p, [OBX_store_options_p])

@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import objectbox
-from objectbox.c import NotFoundException, CoreException
+from objectbox.exceptions import DbError, NotFoundError
 from tests.common import create_test_store
 
 
@@ -37,6 +37,6 @@ def test_open():
 
 def test_not_found_exception():
     try:
-        raise NotFoundException()
-    except CoreException as e:
+        raise NotFoundError()
+    except DbError as e:
         assert e.code == 404
