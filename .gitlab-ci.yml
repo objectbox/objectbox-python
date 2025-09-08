@@ -69,6 +69,6 @@ test:mac:x64:
 
 test:windows:x64:
   extends: .test
-  tags: [windows, x64, shell, python3]
+  tags: [windows, x64, python]
   variables:
     PYTHON: "python.exe"
