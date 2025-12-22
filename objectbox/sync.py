@@ -1,0 +1,163 @@
+import ctypes
+import c as c
+from objectbox import Store
+from objectbox.c import c_array_pointer
+
+
+class SyncCredentials:
+
+    def __init__(self, credential_type: c.OBXSyncCredentialsType):
+        self.type = credential_type
+
+    @staticmethod
+    def none() -> 'SyncCredentials':
+        return SyncCredentialsNone()
+
+    @staticmethod
+    def shared_secret_string(secret: str) -> 'SyncCredentials':
+        return SyncCredentialsSecret(c.OBXSyncCredentialsType.SHARED_SECRET_SIPPED, secret.encode('utf-8'))
+
+    @staticmethod
+    def google_auth(secret: str) -> 'SyncCredentials':
+        return SyncCredentialsSecret(c.OBXSyncCredentialsType.GOOGLE_AUTH, secret.encode('utf-8'))
+
+    @staticmethod
+    def user_and_password(username: str, password: str) -> 'SyncCredentials':
+        return SyncCredentialsUserPassword(c.OBXSyncCredentialsType.USER_PASSWORD, username, password)
+
+    @staticmethod
+    def jwt_id_token(jwt_id_token: str) -> 'SyncCredentials':
+        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_ID, jwt_id_token.encode('utf-8'))
+
+    @staticmethod
+    def jwt_access_token(jwt_access_token: str) -> 'SyncCredentials':
+        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_ACCESS, jwt_access_token.encode('utf-8'))
+
+    @staticmethod
+    def jwt_refresh_token(jwt_refresh_token: str) -> 'SyncCredentials':
+        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_REFRESH, jwt_refresh_token.encode('utf-8'))
+
+    @staticmethod
+    def jwt_custom_token(jwt_custom_token: str) -> 'SyncCredentials':
+        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_CUSTOM, jwt_custom_token.encode('utf-8'))
+
+
+class SyncCredentialsNone(SyncCredentials):
+    def __init__(self):
+        super().__init__(c.OBXSyncCredentialsType.NONE)
+
+
+class SyncCredentialsSecret(SyncCredentials):
+    def __init__(self, credential_type: c.OBXSyncCredentialsType, secret: bytes):
+        super().__init__(credential_type)
+        self.secret = secret
+
+
+class SyncCredentialsUserPassword(SyncCredentials):
+    def __init__(self, credential_type: c.OBXSyncCredentialsType, username: str, password: str):
+        super().__init__(credential_type)
+        self.username = username
+        self.password = password
+
+
+class SyncState:
+    UNKNOWN = 'unknown'
+    CREATED = 'created'
+    STARTED = 'started'
+    CONNECTED = 'connected'
+    LOGGED_IN = 'logged_in'
+    DISCONNECTED = 'disconnected'
+    STOPPED = 'stopped'
+    DEAD = 'dead'
+
+
+class SyncRequestUpdatesMode:
+    MANUAL = 'manual'
+    AUTO = 'auto'
+    AUTO_NO_PUSHES = 'auto_no_pushes'
+
+
+class SyncConnectionEvent:
+    CONNECTED = 'connected'
+    DISCONNECTED = 'disconnected'
+
+
+class SyncLoginEvent:
+    LOGGED_IN = 'logged_in'
+    CREDENTIALS_REJECTED = 'credentials_rejected'
+    UNKNOWN_ERROR = 'unknown_error'
+
+
+class SyncChange:
+    def __init__(self, entity_id: int, entity: type, puts: list[int], removals: list[int]):
+        self.entity_id = entity_id
+        self.entity = entity
+        self.puts = puts
+        self.removals = removals
+
+
+class SyncClient:
+
+    def __init__(self, store: Store, server_urls: list[str], credentials: list[SyncCredentials],
+                 filter_variables: dict[str, str] | None = None):
+        if not server_urls:
+            raise ValueError("Provide at least one server URL")
+
+        if not Sync.is_available():
+            raise RuntimeError(
+                'Sync is not available in the loaded ObjectBox runtime library. '
+                'Please visit https://objectbox.io/sync/ for options.')
+
+        self.__store = store
+        self.__server_urls = server_urls
+        self.__credentials = credentials
+
+        self.__c_sync_client_ptr = c.obx_sync_urls(store.c_store(), c_array_pointer(server_urls, ctypes.c_char_p),
+                                                   len(server_urls))
+
+    def set_credentials(self, credentials: SyncCredentials):
+        if isinstance(credentials, SyncCredentialsNone):
+            c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type, None, 0)
+        elif isinstance(credentials, SyncCredentialsUserPassword):
+            c.obx_sync_credentials_user_password(self.__c_sync_client_ptr,
+                                                 credentials.type,
+                                                 credentials.username.encode('utf-8'),
+                                                 credentials.password.encode('utf-8'))
+        elif isinstance(credentials, SyncCredentialsSecret):
+            c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type,
+                                   credentials.secret,
+                                   len(credentials.secret))
+
+    def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
+        if mode == SyncRequestUpdatesMode.MANUAL:
+            c_mode = c.OBXRequestUpdatesMode.MANUAL
+        elif mode == SyncRequestUpdatesMode.AUTO:
+            c_mode = c.OBXRequestUpdatesMode.AUTO
+        elif mode == SyncRequestUpdatesMode.AUTO_NO_PUSHES:
+            c_mode = c.OBXRequestUpdatesMode.AUTO_NO_PUSHES
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
+        c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, c_mode)
+
+    def start(self):
+        c.obx_sync_start(self.__c_sync_client_ptr)
+
+    def stop(self):
+        c.obx_sync_stop(self.__c_sync_client_ptr)
+
+    def trigger_reconnect(self) -> bool:
+        return c.check_obx_success(c.obx_sync_trigger_reconnect(self.__c_sync_client_ptr))
+
+    @staticmethod
+    def protocol_version() -> int:
+        return c.obx_sync_protocol_version()
+
+    def protocol_server_version(self) -> int:
+        return c.obx_sync_protocol_version_server(self.__c_sync_client_ptr)
+
+    def close(self):
+        c.obx_sync_close(self.__c_sync_client_ptr)
+        self.__c_sync_client_ptr = None
+
+    def is_closed(self) -> bool:
+        return self.__c_sync_client_ptr is None

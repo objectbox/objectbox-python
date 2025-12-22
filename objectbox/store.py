@@ -285,3 +285,6 @@ class Store:
             Path to DB directory.
         """
         c.obx_remove_db_files(c.c_str(db_dir))
+
+    def c_store(self):
+        return self._c_store

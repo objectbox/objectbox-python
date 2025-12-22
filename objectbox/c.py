@@ -251,6 +251,123 @@ class OBX_query(ctypes.Structure):
 
 OBX_query_p = ctypes.POINTER(OBX_query)
 
+
+# Sync types
+class OBX_sync(ctypes.Structure):
+    pass
+
+
+OBX_sync_p = ctypes.POINTER(OBX_sync)
+
+
+class OBX_sync_server(ctypes.Structure):
+    pass
+
+
+OBX_sync_server_p = ctypes.POINTER(OBX_sync_server)
+
+
+class OBXSyncCredentialsType(IntEnum):
+    NONE = 1
+    SHARED_SECRET = 2  # Deprecated, use SHARED_SECRET_SIPPED instead
+    GOOGLE_AUTH = 3
+    SHARED_SECRET_SIPPED = 4  # Uses shared secret to create a hashed credential
+    OBX_ADMIN_USER = 5  # ObjectBox admin users (username/password)
+    USER_PASSWORD = 6  # Generic credential type for admin users
+    JWT_ID = 7  # JSON Web Token (JWT): ID token with user identity
+    JWT_ACCESS = 8  # JSON Web Token (JWT): access token for resources
+    JWT_REFRESH = 9  # JSON Web Token (JWT): refresh token
+    JWT_CUSTOM = 10  # JSON Web Token (JWT): custom token type
+
+
+class OBXRequestUpdatesMode(IntEnum):
+    MANUAL = 0  # No updates by default, must call obx_sync_updates_request() manually
+    AUTO = 1  # Same as calling obx_sync_updates_request(sync, TRUE)
+    AUTO_NO_PUSHES = 2  # Same as calling obx_sync_updates_request(sync, FALSE)
+
+
+class OBXSyncState(IntEnum):
+    CREATED = 1
+    STARTED = 2
+    CONNECTED = 3
+    LOGGED_IN = 4
+    DISCONNECTED = 5
+    STOPPED = 6
+    DEAD = 7
+
+
+class OBXSyncCode(IntEnum):
+    OK = 20
+    REQ_REJECTED = 40
+    CREDENTIALS_REJECTED = 43
+    UNKNOWN = 50
+    AUTH_UNREACHABLE = 53
+    BAD_VERSION = 55
+    CLIENT_ID_TAKEN = 61
+    TX_VIOLATED_UNIQUE = 71
+
+
+class OBXSyncError(IntEnum):
+    REJECT_TX_NO_PERMISSION = 1  # Sync client received rejection of transaction writes due to missing permissions
+
+
+class OBXSyncObjectType(IntEnum):
+    FlatBuffers = 1
+    String = 2
+    Raw = 3
+
+
+class OBX_sync_change(ctypes.Structure):
+    _fields_ = [
+        ('entity_id', obx_schema_id),
+        ('puts', ctypes.POINTER(OBX_id_array)),
+        ('removals', ctypes.POINTER(OBX_id_array)),
+    ]
+
+
+class OBX_sync_change_array(ctypes.Structure):
+    _fields_ = [
+        ('list', ctypes.POINTER(OBX_sync_change)),
+        ('count', ctypes.c_size_t),
+    ]
+
+
+class OBX_sync_object(ctypes.Structure):
+    _fields_ = [
+        ('type', ctypes.c_int),  # OBXSyncObjectType
+        ('id', ctypes.c_uint64),
+        ('data', ctypes.c_void_p),
+        ('size', ctypes.c_size_t),
+    ]
+
+
+class OBX_sync_msg_objects(ctypes.Structure):
+    _fields_ = [
+        ('topic', ctypes.c_void_p),
+        ('topic_size', ctypes.c_size_t),
+        ('objects', ctypes.POINTER(OBX_sync_object)),
+        ('count', ctypes.c_size_t),
+    ]
+
+
+class OBX_sync_msg_objects_builder(ctypes.Structure):
+    pass
+
+
+OBX_sync_msg_objects_builder_p = ctypes.POINTER(OBX_sync_msg_objects_builder)
+
+# Define callback types for sync listeners
+OBX_sync_listener_connect = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_disconnect = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_login = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_login_failure = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncCode
+OBX_sync_listener_complete = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_error = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncError
+OBX_sync_listener_change = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_change_array))
+OBX_sync_listener_server_time = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int64)
+OBX_sync_listener_msg_objects = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_msg_objects))
+
+
 # manually configure error methods, we can't use `fn()` defined below yet due to circular dependencies
 C.obx_last_error_message.restype = ctypes.c_char_p
 C.obx_last_error_code.restype = obx_err
@@ -310,6 +427,11 @@ def check_obx_err(code: obx_err, func, args) -> obx_err:
         raise create_db_error(code)
     return code
 
+def check_obx_success(code: obx_err) -> bool:
+    if code == DbErrorCode.OBX_NO_SUCCESS:
+        return False
+    check_obx_err(code, None, None)
+    return True
 
 def check_obx_qb_cond(qb_cond: obx_qb_cond, func, args) -> obx_qb_cond:
     """ Raises an exception if obx_qb_cond is not successful. """
@@ -1068,3 +1190,30 @@ OBXValidateOnOpenKvFlags_None = 0
 
 OBXBackupRestoreFlags_None = 0
 OBXBackupRestoreFlags_OverwriteExistingData = 1
+
+obx_sync = c_fn("obx_sync", obx_err, [OBX_store_p, ctypes.c_char_p])
+obx_sync_urls = c_fn("obx_sync_urls", obx_err, [OBX_store_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t])
+
+
+obx_sync_credentials = c_fn_rc('obx_sync_credentials',
+                                [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t])
+obx_sync_credentials_user_password = c_fn_rc('obx_sync_credentials_user_password',
+                                               [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_char_p,
+                                                ctypes.c_char_p])
+obx_sync_credentials_add = c_fn_rc('obx_sync_credentials_add',
+                                    [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool])
+obx_sync_credentials_add_user_password = c_fn_rc('obx_sync_credentials_add_user_password',
+                                                   [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_char_p, ctypes.c_char_p,
+                                                    ctypes.c_bool])
+
+obx_sync_request_updates_mode = c_fn_rc('obx_sync_request_updates_mode', [OBX_sync_p, OBXRequestUpdatesMode])
+
+obx_sync_start = c_fn_rc('obx_sync_start', [OBX_sync_p])
+obx_sync_stop = c_fn_rc('obx_sync_stop', [OBX_sync_p])
+
+obx_sync_trigger_reconnect = c_fn_rc('obx_sync_trigger_reconnect', [OBX_sync_p])
+
+obx_sync_protocol_version = c_fn('obx_sync_protocol_version', ctypes.c_uint32, [])
+obx_sync_protocol_version_server = c_fn('obx_sync_protocol_version_server', ctypes.c_uint32, [OBX_sync_p])
+
+obx_sync_close = c_fn_rc('obx_sync_close', [OBX_sync_p])
