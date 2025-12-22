@@ -9,7 +9,7 @@ from build_info import clib_version
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
 version = "v" + clib_version()  # i.e. objectbox/c.py required_version
-variant = 'objectbox'  # or 'objectbox-sync'
+variant = 'objectbox-sync'  # or 'objectbox-sync'
 
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 

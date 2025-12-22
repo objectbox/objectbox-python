@@ -140,6 +140,7 @@ class Store:
 
         self._c_store = None
         self._c_log_callback = None
+        self._close_listeners: list[Callable[[], None]] = []
         if not c_store:
             options = StoreOptions()
             try:
@@ -323,6 +324,9 @@ class Store:
 
     def close(self):
         """Close database."""
+        for listener in self._close_listeners:
+            listener()
+        self._close_listeners.clear()
         c_store_to_close = self._c_store
         if c_store_to_close:
             self._c_store = None
@@ -336,3 +340,9 @@ class Store:
             Path to DB directory.
         """
         c.obx_remove_db_files(c.c_str(db_dir))
+
+    def c_store(self):
+        return self._c_store
+
+    def add_store_close_listener(self, on_store_close: Callable[[], None]):
+        self._close_listeners.append(on_store_close)
