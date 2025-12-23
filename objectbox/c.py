@@ -27,7 +27,7 @@ from enum import IntEnum
 
 # Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
 # Don't forget to update download-c-lib.py when upgrading to a newer version.
-required_version = "4.0.0"
+required_version = "5.0.0"
 
 
 def shlib_name(library: str) -> str:
@@ -266,8 +266,12 @@ class OBX_sync_server(ctypes.Structure):
 
 OBX_sync_server_p = ctypes.POINTER(OBX_sync_server)
 
+OBXSyncCredentialsType = ctypes.c_int
+OBXRequestUpdatesMode = ctypes.c_int
+OBXSyncState = ctypes.c_int
+OBXSyncCode = ctypes.c_int
 
-class OBXSyncCredentialsType(IntEnum):
+class SyncCredentialsType(IntEnum):
     NONE = 1
     SHARED_SECRET = 2  # Deprecated, use SHARED_SECRET_SIPPED instead
     GOOGLE_AUTH = 3
@@ -280,13 +284,13 @@ class OBXSyncCredentialsType(IntEnum):
     JWT_CUSTOM = 10  # JSON Web Token (JWT): custom token type
 
 
-class OBXRequestUpdatesMode(IntEnum):
+class RequestUpdatesMode(IntEnum):
     MANUAL = 0  # No updates by default, must call obx_sync_updates_request() manually
     AUTO = 1  # Same as calling obx_sync_updates_request(sync, TRUE)
     AUTO_NO_PUSHES = 2  # Same as calling obx_sync_updates_request(sync, FALSE)
 
 
-class OBXSyncState(IntEnum):
+class SyncState(IntEnum):
     CREATED = 1
     STARTED = 2
     CONNECTED = 3
@@ -296,7 +300,7 @@ class OBXSyncState(IntEnum):
     DEAD = 7
 
 
-class OBXSyncCode(IntEnum):
+class SyncCode(IntEnum):
     OK = 20
     REQ_REJECTED = 40
     CREDENTIALS_REJECTED = 43
@@ -1191,20 +1195,22 @@ OBXValidateOnOpenKvFlags_None = 0
 OBXBackupRestoreFlags_None = 0
 OBXBackupRestoreFlags_OverwriteExistingData = 1
 
-obx_sync = c_fn("obx_sync", obx_err, [OBX_store_p, ctypes.c_char_p])
-obx_sync_urls = c_fn("obx_sync_urls", obx_err, [OBX_store_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t])
+obx_sync = c_fn("obx_sync", OBX_sync_p, [OBX_store_p, ctypes.c_char_p])
+obx_sync_urls = c_fn("obx_sync_urls", OBX_sync_p, [OBX_store_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t])
 
 
 obx_sync_credentials = c_fn_rc('obx_sync_credentials',
-                                [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t])
+                               [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t])
 obx_sync_credentials_user_password = c_fn_rc('obx_sync_credentials_user_password',
                                                [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_char_p,
                                                 ctypes.c_char_p])
 obx_sync_credentials_add = c_fn_rc('obx_sync_credentials_add',
-                                    [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool])
+                                   [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool])
 obx_sync_credentials_add_user_password = c_fn_rc('obx_sync_credentials_add_user_password',
                                                    [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_char_p, ctypes.c_char_p,
                                                     ctypes.c_bool])
+
+obx_sync_state = c_fn('obx_sync_state', OBXSyncState, [OBX_sync_p])
 
 obx_sync_request_updates_mode = c_fn_rc('obx_sync_request_updates_mode', [OBX_sync_p, OBXRequestUpdatesMode])
 

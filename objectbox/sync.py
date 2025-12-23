@@ -1,12 +1,11 @@
 import ctypes
-import c as c
+import objectbox.c as c
 from objectbox import Store
-from objectbox.c import c_array_pointer
-
+from enum import Enum, auto
 
 class SyncCredentials:
 
-    def __init__(self, credential_type: c.OBXSyncCredentialsType):
+    def __init__(self, credential_type: c.SyncCredentialsType):
         self.type = credential_type
 
     @staticmethod
@@ -15,60 +14,60 @@ class SyncCredentials:
 
     @staticmethod
     def shared_secret_string(secret: str) -> 'SyncCredentials':
-        return SyncCredentialsSecret(c.OBXSyncCredentialsType.SHARED_SECRET_SIPPED, secret.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.SHARED_SECRET_SIPPED, secret.encode('utf-8'))
 
     @staticmethod
     def google_auth(secret: str) -> 'SyncCredentials':
-        return SyncCredentialsSecret(c.OBXSyncCredentialsType.GOOGLE_AUTH, secret.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.GOOGLE_AUTH, secret.encode('utf-8'))
 
     @staticmethod
     def user_and_password(username: str, password: str) -> 'SyncCredentials':
-        return SyncCredentialsUserPassword(c.OBXSyncCredentialsType.USER_PASSWORD, username, password)
+        return SyncCredentialsUserPassword(c.SyncCredentialsType.USER_PASSWORD, username, password)
 
     @staticmethod
     def jwt_id_token(jwt_id_token: str) -> 'SyncCredentials':
-        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_ID, jwt_id_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_ID, jwt_id_token.encode('utf-8'))
 
     @staticmethod
     def jwt_access_token(jwt_access_token: str) -> 'SyncCredentials':
-        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_ACCESS, jwt_access_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_ACCESS, jwt_access_token.encode('utf-8'))
 
     @staticmethod
     def jwt_refresh_token(jwt_refresh_token: str) -> 'SyncCredentials':
-        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_REFRESH, jwt_refresh_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_REFRESH, jwt_refresh_token.encode('utf-8'))
 
     @staticmethod
     def jwt_custom_token(jwt_custom_token: str) -> 'SyncCredentials':
-        return SyncCredentialsSecret(c.OBXSyncCredentialsType.JWT_CUSTOM, jwt_custom_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_CUSTOM, jwt_custom_token.encode('utf-8'))
 
 
 class SyncCredentialsNone(SyncCredentials):
     def __init__(self):
-        super().__init__(c.OBXSyncCredentialsType.NONE)
+        super().__init__(c.SyncCredentialsType.NONE)
 
 
 class SyncCredentialsSecret(SyncCredentials):
-    def __init__(self, credential_type: c.OBXSyncCredentialsType, secret: bytes):
+    def __init__(self, credential_type: c.SyncCredentialsType, secret: bytes):
         super().__init__(credential_type)
         self.secret = secret
 
 
 class SyncCredentialsUserPassword(SyncCredentials):
-    def __init__(self, credential_type: c.OBXSyncCredentialsType, username: str, password: str):
+    def __init__(self, credential_type: c.SyncCredentialsType, username: str, password: str):
         super().__init__(credential_type)
         self.username = username
         self.password = password
 
 
-class SyncState:
-    UNKNOWN = 'unknown'
-    CREATED = 'created'
-    STARTED = 'started'
-    CONNECTED = 'connected'
-    LOGGED_IN = 'logged_in'
-    DISCONNECTED = 'disconnected'
-    STOPPED = 'stopped'
-    DEAD = 'dead'
+class SyncState(Enum):
+    UNKNOWN = auto()
+    CREATED = auto()
+    STARTED = auto()
+    CONNECTED = auto()
+    LOGGED_IN = auto()
+    DISCONNECTED = auto()
+    STOPPED = auto()
+    DEAD = auto()
 
 
 class SyncRequestUpdatesMode:
@@ -103,16 +102,18 @@ class SyncClient:
         if not server_urls:
             raise ValueError("Provide at least one server URL")
 
-        if not Sync.is_available():
-            raise RuntimeError(
-                'Sync is not available in the loaded ObjectBox runtime library. '
-                'Please visit https://objectbox.io/sync/ for options.')
+        # TODO: Implement sync availability check
+        # if not c.Sync.is_available():
+        #     raise RuntimeError(
+        #         'Sync is not available in the loaded ObjectBox runtime library. '
+        #         'Please visit https://objectbox.io/sync/ for options.')
 
         self.__store = store
         self.__server_urls = server_urls
         self.__credentials = credentials
 
-        self.__c_sync_client_ptr = c.obx_sync_urls(store.c_store(), c_array_pointer(server_urls, ctypes.c_char_p),
+        server_urls = [url.encode('utf-8') for url in server_urls]
+        self.__c_sync_client_ptr = c.obx_sync_urls(store.c_store(), c.c_array_pointer(server_urls, ctypes.c_char_p),
                                                    len(server_urls))
 
     def set_credentials(self, credentials: SyncCredentials):
@@ -130,14 +131,33 @@ class SyncClient:
 
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
         if mode == SyncRequestUpdatesMode.MANUAL:
-            c_mode = c.OBXRequestUpdatesMode.MANUAL
+            c_mode = c.RequestUpdatesMode.MANUAL
         elif mode == SyncRequestUpdatesMode.AUTO:
-            c_mode = c.OBXRequestUpdatesMode.AUTO
+            c_mode = c.RequestUpdatesMode.AUTO
         elif mode == SyncRequestUpdatesMode.AUTO_NO_PUSHES:
-            c_mode = c.OBXRequestUpdatesMode.AUTO_NO_PUSHES
+            c_mode = c.RequestUpdatesMode.AUTO_NO_PUSHES
         else:
             raise ValueError(f"Invalid mode: {mode}")
         c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, c_mode)
+
+    def get_sync_state(self) -> SyncState:
+        c_state = c.obx_sync_state(self.__c_sync_client_ptr)
+        if c_state == c.SyncState.CREATED:
+            return SyncState.CREATED
+        elif c_state == c.SyncState.STARTED:
+            return SyncState.STARTED
+        elif c_state == c.SyncState.CONNECTED:
+            return SyncState.CONNECTED
+        elif c_state == c.SyncState.LOGGED_IN:
+            return SyncState.LOGGED_IN
+        elif c_state == c.SyncState.DISCONNECTED:
+            return SyncState.DISCONNECTED
+        elif c_state == c.SyncState.STOPPED:
+            return SyncState.STOPPED
+        elif c_state == c.SyncState.DEAD:
+            return SyncState.DEAD
+        else:
+            return SyncState.UNKNOWN
 
     def start(self):
         c.obx_sync_start(self.__c_sync_client_ptr)
