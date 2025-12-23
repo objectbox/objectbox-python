@@ -6,8 +6,8 @@ import os
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
-version = "v4.0.0"  # see objectbox/c.py required_version
-variant = 'objectbox'  # or 'objectbox-sync'
+version = "v5.0.0"  # see objectbox/c.py required_version
+variant = 'objectbox-sync'  # or 'objectbox-sync'
 
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 
@@ -21,7 +21,7 @@ files = {
     "x86_64/libobjectbox.so": "linux-x64.tar.gz",
     "aarch64/libobjectbox.so": "linux-aarch64.tar.gz",
     "armv7l/libobjectbox.so": "linux-armv7hf.tar.gz",
-    "armv6l/libobjectbox.so": "linux-armv6hf.tar.gz",
+    #"armv6l/libobjectbox.so": "linux-armv6hf.tar.gz",
 
     # mac
     "macos-universal/libobjectbox.dylib": "macos-universal.zip",
