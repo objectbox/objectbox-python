@@ -299,18 +299,6 @@ class SyncState(IntEnum):
     STOPPED = 6
     DEAD = 7
 
-
-class SyncCode(IntEnum):
-    OK = 20
-    REQ_REJECTED = 40
-    CREDENTIALS_REJECTED = 43
-    UNKNOWN = 50
-    AUTH_UNREACHABLE = 53
-    BAD_VERSION = 55
-    CLIENT_ID_TAKEN = 61
-    TX_VIOLATED_UNIQUE = 71
-
-
 class OBXSyncError(IntEnum):
     REJECT_TX_NO_PERMISSION = 1  # Sync client received rejection of transaction writes due to missing permissions
 
@@ -1223,3 +1211,11 @@ obx_sync_protocol_version = c_fn('obx_sync_protocol_version', ctypes.c_uint32, [
 obx_sync_protocol_version_server = c_fn('obx_sync_protocol_version_server', ctypes.c_uint32, [OBX_sync_p])
 
 obx_sync_close = c_fn_rc('obx_sync_close', [OBX_sync_p])
+
+obx_sync_listener_connect = c_fn('obx_sync_listener_connect', None, [OBX_sync_p, OBX_sync_listener_connect, ctypes.c_void_p])
+obx_sync_listener_disconnect = c_fn('obx_sync_listener_disconnect', None, [OBX_sync_p, OBX_sync_listener_disconnect, ctypes.c_void_p])
+obx_sync_listener_login = c_fn('obx_sync_listener_login', None, [OBX_sync_p, OBX_sync_listener_login, ctypes.c_void_p])
+obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None, [OBX_sync_p, OBX_sync_listener_login_failure, ctypes.c_void_p])
+obx_sync_listener_error = c_fn('obx_sync_listener_error', None, [OBX_sync_p, OBX_sync_listener_error, ctypes.c_void_p])
+
+obx_sync_wait_for_logged_in_state = c_fn_rc('obx_sync_wait_for_logged_in_state', [OBX_sync_p, ctypes.c_uint64])

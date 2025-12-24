@@ -1,7 +1,13 @@
 import ctypes
+from collections.abc import Callable
+from ctypes import c_void_p
+
 import objectbox.c as c
 from objectbox import Store
-from enum import Enum, auto
+from enum import Enum, auto, IntEnum
+
+from objectbox.c import OBX_sync_listener_login
+
 
 class SyncCredentials:
 
@@ -86,6 +92,15 @@ class SyncLoginEvent:
     CREDENTIALS_REJECTED = 'credentials_rejected'
     UNKNOWN_ERROR = 'unknown_error'
 
+class SyncCode(IntEnum):
+    OK = 20
+    REQ_REJECTED = 40
+    CREDENTIALS_REJECTED = 43
+    UNKNOWN = 50
+    AUTH_UNREACHABLE = 53
+    BAD_VERSION = 55
+    CLIENT_ID_TAKEN = 61
+    TX_VIOLATED_UNIQUE = 71
 
 class SyncChange:
     def __init__(self, entity_id: int, entity: type, puts: list[int], removals: list[int]):
@@ -94,11 +109,36 @@ class SyncChange:
         self.puts = puts
         self.removals = removals
 
+class SyncLoginListener:
+
+    def on_logged_in(self):
+        pass
+
+    def on_login_failed(self, sync_login_code: SyncCode):
+        pass
+
+class SyncConnectionListener:
+
+    def on_connected(self):
+        pass
+
+    def on_disconnected(self):
+        pass
+
+class SyncErrorListener:
+
+    def on_error(self, sync_error_code: int):
+        pass
 
 class SyncClient:
 
-    def __init__(self, store: Store, server_urls: list[str], credentials: list[SyncCredentials],
+    def __init__(self, store: Store, server_urls: list[str],
                  filter_variables: dict[str, str] | None = None):
+        self.__c_login_listener = None
+        self.__c_login_failure_listener = None
+        self.__c_connect_listener = None
+        self.__c_disconnect_listener = None
+        self.__c_error_listener = None
         if not server_urls:
             raise ValueError("Provide at least one server URL")
 
@@ -109,14 +149,13 @@ class SyncClient:
         #         'Please visit https://objectbox.io/sync/ for options.')
 
         self.__store = store
-        self.__server_urls = server_urls
-        self.__credentials = credentials
+        self.__server_urls = [url.encode('utf-8') for url in server_urls]
 
-        server_urls = [url.encode('utf-8') for url in server_urls]
-        self.__c_sync_client_ptr = c.obx_sync_urls(store.c_store(), c.c_array_pointer(server_urls, ctypes.c_char_p),
-                                                   len(server_urls))
+        self.__c_sync_client_ptr = c.obx_sync_urls(store.c_store(), c.c_array_pointer(self.__server_urls, ctypes.c_char_p),
+                                                   len(self.__server_urls))
 
     def set_credentials(self, credentials: SyncCredentials):
+        self.__credentials = credentials
         if isinstance(credentials, SyncCredentialsNone):
             c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type, None, 0)
         elif isinstance(credentials, SyncCredentialsUserPassword):
@@ -181,3 +220,42 @@ class SyncClient:
 
     def is_closed(self) -> bool:
         return self.__c_sync_client_ptr is None
+
+    def set_login_listener(self, login_listener: SyncLoginListener):
+        self.__c_login_listener = c.OBX_sync_listener_login(lambda arg: login_listener.on_logged_in())
+        self.__c_login_failure_listener = c.OBX_sync_listener_login_failure(lambda arg, sync_login_code: login_listener.on_login_failed(sync_login_code))
+        c.obx_sync_listener_login(
+            self.__c_sync_client_ptr,
+            self.__c_login_listener,
+            None
+        )
+        c.obx_sync_listener_login_failure(
+            self.__c_sync_client_ptr,
+            self.__c_login_failure_listener,
+            None
+        )
+
+    def set_connection_listener(self, connection_listener: SyncConnectionListener):
+        self.__c_connect_listener = c.OBX_sync_listener_connect(lambda arg: connection_listener.on_connected())
+        self.__c_disconnect_listener = c.OBX_sync_listener_disconnect(lambda arg: connection_listener.on_disconnected())
+        c.obx_sync_listener_connect(
+            self.__c_sync_client_ptr,
+            self.__c_connect_listener,
+            None
+        )
+        c.obx_sync_listener_disconnect(
+            self.__c_sync_client_ptr,
+            self.__c_disconnect_listener,
+            None
+        )
+
+    def set_error_listener(self, error_listener: SyncErrorListener):
+        self.__c_error_listener = c.OBX_sync_listener_error(lambda arg, sync_error_code: error_listener.on_error(sync_error_code))
+        c.obx_sync_listener_error(
+            self.__c_sync_client_ptr,
+            self.__c_error_listener,
+            None
+        )
+
+    def wait_for_logged_in_state(self, timeout_millis: int):
+        c.obx_sync_wait_for_logged_in_state(self.__c_sync_client_ptr, timeout_millis)
