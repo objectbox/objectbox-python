@@ -273,7 +273,7 @@ class Store:
 
     def close(self):
         """Close database."""
-        for listener in self._close_listeners.values():
+        for listener in self._close_listeners:
             listener()
         self._close_listeners.clear()
         c_store_to_close = self._c_store
