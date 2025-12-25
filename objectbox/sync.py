@@ -156,6 +156,14 @@ class SyncClient:
                                                    c.c_array_pointer(self.__server_urls, ctypes.c_char_p),
                                                    len(self.__server_urls))
 
+        self.__store.add_store_close_listener(on_store_close=self.__close_sync_client_func())
+
+    def __close_sync_client_func(self):
+        def close_sync_client():
+            self.close()
+
+        return close_sync_client
+
     def set_credentials(self, credentials: SyncCredentials):
         self.__credentials = credentials
         if isinstance(credentials, SyncCredentialsNone):

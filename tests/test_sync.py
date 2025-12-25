@@ -95,3 +95,12 @@ def test_multiple_credentials(test_store):
         SyncCredentials.jwt_refresh_token("token3"),
         SyncCredentials.jwt_custom_token("token4")
     ])
+
+
+def test_client_closed_when_store_closed(test_store):
+    server_urls = ["ws://localhost:9999"]
+    client = SyncClient(test_store, server_urls)
+
+    assert not client.is_closed()
+    test_store.close()
+    assert client.is_closed()
