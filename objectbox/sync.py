@@ -155,6 +155,9 @@ class SyncClient:
                                                    c.c_array_pointer(self.__server_urls, ctypes.c_char_p),
                                                    len(self.__server_urls))
 
+        for name, value in (filter_variables or {}).items():
+            self.add_filter_variable(name, value)
+
         self.__store.add_store_close_listener(on_store_close=self.__close_sync_client_func())
 
     def __close_sync_client_func(self):
