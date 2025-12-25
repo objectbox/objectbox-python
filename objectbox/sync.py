@@ -143,11 +143,10 @@ class SyncClient:
         if not server_urls:
             raise ValueError("Provide at least one server URL")
 
-        # TODO: Implement sync availability check
-        # if not c.Sync.is_available():
-        #     raise RuntimeError(
-        #         'Sync is not available in the loaded ObjectBox runtime library. '
-        #         'Please visit https://objectbox.io/sync/ for options.')
+        if not Sync.is_available():
+            raise RuntimeError(
+                'Sync is not available in the loaded ObjectBox runtime library. '
+                'Please visit https://objectbox.io/sync/ for options.')
 
         self.__store = store
         self.__server_urls = [url.encode('utf-8') for url in server_urls]
