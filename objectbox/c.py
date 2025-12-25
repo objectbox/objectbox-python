@@ -16,10 +16,12 @@
 import ctypes.util
 import os
 import platform
-from objectbox.version import Version
+from ctypes import c_char_p
 from typing import *
+
 import numpy as np
-from enum import IntEnum
+
+from objectbox.version import Version
 
 # This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
 # The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
@@ -1219,3 +1221,10 @@ obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None, 
 obx_sync_listener_error = c_fn('obx_sync_listener_error', None, [OBX_sync_p, OBX_sync_listener_error, ctypes.c_void_p])
 
 obx_sync_wait_for_logged_in_state = c_fn_rc('obx_sync_wait_for_logged_in_state', [OBX_sync_p, ctypes.c_uint64])
+
+obx_sync_filter_variables_put = c_fn_rc('obx_sync_filter_variables_put',
+                                        [OBX_sync_p, c_char_p, c_char_p])
+obx_sync_filter_variables_remove = c_fn_rc('obx_sync_filter_variables_remove',
+                                           [OBX_sync_p, c_char_p])
+obx_sync_filter_variables_remove_all = c_fn_rc('obx_sync_filter_variables_remove_all',
+                                               [OBX_sync_p])

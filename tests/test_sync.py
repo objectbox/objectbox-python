@@ -1,5 +1,10 @@
 from time import sleep
+
+import pytest
+
+from objectbox.exceptions import IllegalArgumentError
 from objectbox.sync import *
+
 
 def test_sync_protocol_version():
     version = SyncClient.protocol_version()
@@ -32,3 +37,21 @@ def test_sync_listener(test_store, login_listener, connection_listener):
     assert login_listener.login_failure_code == SyncCode.CREDENTIALS_REJECTED
     assert connection_listener.connected_called
     assert connection_listener.disconnected_called
+
+
+def test_filter_variables(test_store):
+    server_urls = ["ws://localhost:9999"]
+
+    filter_vars = {
+        "name1": "val1",
+        "name2": "val2"
+    }
+    client = SyncClient(test_store, server_urls, filter_vars)
+
+    client.add_filter_variable("name3", "val3")
+    client.remove_filter_variable("name1")
+    client.add_filter_variable("name4", "val4")
+    client.remove_all_filter_variables()
+
+    with pytest.raises(IllegalArgumentError, match="Filter variables must have a name"):
+        client.add_filter_variable("", "val5")
