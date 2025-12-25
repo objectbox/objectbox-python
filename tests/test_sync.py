@@ -55,3 +55,21 @@ def test_filter_variables(test_store):
 
     with pytest.raises(IllegalArgumentError, match="Filter variables must have a name"):
         client.add_filter_variable("", "val5")
+
+    client.close()
+
+
+def test_outgoing_message_count(test_store):
+    server_urls = ["ws://localhost:9999"]
+    client = SyncClient(test_store, server_urls)
+
+    count = client.get_outgoing_message_count()
+    assert count == 0
+
+    count_limited = client.get_outgoing_message_count(limit=10)
+    assert count_limited == 0
+
+    client.close()
+
+    with pytest.raises(IllegalArgumentError, match='Argument "sync" must not be null'):
+        client.get_outgoing_message_count()

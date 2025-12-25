@@ -273,3 +273,8 @@ class SyncClient:
 
     def remove_all_filter_variables(self):
         c.obx_sync_filter_variables_remove_all(self.__c_sync_client_ptr)
+
+    def get_outgoing_message_count(self, limit: int = 0) -> int:
+        outgoing_message_count = ctypes.c_uint64(0)
+        c.obx_sync_outgoing_message_count(self.__c_sync_client_ptr, limit, ctypes.byref(outgoing_message_count))
+        return outgoing_message_count.value

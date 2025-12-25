@@ -1228,3 +1228,7 @@ obx_sync_filter_variables_remove = c_fn_rc('obx_sync_filter_variables_remove',
                                            [OBX_sync_p, c_char_p])
 obx_sync_filter_variables_remove_all = c_fn_rc('obx_sync_filter_variables_remove_all',
                                                [OBX_sync_p])
+
+# OBX_C_API obx_err obx_sync_outgoing_message_count(OBX_sync* sync, uint64_t limit, uint64_t* out_count);
+obx_sync_outgoing_message_count = c_fn_rc('obx_sync_outgoing_message_count',
+                                          [OBX_sync_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
