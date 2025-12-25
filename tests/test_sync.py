@@ -73,3 +73,26 @@ def test_outgoing_message_count(test_store):
 
     with pytest.raises(IllegalArgumentError, match='Argument "sync" must not be null'):
         client.get_outgoing_message_count()
+
+
+def test_multiple_credentials(test_store):
+    server_urls = ["ws://localhost:9999"]
+    client = SyncClient(test_store, server_urls)
+
+    # empty list should raise ValueError
+    with pytest.raises(ValueError, match='Provide at least one credential'):
+        client.set_multiple_credentials([])
+
+    # SyncCredentials.none() is not supported with multiple credentials
+    with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported, use set_credentials\(\) instead'):
+        client.set_multiple_credentials([SyncCredentials.none()])
+
+    client.set_multiple_credentials([
+        SyncCredentials.google_auth("token_google"),
+        SyncCredentials.user_and_password("user1", "password"),
+        SyncCredentials.shared_secret_string("secret1"),
+        SyncCredentials.jwt_id_token("token1"),
+        SyncCredentials.jwt_access_token("token2"),
+        SyncCredentials.jwt_refresh_token("token3"),
+        SyncCredentials.jwt_custom_token("token4")
+    ])

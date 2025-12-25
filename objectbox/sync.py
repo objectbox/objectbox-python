@@ -4,7 +4,6 @@ from enum import Enum, auto, IntEnum
 import objectbox.c as c
 from objectbox import Store
 
-
 class SyncCredentials:
 
     def __init__(self, credential_type: c.SyncCredentialsType):
@@ -170,6 +169,32 @@ class SyncClient:
             c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type,
                                    credentials.secret,
                                    len(credentials.secret))
+
+    def set_multiple_credentials(self, credentials_list: list[SyncCredentials]):
+        if len(credentials_list) == 0:
+            raise ValueError("Provide at least one credential")
+
+        for i in range(len(credentials_list)):
+            is_last = (i == len(credentials_list) - 1)
+            credentials = credentials_list[i]
+
+            if isinstance(credentials, SyncCredentialsNone):
+                raise ValueError("SyncCredentials.none() is not supported, use set_credentials() instead")
+
+            if isinstance(credentials, SyncCredentialsUserPassword):
+                c.obx_sync_credentials_add_user_password(self.__c_sync_client_ptr,
+                                                         credentials.type,
+                                                         credentials.username.encode('utf-8'),
+                                                         credentials.password.encode('utf-8'),
+                                                         is_last
+                                                         )
+            elif isinstance(credentials, SyncCredentialsSecret):
+                c.obx_sync_credentials_add(self.__c_sync_client_ptr,
+                                           credentials.type,
+                                           credentials.secret,
+                                           len(credentials.secret),
+                                           is_last)
+
 
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
         if mode == SyncRequestUpdatesMode.MANUAL:
