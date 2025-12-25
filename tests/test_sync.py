@@ -12,8 +12,7 @@ def test_sync_protocol_version():
 
 def test_sync_client_states(test_store):
     server_urls = ["ws://localhost:9999"]
-    credentials = [SyncCredentials.none()]
-    client = SyncClient(test_store, server_urls, credentials)
+    client = SyncClient(test_store, server_urls)
     assert client.get_sync_state() == SyncState.CREATED
     client.start()
     assert client.get_sync_state() == SyncState.STARTED
