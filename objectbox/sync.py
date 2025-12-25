@@ -311,3 +311,58 @@ class SyncClient:
         outgoing_message_count = ctypes.c_uint64(0)
         c.obx_sync_outgoing_message_count(self.__c_sync_client_ptr, limit, ctypes.byref(outgoing_message_count))
         return outgoing_message_count.value
+
+
+class Sync:
+    __sync_clients: dict[Store, SyncClient] = {}
+
+    @staticmethod
+    def is_available() -> bool:
+        return c.obx_has_feature(c.Feature.Sync)
+
+    @staticmethod
+    def client(
+            store: Store,
+            server_url: str,
+            credential: SyncCredentials,
+            filter_variables: dict[str, str] | None = None
+    ) -> SyncClient:
+        client = SyncClient(store, [server_url], filter_variables)
+        client.set_credentials(credential)
+        return client
+
+    @staticmethod
+    def client_multi_creds(
+            store: Store,
+            server_url: str,
+            credentials_list: list[SyncCredentials],
+            filter_variables: dict[str, str] | None = None
+    ) -> SyncClient:
+        client = SyncClient(store, [server_url], filter_variables)
+        client.set_multiple_credentials(credentials_list)
+        return client
+
+    @staticmethod
+    def client_multi_urls(
+            store: Store,
+            server_urls: list[str],
+            credential: SyncCredentials,
+            filter_variables: dict[str, str] | None = None
+    ) -> SyncClient:
+        client = SyncClient(store, server_urls, filter_variables)
+        client.set_credentials(credential)
+        return client
+
+    @staticmethod
+    def client_multi_creds_multi_urls(
+            store: Store,
+            server_urls: list[str],
+            credentials_list: list[SyncCredentials],
+            filter_variables: dict[str, str] | None = None
+    ) -> SyncClient:
+        if store in Sync.__sync_clients:
+            raise ValueError('Only one sync client can be active for a store')
+        client = SyncClient(store, server_urls, filter_variables)
+        client.set_multiple_credentials(credentials_list)
+        Sync.__sync_clients[store] = client
+        return client

@@ -1232,3 +1232,30 @@ obx_sync_filter_variables_remove_all = c_fn_rc('obx_sync_filter_variables_remove
 # OBX_C_API obx_err obx_sync_outgoing_message_count(OBX_sync* sync, uint64_t limit, uint64_t* out_count);
 obx_sync_outgoing_message_count = c_fn_rc('obx_sync_outgoing_message_count',
                                           [OBX_sync_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+
+OBXFeature = ctypes.c_int
+
+
+class Feature(IntEnum):
+    ResultArray = 1
+    TimeSeries = 2
+    Sync = 3
+    DebugLog = 4
+    Admin = 5
+    Tree = 6
+    SyncServer = 7
+    WebSockets = 8
+    Cluster = 9
+    HttpServer = 10
+    GraphQL = 11
+    Backup = 12
+    Lmdb = 13
+    VectorSearch = 14
+    Wal = 15
+    SyncMongoDb = 16
+    Auth = 17
+    Trial = 18
+    SyncFilters = 19
+
+
+obx_has_feature = c_fn('obx_has_feature', ctypes.c_bool, [OBXFeature])
