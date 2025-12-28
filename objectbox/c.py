@@ -1259,3 +1259,9 @@ class Feature(IntEnum):
 
 
 obx_has_feature = c_fn('obx_has_feature', ctypes.c_bool, [OBXFeature])
+
+# OBX_C_API obx_err obx_sync_updates_request(OBX_sync* sync, bool subscribe_for_pushes);
+obx_sync_updates_request = c_fn_rc('obx_sync_updates_request', [OBX_sync_p, ctypes.c_bool])
+
+# OBX_C_API obx_err obx_sync_updates_cancel(OBX_sync* sync);
+obx_sync_updates_cancel = c_fn_rc('obx_sync_updates_cancel', [OBX_sync_p])

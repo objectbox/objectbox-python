@@ -245,6 +245,12 @@ class SyncClient:
     def trigger_reconnect(self) -> bool:
         return c.check_obx_success(c.obx_sync_trigger_reconnect(self.__c_sync_client_ptr))
 
+    def request_updates(self, subscribe_for_future_pushes: bool) -> bool:
+        return c.check_obx_success(c.obx_sync_updates_request(self.__c_sync_client_ptr, subscribe_for_future_pushes))
+
+    def cancel_updates(self) -> bool:
+        return c.check_obx_success(c.obx_sync_updates_cancel(self.__c_sync_client_ptr))
+
     @staticmethod
     def protocol_version() -> int:
         return c.obx_sync_protocol_version()
