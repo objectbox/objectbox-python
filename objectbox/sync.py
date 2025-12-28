@@ -166,7 +166,12 @@ class SyncClient:
 
         return close_sync_client
 
+    def __check_sync_ptr_not_null(self):
+        if self.__c_sync_client_ptr is None:
+            raise ValueError('SyncClient already closed')
+
     def set_credentials(self, credentials: SyncCredentials):
+        self.__check_sync_ptr_not_null()
         self.__credentials = credentials
         if isinstance(credentials, SyncCredentialsNone):
             c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type, None, 0)
@@ -181,6 +186,7 @@ class SyncClient:
                                    len(credentials.secret))
 
     def set_multiple_credentials(self, credentials_list: list[SyncCredentials]):
+        self.__check_sync_ptr_not_null()
         if len(credentials_list) == 0:
             raise ValueError("Provide at least one credential")
 
@@ -207,6 +213,7 @@ class SyncClient:
 
 
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
+        self.__check_sync_ptr_not_null()
         if mode == SyncRequestUpdatesMode.MANUAL:
             c_mode = c.RequestUpdatesMode.MANUAL
         elif mode == SyncRequestUpdatesMode.AUTO:
@@ -218,6 +225,7 @@ class SyncClient:
         c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, c_mode)
 
     def get_sync_state(self) -> SyncState:
+        self.__check_sync_ptr_not_null()
         c_state = c.obx_sync_state(self.__c_sync_client_ptr)
         if c_state == c.SyncState.CREATED:
             return SyncState.CREATED
@@ -237,18 +245,23 @@ class SyncClient:
             return SyncState.UNKNOWN
 
     def start(self):
+        self.__check_sync_ptr_not_null()
         c.obx_sync_start(self.__c_sync_client_ptr)
 
     def stop(self):
+        self.__check_sync_ptr_not_null()
         c.obx_sync_stop(self.__c_sync_client_ptr)
 
     def trigger_reconnect(self) -> bool:
+        self.__check_sync_ptr_not_null()
         return c.check_obx_success(c.obx_sync_trigger_reconnect(self.__c_sync_client_ptr))
 
     def request_updates(self, subscribe_for_future_pushes: bool) -> bool:
+        self.__check_sync_ptr_not_null()
         return c.check_obx_success(c.obx_sync_updates_request(self.__c_sync_client_ptr, subscribe_for_future_pushes))
 
     def cancel_updates(self) -> bool:
+        self.__check_sync_ptr_not_null()
         return c.check_obx_success(c.obx_sync_updates_cancel(self.__c_sync_client_ptr))
 
     @staticmethod
@@ -266,6 +279,7 @@ class SyncClient:
         return self.__c_sync_client_ptr is None
 
     def set_login_listener(self, login_listener: SyncLoginListener):
+        self.__check_sync_ptr_not_null()
         self.__c_login_listener = c.OBX_sync_listener_login(lambda arg: login_listener.on_logged_in())
         self.__c_login_failure_listener = c.OBX_sync_listener_login_failure(
             lambda arg, sync_login_code: login_listener.on_login_failed(sync_login_code))
@@ -281,6 +295,7 @@ class SyncClient:
         )
 
     def set_connection_listener(self, connection_listener: SyncConnectionListener):
+        self.__check_sync_ptr_not_null()
         self.__c_connect_listener = c.OBX_sync_listener_connect(lambda arg: connection_listener.on_connected())
         self.__c_disconnect_listener = c.OBX_sync_listener_disconnect(lambda arg: connection_listener.on_disconnected())
         c.obx_sync_listener_connect(
@@ -295,6 +310,7 @@ class SyncClient:
         )
 
     def set_error_listener(self, error_listener: SyncErrorListener):
+        self.__check_sync_ptr_not_null()
         self.__c_error_listener = c.OBX_sync_listener_error(
             lambda arg, sync_error_code: error_listener.on_error(sync_error_code))
         c.obx_sync_listener_error(
@@ -304,18 +320,23 @@ class SyncClient:
         )
 
     def wait_for_logged_in_state(self, timeout_millis: int):
+        self.__check_sync_ptr_not_null()
         c.obx_sync_wait_for_logged_in_state(self.__c_sync_client_ptr, timeout_millis)
 
     def add_filter_variable(self, name: str, value: str):
+        self.__check_sync_ptr_not_null()
         c.obx_sync_filter_variables_put(self.__c_sync_client_ptr, name.encode('utf-8'), value.encode('utf-8'))
 
     def remove_filter_variable(self, name: str):
+        self.__check_sync_ptr_not_null()
         c.obx_sync_filter_variables_remove(self.__c_sync_client_ptr, name.encode('utf-8'))
 
     def remove_all_filter_variables(self):
+        self.__check_sync_ptr_not_null()
         c.obx_sync_filter_variables_remove_all(self.__c_sync_client_ptr)
 
     def get_outgoing_message_count(self, limit: int = 0) -> int:
+        self.__check_sync_ptr_not_null()
         outgoing_message_count = ctypes.c_uint64(0)
         c.obx_sync_outgoing_message_count(self.__c_sync_client_ptr, limit, ctypes.byref(outgoing_message_count))
         return outgoing_message_count.value

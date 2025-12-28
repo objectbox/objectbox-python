@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from time import sleep
 
 import pytest
@@ -104,3 +105,32 @@ def test_client_closed_when_store_closed(test_store):
     assert not client.is_closed()
     test_store.close()
     assert client.is_closed()
+
+
+def assert_raises_value_error(fn: Callable[[], object | None], message: str | None = None):
+    with pytest.raises(ValueError, match=message):
+        fn()
+
+
+def test_client_access_after_close_throws_error(test_store):
+    server_urls = ["ws://localhost:9999"]
+    client = SyncClient(test_store, server_urls)
+    client.close()
+
+    assert client.is_closed()
+
+    match_error = "SyncClient already closed"
+
+    assert_raises_value_error(message=match_error, fn=lambda: client.start())
+    assert_raises_value_error(message=match_error, fn=lambda: client.stop())
+    assert_raises_value_error(message=match_error, fn=lambda: client.get_sync_state())
+    assert_raises_value_error(message=match_error, fn=lambda: client.get_outgoing_message_count())
+    assert_raises_value_error(message=match_error, fn=lambda: client.set_credentials(SyncCredentials.none()))
+    assert_raises_value_error(message=match_error,
+                              fn=lambda: client.set_credentials(SyncCredentials.google_auth("token_google")))
+    assert_raises_value_error(message=match_error, fn=lambda: client.set_multiple_credentials([
+        SyncCredentials.google_auth("token_google"),
+        SyncCredentials.user_and_password("user1", "password")
+    ]))
+    assert_raises_value_error(message=match_error,
+                              fn=lambda: client.set_request_updates_mode(SyncRequestUpdatesMode.AUTO))
