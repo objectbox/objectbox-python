@@ -2,6 +2,7 @@ import urllib.request
 import tarfile
 import zipfile
 import os
+import sys
 
 from build_info import clib_version
 
@@ -9,7 +10,9 @@ from build_info import clib_version
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
 version = "v" + clib_version()  # i.e. objectbox/c.py required_version
-variant = 'objectbox-sync'  # or 'objectbox-sync'
+variant = 'objectbox'  # or 'objectbox-sync'
+if len(sys.argv) > 1 and sys.argv[1] == '--sync':
+    variant = 'objectbox-sync'
 
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 

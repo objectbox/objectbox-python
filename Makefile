@@ -50,6 +50,10 @@ depend:	${VENV}			## Prepare dependencies
 	set -e ; \
 	${PYTHON} download-c-lib.py
 
+depend-sync:	${VENV}			## Prepare dependencies
+	set -e ; \
+	${PYTHON} download-c-lib.py --sync
+
 test: ${VENV}			## Test all targets
 	set -e ; \
 	${PYTHON} -m pytest --capture=no --verbose -rs
