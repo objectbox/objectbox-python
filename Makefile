@@ -29,6 +29,11 @@ build: ${VENV} clean	## Clean and build
 	${PYTHON} setup.py bdist_wheel ; \
 	ls -lh dist
 
+build-sync: ${VENV} clean	## Clean and build
+	set -e ; \
+	OBX_BUILD_SYNC=1 ${PYTHON} setup.py bdist_wheel ; \
+	ls -lh dist
+
 ${VENV}: ${VENVBIN}/activate
 
 venv-init:
@@ -48,6 +53,10 @@ ${VENVBIN}/activate: requirements.txt
 depend:	${VENV}			## Prepare dependencies
 	set -e ; \
 	${PYTHON} download-c-lib.py
+
+depend-sync:	${VENV}			## Prepare dependencies
+	set -e ; \
+	${PYTHON} download-c-lib.py --sync
 
 test: ${VENV}			## Test all targets
 	set -e ; \
