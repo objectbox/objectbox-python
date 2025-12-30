@@ -78,7 +78,7 @@ __all__ = [
 ]
 
 # Python binding version
-version = Version(4, 0, 0)
+version = Version(5, 0, 0)
 """ObjectBox Python package version"""
 
 def version_info():
