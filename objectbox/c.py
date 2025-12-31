@@ -414,6 +414,11 @@ class DbErrorCode(IntEnum):
     OBX_ERROR_TREE_OTHER = 10699
 
 
+class OBXEntityFlags(IntEnum):
+    SYNC_ENABLED = 2
+    SHARED_GLOBAL_IDS = 4
+
+
 def check_obx_err(code: obx_err, func, args) -> obx_err:
     """ Raises an exception if obx_err is not successful. """
     if code != DbErrorCode.OBX_SUCCESS:
@@ -534,6 +539,9 @@ obx_model = c_fn('obx_model', OBX_model_p, [])
 # obx_err (OBX_model* model, const char* name, obx_schema_id entity_id, obx_uid entity_uid);
 obx_model_entity = c_fn_rc('obx_model_entity', [
     OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
+
+# obx_err obx_model_entity_flags(OBX_model* model, uint32_t flags);
+obx_model_entity_flags = c_fn_rc('obx_model_entity_flags', [OBX_model_p, ctypes.c_uint32])
 
 # obx_err (OBX_model* model, const char* name, OBXPropertyType type, obx_schema_id property_id, obx_uid property_uid);
 obx_model_property = c_fn_rc('obx_model_property',

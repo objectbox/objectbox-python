@@ -38,6 +38,7 @@ class _Entity(object):
         self._id_property = None
         self._fill_properties()
         self._tl = threading.local()
+        self._flags = 0
 
     @property
     def _id(self) -> int:
@@ -320,3 +321,9 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
         return entity_type
 
     return wrapper
+
+
+def SyncEntity(cls):
+    entity: _Entity = obx_models_by_name["default"][-1]  # get the last added entity
+    entity._flags |= OBXEntityFlags.SYNC_ENABLED
+    return cls
