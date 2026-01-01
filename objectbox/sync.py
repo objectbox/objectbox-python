@@ -3,6 +3,8 @@ from enum import Enum, auto, IntEnum
 
 import objectbox.c as c
 from objectbox import Store
+from objectbox.c import OBX_sync_change_array
+
 
 class SyncCredentials:
     """Credentials used to authenticate a sync client against a server."""
@@ -245,20 +247,16 @@ class SyncCode(IntEnum):
 class SyncChange:
     """Sync incoming data event."""
 
-    def __init__(self, entity_id: int, entity: type, puts: list[int], removals: list[int]):
+    def __init__(self, entity_id: int, puts: list[int], removals: list[int]):
         """Creates a SyncChange event.
 
         Args:
             entity_id: Entity ID this change relates to.
-            entity: Entity type this change relates to.
             puts: List of "put" (inserted/updated) object IDs.
             removals: List of removed object IDs.
         """
         self.entity_id = entity_id
         """Entity ID this change relates to."""
-
-        self.entity = entity
-        """Entity type this change relates to."""
 
         self.puts = puts
         """List of "put" (inserted/updated) object IDs."""
@@ -319,6 +317,17 @@ class SyncErrorListener:
         pass
 
 
+class SyncChangeListener:
+
+    def on_change(self, sync_changes: list[SyncChange]):
+        """Called when incoming data changes are received from the server.
+
+        Args:
+            sync_changes: List of SyncChange events representing the changes.
+        """
+        pass
+
+
 class SyncClient:
     """Sync client is used to connect to an ObjectBox sync server.
 
@@ -336,6 +345,7 @@ class SyncClient:
             server_urls: List of server URLs to connect to.
             filter_variables: Optional dictionary of filter variable names to values.
         """
+        self.__c_change_listener = None
         self.__c_login_listener = None
         self.__c_login_failure_listener = None
         self.__c_connect_listener = None
@@ -547,6 +557,12 @@ class SyncClient:
         It can no longer be used afterwards, make a new sync client instead.
         Does nothing if this sync client has already been closed.
         """
+        c.obx_sync_listener_error(self.__c_sync_client_ptr, None, None)
+        c.obx_sync_listener_login(self.__c_sync_client_ptr, None, None)
+        c.obx_sync_listener_login_failure(self.__c_sync_client_ptr, None, None)
+        c.obx_sync_listener_connect(self.__c_sync_client_ptr, None, None)
+        c.obx_sync_listener_disconnect(self.__c_sync_client_ptr, None, None)
+        c.obx_sync_listener_change(self.__c_sync_client_ptr, None, None)
         c.obx_sync_close(self.__c_sync_client_ptr)
         self.__c_sync_client_ptr = None
 
@@ -607,6 +623,44 @@ class SyncClient:
         c.obx_sync_listener_error(
             self.__c_sync_client_ptr,
             self.__c_error_listener,
+            None
+        )
+
+    def set_change_listener(self, change_listener: SyncChangeListener):
+        """Sets a listener to observe incoming data changes from the server.
+
+        Args:
+            change_listener: The listener to receive change events.
+        """
+        self.__check_sync_ptr_not_null()
+
+        def c_change_callback(arg, sync_change_array_ptr):
+            sync_change_array = ctypes.cast(sync_change_array_ptr, ctypes.POINTER(OBX_sync_change_array)).contents
+            changes: list[SyncChange] = []
+            for i in range(sync_change_array.count):
+                c_sync_change: c.OBX_sync_change = sync_change_array.list[i]
+                puts = []
+                if c_sync_change.puts:
+                    c_puts_id_array: c.OBX_id_array = ctypes.cast(c_sync_change.puts, c.OBX_id_array_p).contents
+                    puts = list(
+                        ctypes.cast(c_puts_id_array.ids, ctypes.POINTER(c.obx_id * c_puts_id_array.count)).contents)
+                removals = []
+                if c_sync_change.removals:
+                    c_removals_id_array: c.OBX_id_array = ctypes.cast(c_sync_change.removals, c.OBX_id_array_p).contents
+                    removals = list(
+                        ctypes.cast(c_removals_id_array.ids,
+                                    ctypes.POINTER(c.obx_id * c_removals_id_array.count)).contents)
+                changes.append(SyncChange(
+                    entity_id=c_sync_change.entity_id,
+                    puts=puts,
+                    removals=removals
+                ))
+            change_listener.on_change(changes)
+
+        self.__c_change_listener = c.OBX_sync_listener_change(c_change_callback)
+        c.obx_sync_listener_change(
+            self.__c_sync_client_ptr,
+            self.__c_change_listener,
             None
         )
 

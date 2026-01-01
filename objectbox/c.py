@@ -1273,6 +1273,10 @@ obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None, 
 # void obx_sync_listener_complete(OBX_sync* sync, OBX_sync_listener_complete* listener, void* listener_arg);
 obx_sync_listener_error = c_fn('obx_sync_listener_error', None, [OBX_sync_p, OBX_sync_listener_error, ctypes.c_void_p])
 
+# void obx_sync_listener_change(OBX_sync* sync, OBX_sync_listener_change* listener, void* listener_arg);
+obx_sync_listener_change = c_fn('obx_sync_listener_change', None,
+                                [OBX_sync_p, OBX_sync_listener_change, ctypes.c_void_p])
+
 # Filter Variables
 
 # obx_err obx_sync_filter_variables_put(OBX_sync* sync, const char* name, const char* value);
