@@ -582,8 +582,8 @@ class SyncClient:
             login_listener: The listener to receive login events.
         """
         self.__check_sync_ptr_not_null()
-        self.__c_login_listener = c.OBX_sync_listener_login(lambda arg: login_listener.on_logged_in())
-        self.__c_login_failure_listener = c.OBX_sync_listener_login_failure(
+        self.__c_login_listener = c.OBX_sync_listener_login_t(lambda arg: login_listener.on_logged_in())
+        self.__c_login_failure_listener = c.OBX_sync_listener_login_failure_t(
             lambda arg, sync_login_code: login_listener.on_login_failed(sync_login_code))
         c.obx_sync_listener_login(
             self.__c_sync_client_ptr,
@@ -603,8 +603,9 @@ class SyncClient:
             connection_listener: The listener to receive connection events.
         """
         self.__check_sync_ptr_not_null()
-        self.__c_connect_listener = c.OBX_sync_listener_connect(lambda arg: connection_listener.on_connected())
-        self.__c_disconnect_listener = c.OBX_sync_listener_disconnect(lambda arg: connection_listener.on_disconnected())
+        self.__c_connect_listener = c.OBX_sync_listener_connect_t(lambda arg: connection_listener.on_connected())
+        self.__c_disconnect_listener = c.OBX_sync_listener_disconnect_t(
+            lambda arg: connection_listener.on_disconnected())
         c.obx_sync_listener_connect(
             self.__c_sync_client_ptr,
             self.__c_connect_listener,
@@ -623,7 +624,7 @@ class SyncClient:
             error_listener: The listener to receive error events.
         """
         self.__check_sync_ptr_not_null()
-        self.__c_error_listener = c.OBX_sync_listener_error(
+        self.__c_error_listener = c.OBX_sync_listener_error_t(
             lambda arg, sync_error_code: error_listener.on_error(sync_error_code))
         c.obx_sync_listener_error(
             self.__c_sync_client_ptr,
@@ -662,7 +663,7 @@ class SyncClient:
                 ))
             change_listener.on_change(changes)
 
-        self.__c_change_listener = c.OBX_sync_listener_change(c_change_callback)
+        self.__c_change_listener = c.OBX_sync_listener_change_t(c_change_callback)
         c.obx_sync_listener_change(
             self.__c_sync_client_ptr,
             self.__c_change_listener,

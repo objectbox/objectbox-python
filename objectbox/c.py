@@ -1185,13 +1185,13 @@ class OBX_sync_msg_objects_builder(ctypes.Structure):
 OBX_sync_msg_objects_builder_p = ctypes.POINTER(OBX_sync_msg_objects_builder)
 
 # Define callback types for sync listeners
-OBX_sync_listener_connect = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-OBX_sync_listener_disconnect = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-OBX_sync_listener_login = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-OBX_sync_listener_login_failure = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncCode
-OBX_sync_listener_complete = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-OBX_sync_listener_error = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncError
-OBX_sync_listener_change = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_change_array))
+OBX_sync_listener_connect_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_disconnect_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_login_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_login_failure_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncCode
+OBX_sync_listener_complete_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_error_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncError
+OBX_sync_listener_change_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_change_array))
 OBX_sync_listener_server_time = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int64)
 OBX_sync_listener_msg_objects = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_msg_objects))
 
@@ -1259,23 +1259,28 @@ obx_sync_close = c_fn_rc('obx_sync_close', [OBX_sync_p])
 # Listener Callbacks
 
 # void obx_sync_listener_connect(OBX_sync* sync, OBX_sync_listener_connect* listener, void* listener_arg);
-obx_sync_listener_connect = c_fn('obx_sync_listener_connect', None, [OBX_sync_p, OBX_sync_listener_connect, ctypes.c_void_p])
+obx_sync_listener_connect = c_fn('obx_sync_listener_connect', None,
+                                 [OBX_sync_p, OBX_sync_listener_connect_t, ctypes.c_void_p])
 
 # void obx_sync_listener_disconnect(OBX_sync* sync, OBX_sync_listener_disconnect* listener, void* listener_arg);
-obx_sync_listener_disconnect = c_fn('obx_sync_listener_disconnect', None, [OBX_sync_p, OBX_sync_listener_disconnect, ctypes.c_void_p])
+obx_sync_listener_disconnect = c_fn('obx_sync_listener_disconnect', None,
+                                    [OBX_sync_p, OBX_sync_listener_disconnect_t, ctypes.c_void_p])
 
 # void obx_sync_listener_login(OBX_sync* sync, OBX_sync_listener_login* listener, void* listener_arg);
-obx_sync_listener_login = c_fn('obx_sync_listener_login', None, [OBX_sync_p, OBX_sync_listener_login, ctypes.c_void_p])
+obx_sync_listener_login = c_fn('obx_sync_listener_login', None,
+                               [OBX_sync_p, OBX_sync_listener_login_t, ctypes.c_void_p])
 
 # void obx_sync_listener_login_failure(OBX_sync* sync, OBX_sync_listener_login_failure* listener, void* listener_arg);
-obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None, [OBX_sync_p, OBX_sync_listener_login_failure, ctypes.c_void_p])
+obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None,
+                                       [OBX_sync_p, OBX_sync_listener_login_failure_t, ctypes.c_void_p])
 
 # void obx_sync_listener_complete(OBX_sync* sync, OBX_sync_listener_complete* listener, void* listener_arg);
-obx_sync_listener_error = c_fn('obx_sync_listener_error', None, [OBX_sync_p, OBX_sync_listener_error, ctypes.c_void_p])
+obx_sync_listener_error = c_fn('obx_sync_listener_error', None,
+                               [OBX_sync_p, OBX_sync_listener_error_t, ctypes.c_void_p])
 
 # void obx_sync_listener_change(OBX_sync* sync, OBX_sync_listener_change* listener, void* listener_arg);
 obx_sync_listener_change = c_fn('obx_sync_listener_change', None,
-                                [OBX_sync_p, OBX_sync_listener_change, ctypes.c_void_p])
+                                [OBX_sync_p, OBX_sync_listener_change_t, ctypes.c_void_p])
 
 # Filter Variables
 
