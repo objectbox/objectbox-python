@@ -371,6 +371,11 @@ class SyncClient:
 
         self.__store.add_store_close_listener(on_store_close=self.__close_sync_client_func())
 
+    def __del__(self):
+        # Close the SyncClient when this instance is destructed
+        # for ex. when garbage collected.
+        self.close()
+
     def __close_sync_client_func(self):
         def close_sync_client():
             self.close()
