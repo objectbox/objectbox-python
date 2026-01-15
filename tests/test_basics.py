@@ -17,10 +17,10 @@ from tests.common import create_test_store
 
 
 def test_version():
-    assert objectbox.version.major == 4  # update for major version changes
+    assert objectbox.version.major == 5  # update for major version changes
     assert objectbox.version.minor >= 0
 
-    assert objectbox.version_core.major == 4  # update for major version changes
+    assert objectbox.version_core.major == 5  # update for major version changes
     assert objectbox.version_core.minor >= 0
 
     info = objectbox.version_info()
