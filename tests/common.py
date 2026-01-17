@@ -55,7 +55,11 @@ class SyncServerConfig:
 def start_sync_server() -> typing.Union[SyncServerConfig, None]:
     """ Starts the ObjectBox Sync Server in a Docker container. """
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    user_id = os.getuid()
+    user_id = None
+    if os.name != 'nt':
+        user_id = os.getuid()
+    else:
+        user_id = 0
     try:
         command = ("docker run "
                    "--rm "
