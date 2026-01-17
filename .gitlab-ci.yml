@@ -27,6 +27,22 @@ build:
     paths:
       - dist/*.whl
 
+# Build the Sync version of the package
+build-sync:
+  tags: [ x64, docker, linux ]
+  image: python:latest
+  stage: build
+  script:
+    - python -m pip install --upgrade pip
+    # Using released C library (Sync version)
+    - make depend-sync
+    - make test
+    - make build-sync
+  artifacts:
+    expire_in: 1 days
+    paths:
+      - dist/*.whl
+
 # Next, test the packaged wheel built by "build"
 .test:
   stage: test
@@ -72,3 +88,49 @@ test:windows:x64:
   tags: [windows, x64, python]
   variables:
     PYTHON: "python.exe"
+
+# Sync version test jobs
+.test-sync:
+  stage: test
+  needs: [ build-sync ]
+  script:
+    - pip3 install --user pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - pip3 install --user --force-reinstall dist/*.whl  # Artifacts from build-sync
+    - ${PYTHON} -m pytest --runsync
+  variables:
+    PYTHON: "python3"
+
+test-sync:linux:x64:
+  extends: .test-sync
+  tags: [ x64, docker, linux ]
+  image: python:$PYTHON_VERSION
+  parallel:
+    matrix:
+      - PYTHON_VERSION: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
+
+test-sync:linux:armv7hf:
+  extends: .test-sync
+  tags: [ armv7hf, shell, linux, python3 ]
+
+test-sync:linux:aarch64:
+  extends: .test-sync
+  tags: [ aarch64, shell, linux, python3 ]
+
+test-sync:mac:x64:
+  extends: .test-sync
+  script:
+    - python3 -m venv .venv
+    - source .venv/bin/activate
+    - python3 -m pip install pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - pip3 install --force-reinstall dist/*.whl  # Artifacts from build-sync
+    - python -m pytest --runsync
+  tags: [ mac, x64, shell, python3 ]
+
+test-sync:windows:x64:
+  extends: .test-sync
+  tags: [ windows, x64, python ]
+  variables:
+    PYTHON: "python.exe"
+

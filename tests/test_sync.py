@@ -6,11 +6,13 @@ from objectbox.exceptions import IllegalArgumentError
 from objectbox.sync import *
 
 
+@pytest.mark.sync
 def test_sync_protocol_version():
     version = SyncClient.protocol_version()
     assert version >= 1
 
 
+@pytest.mark.sync
 def test_sync_client_states(sync_client):
     assert sync_client.get_sync_state() == SyncState.CREATED
     sync_client.start()
@@ -20,6 +22,7 @@ def test_sync_client_states(sync_client):
     sync_client.close()
 
 
+@pytest.mark.sync
 def test_sync_listener(sync_server, sync_client, login_listener, connection_listener):
     if not sync_server:
         pytest.skip("Sync server not available")
@@ -34,6 +37,7 @@ def test_sync_listener(sync_server, sync_client, login_listener, connection_list
     assert connection_listener.connected_called
 
 
+@pytest.mark.sync
 def test_filter_variables(test_store):
     server_urls = ["ws://localhost:9999"]
 
@@ -54,6 +58,7 @@ def test_filter_variables(test_store):
     client.close()
 
 
+@pytest.mark.sync
 def test_outgoing_message_count(sync_client):
     count = sync_client.get_outgoing_message_count()
     assert count == 0
@@ -67,6 +72,7 @@ def test_outgoing_message_count(sync_client):
         sync_client.get_outgoing_message_count()
 
 
+@pytest.mark.sync
 def test_multiple_credentials(sync_client):
     # empty list should raise ValueError
     with pytest.raises(ValueError, match='Provide at least one credential'):
@@ -87,17 +93,20 @@ def test_multiple_credentials(sync_client):
     ])
 
 
+@pytest.mark.sync
 def test_client_closed_when_store_closed(test_store, sync_client):
     assert not sync_client.is_closed()
     test_store.close()
     assert sync_client.is_closed()
 
 
+@pytest.mark.sync
 def assert_raises_value_error(fn: Callable[[], object | None], message: str | None = None):
     with pytest.raises(ValueError, match=message):
         fn()
 
 
+@pytest.mark.sync
 def test_client_access_after_close_throws_error(sync_client):
     sync_client.close()
 

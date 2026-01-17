@@ -1,7 +1,5 @@
-import pytest
-from objectbox.logger import logger
-from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener, SyncClient, SyncCredentials
 from common import *
+from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener, SyncClient, SyncCredentials
 
 
 # Fixtures in this file are used by all files in the same directory:
@@ -95,3 +93,22 @@ def sync_server():
     yield server_config
     if server_config:
         stop_sync_server(server_config.container_id)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--runsync", action="store_false", default=False, help="run Sync tests"
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "sync: run Sync tests")
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--runsync"):
+        return
+    skip_sync = pytest.mark.skip(reason="need --runsync option to run")
+    for item in items:
+        if "sync" in item.keywords:
+            item.add_marker(skip_sync)
