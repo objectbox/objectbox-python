@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 import socket
+import typing
 
 import pytest
 import objectbox
@@ -51,7 +52,7 @@ class SyncServerConfig:
     port: int
 
 
-def start_sync_server() -> SyncServerConfig | None:
+def start_sync_server() -> typing.Union[SyncServerConfig, None]:
     """ Starts the ObjectBox Sync Server in a Docker container. """
     current_dir = os.path.dirname(os.path.realpath(__file__))
     user_id = os.getuid()
