@@ -97,7 +97,7 @@ def sync_server():
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--runsync", action="store_false", default=False, help="run Sync tests"
+        "--runsync", action="store_true", default=False, help="run Sync tests"
     )
 
 
