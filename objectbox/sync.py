@@ -562,12 +562,14 @@ class SyncClient:
         It can no longer be used afterwards, make a new sync client instead.
         Does nothing if this sync client has already been closed.
         """
-        c.obx_sync_listener_error(self.__c_sync_client_ptr, None, None)
-        c.obx_sync_listener_login(self.__c_sync_client_ptr, None, None)
-        c.obx_sync_listener_login_failure(self.__c_sync_client_ptr, None, None)
-        c.obx_sync_listener_connect(self.__c_sync_client_ptr, None, None)
-        c.obx_sync_listener_disconnect(self.__c_sync_client_ptr, None, None)
-        c.obx_sync_listener_change(self.__c_sync_client_ptr, None, None)
+        c.obx_sync_listener_error(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_error_t), None)
+        c.obx_sync_listener_login(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_login_t), None)
+        c.obx_sync_listener_login_failure(self.__c_sync_client_ptr,
+                                          ctypes.cast(None, c.OBX_sync_listener_login_failure_t), None)
+        c.obx_sync_listener_connect(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_connect_t), None)
+        c.obx_sync_listener_disconnect(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_disconnect_t),
+                                       None)
+        c.obx_sync_listener_change(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_change_t), None)
         c.obx_sync_close(self.__c_sync_client_ptr)
         self.__c_sync_client_ptr = None
 

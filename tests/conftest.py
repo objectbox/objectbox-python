@@ -1,6 +1,6 @@
 import pytest
 from objectbox.logger import logger
-from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener
+from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener, SyncClient, SyncCredentials
 from common import *
 
 
@@ -20,6 +20,7 @@ def test_store():
     store = create_test_store()
     yield store
     store.close()
+
 
 class TestLoginListener(SyncLoginListener):
     def __init__(self):
@@ -52,12 +53,14 @@ class TestErrorListener(SyncErrorListener):
     def on_error(self, sync_error_code: int):
         self.sync_error_code = sync_error_code
 
+
 @pytest.fixture
 def connection_listener():
     listener = TestConnectionListener()
     yield listener
     listener.connected_called = False
     listener.disconnected_called = False
+
 
 @pytest.fixture
 def login_listener():
@@ -66,8 +69,29 @@ def login_listener():
     listener.logged_in_called = False
     listener.login_failure_code = None
 
+
 @pytest.fixture
 def error_listener():
     listener = TestErrorListener()
     yield listener
     listener.sync_error_code = None
+
+
+@pytest.fixture
+def sync_client(test_store, login_listener, connection_listener, error_listener):
+    server_urls = ["ws://127.0.0.1:9999"]
+    client = SyncClient(test_store, server_urls)
+    client.set_credentials(SyncCredentials.none())
+    client.set_login_listener(login_listener)
+    client.set_connection_listener(connection_listener)
+    client.set_error_listener(error_listener)
+    yield client
+    client.close()
+
+
+@pytest.fixture(scope="session")
+def sync_server():
+    server_config = start_sync_server()
+    yield server_config
+    if server_config:
+        stop_sync_server(server_config.container_id)

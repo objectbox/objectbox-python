@@ -1,4 +1,8 @@
 import os
+import time
+import subprocess
+import socket
+
 import pytest
 import objectbox
 from objectbox.logger import logger
@@ -6,6 +10,12 @@ from tests.model import *
 import numpy as np
 from datetime import datetime, timezone
 from objectbox import *
+import logging
+
+from dataclasses import dataclass
+
+test_logger = logging.getLogger(__name__)
+
 
 def remove_json_model_file():
     path = os.path.dirname(os.path.realpath(__file__))
@@ -33,6 +43,56 @@ def create_test_store(db_path: str = "testdata", clear_db: bool = True) -> objec
         Store.remove_db_files(db_path)
         remove_json_model_file()
     return objectbox.Store(model=create_default_model(), directory=db_path)
+
+
+@dataclass
+class SyncServerConfig:
+    container_id: str
+    port: int
+
+
+def start_sync_server() -> SyncServerConfig | None:
+    """ Starts the ObjectBox Sync Server in a Docker container. """
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    user_id = os.getuid()
+    try:
+        command = ("docker run "
+                   "--rm "
+                   "-d "
+                   f"--volume {current_dir}:/data "
+                   f"--user {user_id} "
+                   "-p 127.0.0.1:9999:9999 "
+                   "objectboxio/sync-server-trial "
+                   "--conf sync_server_config.json")
+        logger.info("Using command to start Sync Server Docker container:" + command)
+        stdout = subprocess.run(command.split(), check=True, capture_output=True, text=True).stdout
+        container_id = stdout.strip()
+
+        start_time = time.time()
+        while (time.time() - start_time) < 10:
+            try:
+                with socket.create_connection(("127.0.0.1", 9999)):
+                    break
+            except OSError:
+                pass
+        else:
+            raise RuntimeError("Timed out waiting for Sync Server to start")
+
+        test_logger.info("Started ObjectBox Sync Server in Docker")
+        return SyncServerConfig(container_id=container_id, port=9999)
+    except Exception as e:
+        test_logger.warning(f"Could not start ObjectBox Sync Server in Docker: {e}")
+        return None
+
+
+def stop_sync_server(container_id: str):
+    """ Stops the ObjectBox Sync Server Docker container. """
+    try:
+        command = f"docker stop {container_id}"
+        subprocess.run(command.split(), check=True)
+        test_logger.info("Stopped ObjectBox Sync Server Docker container")
+    except Exception as e:
+        test_logger.warning(f"Could not stop ObjectBox Sync Server Docker container: {e}")
 
 
 def assert_equal_prop(actual, expected, default):
