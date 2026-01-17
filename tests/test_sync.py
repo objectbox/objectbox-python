@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from typing import Callable, Optional
 
 import pytest
 
@@ -101,7 +101,7 @@ def test_client_closed_when_store_closed(test_store, sync_client):
 
 
 @pytest.mark.sync
-def assert_raises_value_error(fn: Callable[[], object | None], message: str | None = None):
+def assert_raises_value_error(fn: Callable[[], Optional[object]], message: Optional[str] = None):
     with pytest.raises(ValueError, match=message):
         fn()
 

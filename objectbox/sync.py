@@ -1,4 +1,5 @@
 import ctypes
+import typing
 from enum import Enum, auto, IntEnum
 
 import objectbox.c as c
@@ -247,7 +248,7 @@ class SyncCode(IntEnum):
 class SyncChange:
     """Sync incoming data event."""
 
-    def __init__(self, entity_id: int, puts: list[int], removals: list[int]):
+    def __init__(self, entity_id: int, puts: typing.List[int], removals: typing.List[int]):
         """Creates a SyncChange event.
 
         Args:
@@ -319,7 +320,7 @@ class SyncErrorListener:
 
 class SyncChangeListener:
 
-    def on_change(self, sync_changes: list[SyncChange]):
+    def on_change(self, sync_changes: typing.List[SyncChange]):
         """Called when incoming data changes are received from the server.
 
         Args:
@@ -334,8 +335,8 @@ class SyncClient:
     Use through the Sync class factory methods.
     """
 
-    def __init__(self, store: Store, server_urls: list[str],
-                 filter_variables: dict[str, str] | None = None):
+    def __init__(self, store: Store, server_urls: typing.List[str],
+                 filter_variables: typing.Optional[typing.Dict[str, str]] = None):
         """Creates a Sync client associated with the given store and options.
 
         This does not initiate any connection attempts yet: call start() to do so.
@@ -406,7 +407,7 @@ class SyncClient:
                                    credentials.secret,
                                    len(credentials.secret))
 
-    def set_multiple_credentials(self, credentials_list: list[SyncCredentials]):
+    def set_multiple_credentials(self, credentials_list: typing.List[SyncCredentials]):
         """Like set_credentials, but accepts multiple credentials.
 
         However, does **not** support SyncCredentials.none().
@@ -644,7 +645,7 @@ class SyncClient:
 
         def c_change_callback(arg, sync_change_array_ptr):
             sync_change_array = ctypes.cast(sync_change_array_ptr, ctypes.POINTER(OBX_sync_change_array)).contents
-            changes: list[SyncChange] = []
+            changes: typing.List[SyncChange] = []
             for i in range(sync_change_array.count):
                 c_sync_change: c.OBX_sync_change = sync_change_array.list[i]
                 puts = []
@@ -749,7 +750,7 @@ class Sync:
 
     Start a client using Sync.client() and connect to a remote server.
     """
-    __sync_clients: dict[Store, SyncClient] = {}
+    __sync_clients: typing.Dict[Store, SyncClient] = {}
 
     @staticmethod
     def is_available() -> bool:
@@ -761,7 +762,7 @@ class Sync:
             store: Store,
             server_url: str,
             credential: SyncCredentials,
-            filter_variables: dict[str, str] | None = None
+            filter_variables: typing.Optional[typing.Dict[str, str]] = None
     ) -> SyncClient:
         """Creates a Sync client associated with the given store and configures it
         with the given options.
@@ -793,8 +794,8 @@ class Sync:
     def client_multi_creds(
             store: Store,
             server_url: str,
-            credentials_list: list[SyncCredentials],
-            filter_variables: dict[str, str] | None = None
+            credentials_list: typing.List[SyncCredentials],
+            filter_variables: typing.Optional[typing.Dict[str, str]] = None
     ) -> SyncClient:
         """Like client(), but accepts a list of credentials.
 
@@ -817,9 +818,9 @@ class Sync:
     @staticmethod
     def client_multi_urls(
             store: Store,
-            server_urls: list[str],
+            server_urls: typing.List[str],
             credential: SyncCredentials,
-            filter_variables: dict[str, str] | None = None
+            filter_variables: typing.Optional[typing.Dict[str, str]] = None
     ) -> SyncClient:
         """Like client(), but accepts a list of URLs to work with multiple servers.
 
@@ -839,9 +840,9 @@ class Sync:
     @staticmethod
     def client_multi_creds_multi_urls(
             store: Store,
-            server_urls: list[str],
-            credentials_list: list[SyncCredentials],
-            filter_variables: dict[str, str] | None = None
+            server_urls: typing.List[str],
+            credentials_list: typing.List[SyncCredentials],
+            filter_variables: typing.Optional[typing.Dict[str, str]] = None
     ) -> SyncClient:
         """Like client(), but accepts a list of credentials and a list of URLs to
         work with multiple servers.
