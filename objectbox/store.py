@@ -220,7 +220,7 @@ class Store:
         def json_file_inside_module_path(module: Optional[ModuleType]) -> Optional[str]:
             module_path = get_module_path(module)
             if module_path:
-                logging.info("Using module path to locate objectbox-model.json: ", module_path)
+                logging.info(f"Using module path to locate objectbox-model.json: {module_path}")
                 return os.path.join(module_path, "objectbox-model.json")
             return None
 
