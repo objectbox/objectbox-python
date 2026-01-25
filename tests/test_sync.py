@@ -19,7 +19,6 @@ def test_sync_client_states(sync_client):
     assert sync_client.get_sync_state() == SyncState.STARTED
     sync_client.stop()
     assert sync_client.get_sync_state() == SyncState.STOPPED
-    sync_client.close()
 
 
 @pytest.mark.sync
