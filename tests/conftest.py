@@ -92,7 +92,7 @@ def sync_server():
     server_config = start_sync_server()
     yield server_config
     if server_config:
-        stop_sync_server(server_config.container_id)
+        stop_sync_server(server_config.pid)
 
 
 def pytest_addoption(parser):

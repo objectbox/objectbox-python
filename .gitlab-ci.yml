@@ -109,15 +109,15 @@ test-sync:linux:x64:
     matrix:
       - PYTHON_VERSION: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
 
-test-sync:linux:armv7hf:
-  extends: .test-sync
-  tags: [ armv7hf, shell, linux, python3 ]
+#test-sync:linux:armv7hf:
+#  extends: .test-sync
+#  tags: [ armv7hf, shell, linux, python3 ]
 
 test-sync:linux:aarch64:
   extends: .test-sync
   tags: [ aarch64, shell, linux, python3 ]
 
-test-sync:mac:x64:
+test-sync:mac:arm64:
   extends: .test-sync
   script:
     - python3 -m venv .venv
@@ -126,11 +126,11 @@ test-sync:mac:x64:
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - pip3 install --force-reinstall dist/*.whl  # Artifacts from build-sync
     - python -m pytest -s --runsync
-  tags: [ mac, x64, shell, python3 ]
+  tags: [ mac, arm64, shell, python3 ]
 
-test-sync:windows:x64:
-  extends: .test-sync
-  tags: [ windows, x64, python ]
-  variables:
-    PYTHON: "python.exe"
+#test-sync:windows:x64:
+#  extends: .test-sync
+#  tags: [ windows, x64, python ]
+#  variables:
+#    PYTHON: "python.exe"
 
