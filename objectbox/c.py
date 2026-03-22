@@ -16,10 +16,12 @@
 import ctypes.util
 import os
 import platform
-from objectbox.version import Version
+from ctypes import c_char_p
 from typing import *
+
 import numpy as np
-from enum import IntEnum
+
+from objectbox.version import Version
 
 # This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
 # The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
@@ -27,7 +29,7 @@ from enum import IntEnum
 
 # Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
 # Don't forget to update download-c-lib.py when upgrading to a newer version.
-required_version = "4.0.0"
+required_version = "5.0.0"
 
 
 def shlib_name(library: str) -> str:
@@ -303,6 +305,11 @@ class DbErrorCode(IntEnum):
     OBX_ERROR_TREE_OTHER = 10699
 
 
+class OBXEntityFlags(IntEnum):
+    SYNC_ENABLED = 2
+    SHARED_GLOBAL_IDS = 4
+
+
 def check_obx_err(code: obx_err, func, args) -> obx_err:
     """ Raises an exception if obx_err is not successful. """
     if code != DbErrorCode.OBX_SUCCESS:
@@ -310,6 +317,11 @@ def check_obx_err(code: obx_err, func, args) -> obx_err:
         raise create_db_error(code)
     return code
 
+def check_obx_success(code: obx_err) -> bool:
+    if code == DbErrorCode.OBX_NO_SUCCESS:
+        return False
+    check_obx_err(code, None, None)
+    return True
 
 def check_obx_qb_cond(qb_cond: obx_qb_cond, func, args) -> obx_qb_cond:
     """ Raises an exception if obx_qb_cond is not successful. """
@@ -418,6 +430,9 @@ obx_model = c_fn('obx_model', OBX_model_p, [])
 # obx_err (OBX_model* model, const char* name, obx_schema_id entity_id, obx_uid entity_uid);
 obx_model_entity = c_fn_rc('obx_model_entity', [
     OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
+
+# obx_err obx_model_entity_flags(OBX_model* model, uint32_t flags);
+obx_model_entity_flags = c_fn_rc('obx_model_entity_flags', [OBX_model_p, ctypes.c_uint32])
 
 # obx_err (OBX_model* model, const char* name, OBXPropertyType type, obx_schema_id property_id, obx_uid property_uid);
 obx_model_property = c_fn_rc('obx_model_property',
@@ -1068,3 +1083,246 @@ OBXValidateOnOpenKvFlags_None = 0
 
 OBXBackupRestoreFlags_None = 0
 OBXBackupRestoreFlags_OverwriteExistingData = 1
+
+
+# Sync API
+
+class OBX_sync(ctypes.Structure):
+    pass
+
+
+OBX_sync_p = ctypes.POINTER(OBX_sync)
+
+
+class OBX_sync_server(ctypes.Structure):
+    pass
+
+
+OBX_sync_server_p = ctypes.POINTER(OBX_sync_server)
+
+OBXSyncCredentialsType = ctypes.c_int
+OBXRequestUpdatesMode = ctypes.c_int
+OBXSyncState = ctypes.c_int
+OBXSyncCode = ctypes.c_int
+
+
+class SyncCredentialsType(IntEnum):
+    NONE = 1
+    SHARED_SECRET = 2  # Deprecated, use SHARED_SECRET_SIPPED instead
+    GOOGLE_AUTH = 3
+    SHARED_SECRET_SIPPED = 4  # Uses shared secret to create a hashed credential
+    OBX_ADMIN_USER = 5  # ObjectBox admin users (username/password)
+    USER_PASSWORD = 6  # Generic credential type for admin users
+    JWT_ID = 7  # JSON Web Token (JWT): ID token with user identity
+    JWT_ACCESS = 8  # JSON Web Token (JWT): access token for resources
+    JWT_REFRESH = 9  # JSON Web Token (JWT): refresh token
+    JWT_CUSTOM = 10  # JSON Web Token (JWT): custom token type
+
+
+class RequestUpdatesMode(IntEnum):
+    MANUAL = 0  # No updates by default, must call obx_sync_updates_request() manually
+    AUTO = 1  # Same as calling obx_sync_updates_request(sync, TRUE)
+    AUTO_NO_PUSHES = 2  # Same as calling obx_sync_updates_request(sync, FALSE)
+
+
+class SyncState(IntEnum):
+    CREATED = 1
+    STARTED = 2
+    CONNECTED = 3
+    LOGGED_IN = 4
+    DISCONNECTED = 5
+    STOPPED = 6
+    DEAD = 7
+
+
+class OBXSyncError(IntEnum):
+    REJECT_TX_NO_PERMISSION = 1  # Sync client received rejection of transaction writes due to missing permissions
+
+
+class OBXSyncObjectType(IntEnum):
+    FlatBuffers = 1
+    String = 2
+    Raw = 3
+
+
+class OBX_sync_change(ctypes.Structure):
+    _fields_ = [
+        ('entity_id', obx_schema_id),
+        ('puts', ctypes.POINTER(OBX_id_array)),
+        ('removals', ctypes.POINTER(OBX_id_array)),
+    ]
+
+
+class OBX_sync_change_array(ctypes.Structure):
+    _fields_ = [
+        ('list', ctypes.POINTER(OBX_sync_change)),
+        ('count', ctypes.c_size_t),
+    ]
+
+
+class OBX_sync_object(ctypes.Structure):
+    _fields_ = [
+        ('type', ctypes.c_int),  # OBXSyncObjectType
+        ('id', ctypes.c_uint64),
+        ('data', ctypes.c_void_p),
+        ('size', ctypes.c_size_t),
+    ]
+
+
+class OBX_sync_msg_objects(ctypes.Structure):
+    _fields_ = [
+        ('topic', ctypes.c_void_p),
+        ('topic_size', ctypes.c_size_t),
+        ('objects', ctypes.POINTER(OBX_sync_object)),
+        ('count', ctypes.c_size_t),
+    ]
+
+
+class OBX_sync_msg_objects_builder(ctypes.Structure):
+    pass
+
+
+OBX_sync_msg_objects_builder_p = ctypes.POINTER(OBX_sync_msg_objects_builder)
+
+# Define callback types for sync listeners
+OBX_sync_listener_connect_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_disconnect_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_login_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_login_failure_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncCode
+OBX_sync_listener_complete_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+OBX_sync_listener_error_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncError
+OBX_sync_listener_change_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_change_array))
+OBX_sync_listener_server_time = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int64)
+OBX_sync_listener_msg_objects = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_msg_objects))
+
+# OBX_sync* obx_sync(OBX_store* store, const char* server_url);
+obx_sync = c_fn("obx_sync", OBX_sync_p, [OBX_store_p, ctypes.c_char_p])
+
+# OBX_sync* obx_sync_urls(OBX_store* store, const char* server_urls[], size_t server_urls_count);
+obx_sync_urls = c_fn("obx_sync_urls", OBX_sync_p, [OBX_store_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t])
+
+# Client Credentials
+
+# obx_err obx_sync_credentials(OBX_sync* sync, OBXSyncCredentialsType type, const void* data, size_t size);
+obx_sync_credentials = c_fn_rc('obx_sync_credentials',
+                               [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t])
+
+# obx_err obx_sync_credentials_user_password(OBX_sync* sync, OBXSyncCredentialsType type, const char* username, const char* password);
+obx_sync_credentials_user_password = c_fn_rc('obx_sync_credentials_user_password',
+                                               [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_char_p,
+                                                ctypes.c_char_p])
+
+# obx_err obx_sync_credentials_add(OBX_sync* sync, OBXSyncCredentialsType type, const void* data, size_t size, bool complete);
+obx_sync_credentials_add = c_fn_rc('obx_sync_credentials_add',
+                                   [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool])
+
+# obx_err obx_sync_credentials_add_user_password(OBX_sync* sync, OBXSyncCredentialsType type, const char* username, const char* password, bool complete);
+obx_sync_credentials_add_user_password = c_fn_rc('obx_sync_credentials_add_user_password',
+                                                   [OBX_sync_p, OBXSyncCredentialsType, ctypes.c_char_p, ctypes.c_char_p,
+                                                    ctypes.c_bool])
+
+# Sync Control
+
+# OBXSyncState obx_sync_state(OBX_sync* sync);
+obx_sync_state = c_fn('obx_sync_state', OBXSyncState, [OBX_sync_p])
+
+# obx_err obx_sync_request_updates_mode(OBX_sync* sync, OBXRequestUpdatesMode mode);
+obx_sync_request_updates_mode = c_fn_rc('obx_sync_request_updates_mode', [OBX_sync_p, OBXRequestUpdatesMode])
+
+# OBX_C_API obx_err obx_sync_updates_request(OBX_sync* sync, bool subscribe_for_pushes);
+obx_sync_updates_request = c_fn_rc('obx_sync_updates_request', [OBX_sync_p, ctypes.c_bool])
+
+# OBX_C_API obx_err obx_sync_updates_cancel(OBX_sync* sync);
+obx_sync_updates_cancel = c_fn_rc('obx_sync_updates_cancel', [OBX_sync_p])
+
+# obx_err obx_sync_start(OBX_sync* sync);
+obx_sync_start = c_fn_rc('obx_sync_start', [OBX_sync_p])
+
+# obx_err obx_sync_stop(OBX_sync* sync);
+obx_sync_stop = c_fn_rc('obx_sync_stop', [OBX_sync_p])
+
+# obx_err obx_sync_trigger_reconnect(OBX_sync* sync);
+obx_sync_trigger_reconnect = c_fn_rc('obx_sync_trigger_reconnect', [OBX_sync_p])
+
+# uint32_t obx_sync_protocol_version();
+obx_sync_protocol_version = c_fn('obx_sync_protocol_version', ctypes.c_uint32, [])
+
+# uint32_t obx_sync_protocol_version_server(OBX_sync* sync);
+obx_sync_protocol_version_server = c_fn('obx_sync_protocol_version_server', ctypes.c_uint32, [OBX_sync_p])
+
+# obx_err obx_sync_wait_for_logged_in_state(OBX_sync* sync, uint64_t timeout_millis);
+obx_sync_wait_for_logged_in_state = c_fn_rc('obx_sync_wait_for_logged_in_state', [OBX_sync_p, ctypes.c_uint64])
+
+# obx_err obx_sync_close(OBX_sync* sync);
+obx_sync_close = c_fn_rc('obx_sync_close', [OBX_sync_p])
+
+# Listener Callbacks
+
+# void obx_sync_listener_connect(OBX_sync* sync, OBX_sync_listener_connect* listener, void* listener_arg);
+obx_sync_listener_connect = c_fn('obx_sync_listener_connect', None,
+                                 [OBX_sync_p, OBX_sync_listener_connect_t, ctypes.c_void_p])
+
+# void obx_sync_listener_disconnect(OBX_sync* sync, OBX_sync_listener_disconnect* listener, void* listener_arg);
+obx_sync_listener_disconnect = c_fn('obx_sync_listener_disconnect', None,
+                                    [OBX_sync_p, OBX_sync_listener_disconnect_t, ctypes.c_void_p])
+
+# void obx_sync_listener_login(OBX_sync* sync, OBX_sync_listener_login* listener, void* listener_arg);
+obx_sync_listener_login = c_fn('obx_sync_listener_login', None,
+                               [OBX_sync_p, OBX_sync_listener_login_t, ctypes.c_void_p])
+
+# void obx_sync_listener_login_failure(OBX_sync* sync, OBX_sync_listener_login_failure* listener, void* listener_arg);
+obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None,
+                                       [OBX_sync_p, OBX_sync_listener_login_failure_t, ctypes.c_void_p])
+
+# void obx_sync_listener_complete(OBX_sync* sync, OBX_sync_listener_complete* listener, void* listener_arg);
+obx_sync_listener_error = c_fn('obx_sync_listener_error', None,
+                               [OBX_sync_p, OBX_sync_listener_error_t, ctypes.c_void_p])
+
+# void obx_sync_listener_change(OBX_sync* sync, OBX_sync_listener_change* listener, void* listener_arg);
+obx_sync_listener_change = c_fn('obx_sync_listener_change', None,
+                                [OBX_sync_p, OBX_sync_listener_change_t, ctypes.c_void_p])
+
+# Filter Variables
+
+# obx_err obx_sync_filter_variables_put(OBX_sync* sync, const char* name, const char* value);
+obx_sync_filter_variables_put = c_fn_rc('obx_sync_filter_variables_put',
+                                        [OBX_sync_p, c_char_p, c_char_p])
+
+# obx_err obx_sync_filter_variables_remove(OBX_sync* sync, const char* name);
+obx_sync_filter_variables_remove = c_fn_rc('obx_sync_filter_variables_remove',
+                                           [OBX_sync_p, c_char_p])
+
+# obx_err obx_sync_filter_variables_remove_all(OBX_sync* sync);
+obx_sync_filter_variables_remove_all = c_fn_rc('obx_sync_filter_variables_remove_all',
+                                               [OBX_sync_p])
+
+# OBX_C_API obx_err obx_sync_outgoing_message_count(OBX_sync* sync, uint64_t limit, uint64_t* out_count);
+obx_sync_outgoing_message_count = c_fn_rc('obx_sync_outgoing_message_count',
+                                          [OBX_sync_p, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64)])
+
+OBXFeature = ctypes.c_int
+
+class Feature(IntEnum):
+    ResultArray = 1  # Functions that are returning multiple results (e.g. multiple objects) can be only used if this is available.
+    TimeSeries = 2  # TimeSeries support (date/date-nano companion ID and other time-series functionality).
+    Sync = 3  # Sync client availability. Visit https://objectbox.io/sync for more details.
+    DebugLog = 4  # Check whether debug log can be enabled during runtime.
+    Admin = 5  # Admin UI including a database browser, user management, and more. Depends on HttpServer (if Admin is available HttpServer is too).
+    Tree = 6  # Tree with special GraphQL support
+    SyncServer = 7  # Sync server availability. Visit https://objectbox.io/sync for more details.
+    WebSockets = 8  # Implicitly added by Sync or SyncServer; disable via NoWebSockets
+    Cluster = 9  # Sync Server has cluster functionality. Implicitly added by SyncServer; disable via NoCluster
+    HttpServer = 10  # Embedded HTTP server.
+    GraphQL = 11  # Embedded GraphQL server (via HTTP). Depends on HttpServer (if GraphQL is available HttpServer is too).
+    Backup = 12  # Database Backup functionality; typically only enabled in Sync Server builds.
+    Lmdb = 13  # The default database "provider"; writes data persistently to disk (ACID).
+    VectorSearch = 14  # Vector search functionality; enables indexing for nearest neighbor search.
+    Wal = 15  # WAL (write-ahead logging).
+    SyncMongoDb = 16  # Sync connector to integrate MongoDB with SyncServer.
+    Auth = 17  # Enables additional authentication/authorization methods for sync login, e.g.
+    Trial = 18  # This is a free trial version; only applies to server builds (no trial builds for database and Sync clients).
+    SyncFilters = 19  # Server-side filters to return individual data for each sync user (user-specific data).
+
+
+# bool obx_has_feature(OBXFeature feature);
+obx_has_feature = c_fn('obx_has_feature', ctypes.c_bool, [OBXFeature])

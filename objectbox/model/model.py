@@ -102,6 +102,7 @@ class Model:
 
     def _create_entity(self, entity: _Entity):
         obx_model_entity(self._c_model, c_str(entity._name), entity._id, entity._uid)
+        obx_model_entity_flags(self._c_model, entity._flags)
         for prop in entity._properties:
             self._create_property(prop)
         obx_model_entity_last_property_id(self._c_model, entity._last_property_iduid.id, entity._last_property_iduid.uid)

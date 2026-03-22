@@ -14,6 +14,8 @@ jobs:
         exclude:
         - os: "macos"
           python: "3.7" # Prevent "The version '3.7' with architecture 'arm64' was not found for macOS 14.4.1"
+        - os: "ubuntu"
+          python: "3.7" # Python 3.7 is not available in ubuntu-latest i.e. version 24.04
     runs-on: ${{ matrix.os }}-latest
 
     steps:

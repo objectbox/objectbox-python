@@ -73,9 +73,9 @@ class IdSync:
             "modelVersionParserMinimum": MODEL_PARSER_VERSION,
             "entities": [],
             "lastEntityId": str(self.model.last_entity_iduid),
-            "lastIndexId": str(self.model.last_index_iduid)
+            "lastIndexId": str(self.model.last_index_iduid),
+            "lastRelationId": str(self.model.last_relation_iduid)
         }
-        # TODO lastRelationId
         # TODO modelVersion
         # TODO retiredEntityUids
         # TODO retiredIndexUids

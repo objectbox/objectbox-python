@@ -16,7 +16,7 @@
 
 from objectbox.store import Store
 from objectbox.box import Box
-from objectbox.model.entity import Entity
+from objectbox.model.entity import Entity, SyncEntity
 from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, HnswIndex, VectorDistanceType, HnswFlags
 from objectbox.model.model import Model
 from objectbox.c import version_core, DebugFlags
@@ -74,11 +74,12 @@ __all__ = [
     'PropertyQueryCondition',
     'HnswFlags',
     'Query',
-    'QueryBuilder'
+    'QueryBuilder',
+    'SyncEntity'
 ]
 
 # Python binding version
-version = Version(4, 0, 0)
+version = Version(5, 0, 0)
 """ObjectBox Python package version"""
 
 def version_info():

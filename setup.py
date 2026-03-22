@@ -1,11 +1,17 @@
+import os
+
 import setuptools
 import objectbox
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+package_name = "objectbox"
+if "OBX_BUILD_SYNC" in os.environ:
+    package_name = "objectbox-sync"
+
 setuptools.setup(
-    name="objectbox",
+    name=package_name,
     version=str(objectbox.version),
     author="ObjectBox",
     description="ObjectBox is a superfast lightweight database for objects",
