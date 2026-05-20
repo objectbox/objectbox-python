@@ -47,8 +47,8 @@ from objectbox import Entity, Id, Store, String
 
 @Entity()
 class Person:
-    id = Id
-    name = String
+    id = Id()
+    name = String()
 
 # The ObjectBox Store represents a database; keep it around...
 store = Store()
