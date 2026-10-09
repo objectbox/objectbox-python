@@ -6,6 +6,20 @@ from objectbox.exceptions import IllegalArgumentError
 from objectbox.sync import *
 
 
+def test_sync_is_available():
+    # Must not raise if Sync is not available (standard library)
+    assert Sync.is_available() in (True, False)
+
+
+@pytest.mark.sync
+def test_sync_results_without_server(sync_client):
+    # Non-error "failures" are returned as values (not raised)
+    assert sync_client.protocol_server_version() == 0
+    assert sync_client.request_updates(True) is False
+    assert sync_client.cancel_updates() is False
+    assert sync_client.wait_for_logged_in_state(timeout_millis=1) is False
+
+
 @pytest.mark.sync
 def test_sync_protocol_version():
     version = SyncClient.protocol_version()

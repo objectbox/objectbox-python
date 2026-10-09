@@ -359,11 +359,13 @@ def check_obx_err(code: obx_err, func, args) -> obx_err:
         raise create_db_error(code)
     return code
 
-def check_obx_success(code: obx_err) -> bool:
-    if code == DbErrorCode.OBX_NO_SUCCESS:
+def check_obx_success(code: obx_err, func, args) -> bool:
+    """ Returns True for OBX_SUCCESS, False for OBX_NO_SUCCESS (and OBX_TIMEOUT); raises an exception otherwise. """
+    if code == DbErrorCode.OBX_SUCCESS:
+        return True
+    if code == DbErrorCode.OBX_NO_SUCCESS or code == DbErrorCode.OBX_TIMEOUT:
         return False
-    check_obx_err(code, None, None)
-    return True
+    return check_obx_err(code, func, args)
 
 def check_obx_qb_cond(qb_cond: obx_qb_cond, func, args) -> obx_qb_cond:
     """ Raises an exception if obx_qb_cond is not successful. """
@@ -410,6 +412,16 @@ def c_fn_rc(name: str, argtypes):
     func.argtypes = argtypes
     func.restype = obx_err
     func.errcheck = check_obx_err
+    return func
+
+
+def c_fn_rc_success(name: str, argtypes):
+    """ Like c_fn_rc, but for functions that may "fail" without an error (OBX_NO_SUCCESS, OBX_TIMEOUT): returns a bool
+    telling if the function was successful; still raises an exception for errors (other result codes). """
+    func = C.__getattr__(name)
+    func.argtypes = argtypes
+    func.restype = obx_err
+    func.errcheck = check_obx_success
     return func
 
 
@@ -1288,10 +1300,10 @@ obx_sync_state = c_fn('obx_sync_state', OBXSyncState, [OBX_sync_p])
 obx_sync_request_updates_mode = c_fn_rc('obx_sync_request_updates_mode', [OBX_sync_p, OBXRequestUpdatesMode])
 
 # OBX_C_API obx_err obx_sync_updates_request(OBX_sync* sync, bool subscribe_for_pushes);
-obx_sync_updates_request = c_fn_rc('obx_sync_updates_request', [OBX_sync_p, ctypes.c_bool])
+obx_sync_updates_request = c_fn_rc_success('obx_sync_updates_request', [OBX_sync_p, ctypes.c_bool])
 
 # OBX_C_API obx_err obx_sync_updates_cancel(OBX_sync* sync);
-obx_sync_updates_cancel = c_fn_rc('obx_sync_updates_cancel', [OBX_sync_p])
+obx_sync_updates_cancel = c_fn_rc_success('obx_sync_updates_cancel', [OBX_sync_p])
 
 # obx_err obx_sync_start(OBX_sync* sync);
 obx_sync_start = c_fn_rc('obx_sync_start', [OBX_sync_p])
@@ -1300,16 +1312,18 @@ obx_sync_start = c_fn_rc('obx_sync_start', [OBX_sync_p])
 obx_sync_stop = c_fn_rc('obx_sync_stop', [OBX_sync_p])
 
 # obx_err obx_sync_trigger_reconnect(OBX_sync* sync);
-obx_sync_trigger_reconnect = c_fn_rc('obx_sync_trigger_reconnect', [OBX_sync_p])
+obx_sync_trigger_reconnect = c_fn_rc_success('obx_sync_trigger_reconnect', [OBX_sync_p])
 
 # uint32_t obx_sync_protocol_version();
 obx_sync_protocol_version = c_fn('obx_sync_protocol_version', ctypes.c_uint32, [])
 
 # uint32_t obx_sync_protocol_version_server(OBX_sync* sync);
-obx_sync_protocol_version_server = c_fn('obx_sync_protocol_version_server', ctypes.c_uint32, [OBX_sync_p])
+# Note: no error check, 0 is a valid result (no server contact yet)
+obx_sync_protocol_version_server = c_fn_nocheck('obx_sync_protocol_version_server', ctypes.c_uint32, [OBX_sync_p])
 
 # obx_err obx_sync_wait_for_logged_in_state(OBX_sync* sync, uint64_t timeout_millis);
-obx_sync_wait_for_logged_in_state = c_fn_rc('obx_sync_wait_for_logged_in_state', [OBX_sync_p, ctypes.c_uint64])
+obx_sync_wait_for_logged_in_state = c_fn_rc_success('obx_sync_wait_for_logged_in_state',
+                                                    [OBX_sync_p, ctypes.c_uint64])
 
 # obx_err obx_sync_close(OBX_sync* sync);
 obx_sync_close = c_fn_rc('obx_sync_close', [OBX_sync_p])
@@ -1383,4 +1397,5 @@ class Feature(IntEnum):
 
 
 # bool obx_has_feature(OBXFeature feature);
-obx_has_feature = c_fn('obx_has_feature', ctypes.c_bool, [OBXFeature])
+# Note: no error check, False is a valid result
+obx_has_feature = c_fn_nocheck('obx_has_feature', ctypes.c_bool, [OBXFeature])

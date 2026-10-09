@@ -518,7 +518,7 @@ class SyncClient:
             True if a reconnect was actually triggered.
         """
         self.__check_sync_ptr_not_null()
-        return c.check_obx_success(c.obx_sync_trigger_reconnect(self.__c_sync_client_ptr))
+        return c.obx_sync_trigger_reconnect(self.__c_sync_client_ptr)
 
     def request_updates(self, subscribe_for_future_pushes: bool) -> bool:
         """Request updates since we last synchronized our database.
@@ -531,10 +531,11 @@ class SyncClient:
             subscribe_for_future_pushes: If True, also subscribe for future pushes.
 
         Returns:
-            True if the request was successful.
+            True if the request was likely sent (e.g. the client is logged in); False if it was not sent
+            (and will not be sent in the future).
         """
         self.__check_sync_ptr_not_null()
-        return c.check_obx_success(c.obx_sync_updates_request(self.__c_sync_client_ptr, subscribe_for_future_pushes))
+        return c.obx_sync_updates_request(self.__c_sync_client_ptr, subscribe_for_future_pushes)
 
     def cancel_updates(self) -> bool:
         """Cancel updates from the server so that it will stop sending updates.
@@ -542,10 +543,11 @@ class SyncClient:
         See also request_updates().
 
         Returns:
-            True if the cancellation was successful.
+            True if the cancellation was likely sent (e.g. the client is logged in); False if it was not sent
+            (and will not be sent in the future).
         """
         self.__check_sync_ptr_not_null()
-        return c.check_obx_success(c.obx_sync_updates_cancel(self.__c_sync_client_ptr))
+        return c.obx_sync_updates_cancel(self.__c_sync_client_ptr)
 
     @staticmethod
     def protocol_version() -> int:
@@ -556,6 +558,7 @@ class SyncClient:
         """Returns the protocol version of the server after a connection is
         established (or attempted), zero otherwise.
         """
+        self.__check_sync_ptr_not_null()
         return c.obx_sync_protocol_version_server(self.__c_sync_client_ptr)
 
     def close(self):
@@ -674,14 +677,18 @@ class SyncClient:
             None
         )
 
-    def wait_for_logged_in_state(self, timeout_millis: int):
+    def wait_for_logged_in_state(self, timeout_millis: int) -> bool:
         """Waits for the sync client to reach the logged-in state.
 
         Args:
-            timeout_millis: Maximum time to wait in milliseconds.
+            timeout_millis: Maximum time to wait in milliseconds (must be greater than 0).
+
+        Returns:
+            True if the logged-in state was reached within the given timeout; False if the timeout was reached or
+            a state was reached that is unlikely to result in a successful login (e.g. disconnected).
         """
         self.__check_sync_ptr_not_null()
-        c.obx_sync_wait_for_logged_in_state(self.__c_sync_client_ptr, timeout_millis)
+        return c.obx_sync_wait_for_logged_in_state(self.__c_sync_client_ptr, timeout_millis)
 
     def add_filter_variable(self, name: str, value: str):
         """Adds or replaces a Sync filter variable value for the given name.
