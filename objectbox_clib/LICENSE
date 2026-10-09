@@ -1,3 +1,6 @@
-ObjectBox Binary License v2.0-beta 
+ObjectBox Binary License
 
-TODO: TBD
+The ObjectBox pre-built native library (binary) contained in this package is licensed under the ObjectBox Binary Licence Agreement:
+https://objectbox.io/0209-ob-binary-license/
+
+Note: the ObjectBox Python binding (package objectbox) is licensed separately under the Apache License 2.0.

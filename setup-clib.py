@@ -85,9 +85,10 @@ def setup():
         project_urls={
             'GitHub': 'https://github.com/objectbox/objectbox-python',
             'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
+            'License': 'https://objectbox.io/0209-ob-binary-license/',
         },
         python_requires='>=3.4, <4',
-        license='ObjectBox Binary License v2.0-beta',
+        license='ObjectBox Binary License (https://objectbox.io/0209-ob-binary-license/)',
         license_files=["objectbox_clib/LICENSE"],
         package_data={
             'objectbox_clib': ['lib/' + PLATFORMS[platform_tag] + '/*'],
