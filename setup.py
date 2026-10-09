@@ -1,12 +1,13 @@
 import setuptools
-import objectbox
+
+from build_info import binding_version, clib_version
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="objectbox",
-    version=str(objectbox.version),
+    version=binding_version(),
     author="ObjectBox",
     description="ObjectBox is a superfast lightweight database for objects",
     long_description=long_description,
@@ -49,7 +50,9 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'objectbox_clib',
+       # The binding requires an exact C library version (checked at runtime); the ".*" allows post-releases
+       # of objectbox-clib, e.g. 4.0.0.post1 to fix packaging issues.
+       'objectbox-clib==' + clib_version() + '.*',
        # A range instead of an exact pin, so we do not force a specific version on users that also depend on
        # flatbuffers via other packages. The lower bound is the previously pinned version known to work; no upper bound as
        # flatbuffers uses date-based versions (no semver), so its "major" version does not indicate breaking changes.
@@ -57,5 +60,5 @@ setuptools.setup(
        'numpy'
     ],
 
-    packages=setuptools.find_packages(exclude=['exampl*','objectbox_cli*']), 
+    packages=setuptools.find_packages(exclude=['exampl*', 'objectbox_clib*']), 
 )

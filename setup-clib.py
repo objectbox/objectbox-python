@@ -1,12 +1,13 @@
 import setuptools
-import os
-import objectbox
+
+from build_info import clib_version
+
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="objectbox-clib",
-    version=str(objectbox.version),
+    version=clib_version(),
     author="ObjectBox",
     description="ObjectBox is a superfast lightweight database for objects (clib backend)",
     long_description=long_description,
