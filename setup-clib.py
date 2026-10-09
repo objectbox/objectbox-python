@@ -1,8 +1,8 @@
 # Builds the objectbox-clib package containing the ObjectBox C library (no Python code).
 # There is one wheel per platform, tagged for the platform, so pip installs only the library for the user's platform:
 #   python setup-clib.py bdist_wheel --plat-name <platform tag>   (one of PLATFORMS below)
-#   python setup-clib.py bdist_wheel                              (fallback wheel with all libraries)
-#   python setup-clib.py all                                      (all of the above, run by `make build`)
+#   python setup-clib.py all                                      (all platforms, run by `make build`)
+# There is no wheel for other platforms (e.g. no "any" wheel with all libraries); pip fails to install there.
 import os
 import shutil
 import subprocess
@@ -21,8 +21,8 @@ from build_info import clib_version
 # The tags express the minimum OS requirements of the libraries:
 # - Linux: glibc 2.28 (as documented for objectbox-c); manylinux tags are required for PyPI.
 # - macOS: the library requires 13.6; since macOS 11, pip only considers major versions (13.0) for wheel tags.
-# Not included is Linux armv6l (e.g. Raspberry Pi Zero): pip does not support manylinux for armv6l and PyPI does not
-# accept plain "linux_armv6l" wheels; thus armv6l is served by the fallback wheel.
+# Linux armv6l (e.g. Raspberry Pi Zero) is not supported: pip does not support manylinux for armv6l and PyPI does not
+# accept plain "linux_armv6l" wheels.
 PLATFORMS = {
     "manylinux_2_28_x86_64": "x86_64",
     "manylinux_2_28_aarch64": "aarch64",
@@ -31,15 +31,12 @@ PLATFORMS = {
     "win_amd64": "AMD64",
 }
 
-# The fallback wheel ("any" platform) has all libraries; pip prefers a wheel for the specific platform if available.
-ALL_LIB_DIRS = list(PLATFORMS.values()) + ["armv6l"]
-
 
 def build_all():
-    for args in [["--plat-name", tag] for tag in PLATFORMS] + [[]]:
+    for tag in PLATFORMS:
         # Remove build output from the previous platform; otherwise its library would end up in the next wheel too
         shutil.rmtree("build", ignore_errors=True)
-        subprocess.check_call([sys.executable, __file__, "bdist_wheel"] + args)
+        subprocess.check_call([sys.executable, __file__, "bdist_wheel", "--plat-name", tag])
     shutil.rmtree("build", ignore_errors=True)
 
 
@@ -63,17 +60,13 @@ class PlatformWheel(bdist_wheel):
     """Tags the wheel for the given platform but for any Python 3 version (the library does not use the Python API)."""
 
     def get_tag(self):
-        return "py3", "none", self.plat_name if self.plat_name_supplied else "any"
+        return "py3", "none", self.plat_name
 
 
 def setup():
     platform_tag = platform_tag_from_args()
-    if platform_tag is None:
-        lib_dirs = ALL_LIB_DIRS
-    elif platform_tag in PLATFORMS:
-        lib_dirs = [PLATFORMS[platform_tag]]
-    else:
-        raise ValueError(f"Unsupported platform tag: {platform_tag}; supported: {', '.join(PLATFORMS)}")
+    if platform_tag not in PLATFORMS:
+        raise ValueError(f"Missing or unsupported --plat-name: {platform_tag}; supported: {', '.join(PLATFORMS)}")
 
     with open("README.md", "r") as fh:
         long_description = fh.read()
@@ -97,10 +90,10 @@ def setup():
         license='ObjectBox Binary License v2.0-beta',
         license_files=["objectbox_clib/LICENSE"],
         package_data={
-            'objectbox_clib': ['lib/' + lib_dir + '/*' for lib_dir in lib_dirs],
+            'objectbox_clib': ['lib/' + PLATFORMS[platform_tag] + '/*'],
         },
         cmdclass={'bdist_wheel': PlatformWheel},
-        distclass=BinaryDistribution if platform_tag else setuptools.Distribution,
+        distclass=BinaryDistribution,
     )
 
 

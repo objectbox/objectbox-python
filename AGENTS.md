@@ -8,7 +8,7 @@ All `make` targets use (and create if needed) the virtualenv in `.venv` from `re
 
 - `make depend` — set up venv and download the ObjectBox C shared libraries (`download-c-lib.py`) into `objectbox_clib/lib/<arch>/`. Required once after checkout and whenever the C library version changes.
 - `make test` — run all tests (`python -m pytest --capture=no --verbose`)
-- `make build` — clean and build the wheels into `dist/`: `objectbox` and `objectbox-clib` (one per platform plus a fallback)
+- `make build` — clean and build the wheels into `dist/`: `objectbox` and `objectbox-clib` (one per platform)
 - `make benchmark` — CRUD benchmark (`benchmark.py`)
 - Single test: `.venv/bin/python -m pytest tests/test_query.py::test_name -s -v` (the venv gets pytest etc. from `requirements.txt` via any `make` target, e.g. `make depend`)
 
@@ -35,7 +35,7 @@ Python binding for the ObjectBox C API (objectbox-c) via `ctypes`; objects are s
 
 Two pip packages are built from this repository:
 - `objectbox` (`setup.py`): the Python binding; depends on the matching `objectbox-clib` version (`==<C version>.*`).
-- `objectbox-clib` (`setup-clib.py`, package `objectbox_clib/`): only the C libraries, no Python code. Built as one wheel per platform (wheel platform tags in `PLATFORMS`, so pip picks the platform's library) plus a fallback wheel with all libraries (e.g. for Linux armv6l, which cannot be served by platform wheels on PyPI). Versioned like the C library.
+- `objectbox-clib` (`setup-clib.py`, package `objectbox_clib/`): only the C libraries, no Python code. Built as one wheel per platform (wheel platform tags in `PLATFORMS`, so pip picks the platform's library). There is no fallback wheel: other platforms, e.g. Linux armv6l (no manylinux support), are not supported. Versioned like the C library.
 
 `build_info.py` reads the binding version (`objectbox/__init__.py`) and the C library version (`required_version` in `objectbox/c.py`) as text for the build scripts and `download-c-lib.py`. Build scripts must not import `objectbox`: that loads the C library. To bump the C library, only change `required_version`, run `make depend`, and re-check the platform tags in `setup-clib.py` against the new libraries' minimum glibc/macOS versions.
 

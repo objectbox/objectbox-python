@@ -23,7 +23,6 @@ files = {
     "x86_64/libobjectbox.so": "linux-x64.tar.gz",
     "aarch64/libobjectbox.so": "linux-aarch64.tar.gz",
     "armv7l/libobjectbox.so": "linux-armv7hf.tar.gz",
-    "armv6l/libobjectbox.so": "linux-armv6hf.tar.gz",
 
     # mac
     "macos-universal/libobjectbox.dylib": "macos-universal.zip",
