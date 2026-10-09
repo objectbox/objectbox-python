@@ -287,9 +287,7 @@ def test_flex_values(test_store):
 def test_contains(test_store):
     box = test_store.box(TestEntity)
 
-    box.put(TestEntity(str="Object 1"))
-    box.put(TestEntity(str="Object 2"))
-    box.put(TestEntity(str="Object 3"))
+    box.put([TestEntity(str=f"Object {i}") for i in range(1, 4)])
     assert box.count() == 3
 
     assert box.contains(1)
@@ -305,14 +303,13 @@ def test_contains(test_store):
 def test_update(test_store):
     box = test_store.box(TestEntity)
 
-    box.put(TestEntity(str="Object 1"))
-    box.put(TestEntity(str="Object 2"))
-    box.put(TestEntity(str="Object 3"))
+    box.put([TestEntity(str=f"Object {i}") for i in range(1, 4)])
     assert box.count() == 3
 
-    for obj in box.get_all():
-        obj.str += " (updated)"
-        box.update(obj)
+    with test_store.write_tx():
+        for obj in box.get_all():
+            obj.str += " (updated)"
+            box.update(obj)
 
     assert box.get(1).str == "Object 1 (updated)"
     assert box.get(2).str == "Object 2 (updated)"
@@ -332,11 +329,7 @@ def test_update(test_store):
 def test_get_many(test_store):
     box = test_store.box(TestEntity)
 
-    box.put(TestEntity(str="Object 1"))
-    box.put(TestEntity(str="Object 2"))
-    box.put(TestEntity(str="Object 3"))
-    box.put(TestEntity(str="Object 4"))
-    box.put(TestEntity(str="Object 5"))
+    box.put([TestEntity(str=f"Object {i}") for i in range(1, 6)])
     assert box.count() == 5
 
     objects = box.get_many([1, 3, 4])
