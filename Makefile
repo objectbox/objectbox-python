@@ -52,7 +52,7 @@ depend:	${VENV}			## Prepare dependencies
 
 test: ${VENV}			## Test all targets
 	set -e ; \
-	${PYTHON} -m pytest --capture=no --verbose
+	${PYTHON} -m pytest --capture=no --verbose -rs
 
 benchmark: ${VENV}		## Run CRUD benchmarks
 	set -e ; \
