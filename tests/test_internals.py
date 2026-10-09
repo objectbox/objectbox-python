@@ -1,9 +1,9 @@
 from objectbox import *
 from objectbox.model.idsync import sync_model
+import objectbox.c as c
+
 import os
-
 import os.path
-
 import pytest
 
 class _TestEnv:
@@ -82,7 +82,6 @@ def test_property_name_clash(env):
     assert len(box.query(MyEntity.a_safe_one.equals("blah")).build().find()) == 1
 
 
-@pytest.mark.skip(reason="To be fixed")
 def test_entity_attribute_methods_nameclash_check():
     # Test ensures we do not leave occasional instance attributes or class methods/attributes in
     # helper class _Entity which might collide with user-defined property names.
@@ -106,3 +105,23 @@ def test_entity_attribute_methods_nameclash_check():
     assert (
             len(not_prefixed) == 0
     ), f"INTERNAL: Public attributes/methods(s) detected in Class _Entity: {not_prefixed}\nPlease prefix with '_' to prevent name-collision with Property field-names."
+
+
+def test_sync_entity():
+    @SyncEntity
+    @Entity(model="sync-entity-test")
+    class MySyncEntity:
+        id = Id()
+
+    @Entity(model="sync-entity-test")
+    class MyLocalEntity:
+        id = Id()
+
+    assert MySyncEntity._flags & c.OBXEntityFlags.SYNC_ENABLED
+    assert MyLocalEntity._flags == 0
+
+    with pytest.raises(TypeError, match="above @Entity"):
+        @Entity(model="sync-entity-test")
+        @SyncEntity
+        class WrongOrder:
+            id = Id()
