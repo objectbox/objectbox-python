@@ -298,28 +298,8 @@ def test_contains(test_store):
     assert not box.contains(4)
     assert not box.contains(3248)
 
-    with pytest.raises(IllegalArgumentError, match="Illegal ID value: 0") as e:
+    with pytest.raises(IllegalArgumentError, match="Illegal ID value: 0"):
         box.contains(0)
-
-
-def test_insert(test_store):
-    box = test_store.box(TestEntity)
-
-    box.insert(38, TestEntity(str="Object 38"))
-    box.insert(2, TestEntity(str="Object 2"))
-    box.insert(98, TestEntity(str="Object 98"))
-    assert box.count() == 3
-
-    with pytest.raises(IdAlreadyExistsError, match="Insert failed, given ID already exists: 98") as e:
-        box.insert(98, TestEntity(str="Object 98"))
-
-    assert box.put(TestEntity(str="Object 1")) == 1
-    assert box.count() == 4
-
-    assert box.get(2).str == "Object 2"
-    assert box.put(TestEntity(str="Object 2 (updated)")) == 2
-    assert box.get(2).str == "Object 2 (updated)"
-    assert box.count() == 4
 
 
 def test_update(test_store):
@@ -330,20 +310,23 @@ def test_update(test_store):
     box.put(TestEntity(str="Object 3"))
     assert box.count() == 3
 
-    assert box.get(1).str == "Object 1"
-    assert box.get(2).str == "Object 2"
-    assert box.get(3).str == "Object 3"
-
-    box.update(1, TestEntity(str="Object 1 (updated)"))
-    box.update(2, TestEntity(str="Object 2 (updated)"))
-    box.update(3, TestEntity(str="Object 3 (updated)"))
+    for obj in box.get_all():
+        obj.str += " (updated)"
+        box.update(obj)
 
     assert box.get(1).str == "Object 1 (updated)"
     assert box.get(2).str == "Object 2 (updated)"
     assert box.get(3).str == "Object 3 (updated)"
+    assert box.count() == 3
 
-    with pytest.raises(IdNotFoundError, match="Update failed, given ID doesn't exist: 100") as e:
-        box.update(100, TestEntity(str="Object 100 (updated)"))
+    with pytest.raises(ValueError, match="without an ID"):
+        box.update(TestEntity(str="New object"))
+
+    obj = box.get(1)
+    box.remove(1)
+    with pytest.raises(IdNotFoundError, match="Update failed, given ID doesn't exist: 1"):
+        box.update(obj)
+    assert not box.contains(1)  # Failed update must not re-create the object
 
 
 def test_get_many(test_store):

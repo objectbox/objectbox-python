@@ -118,25 +118,15 @@ class Box:
         for k in new.keys():
             self._entity._set_object_id(objects[k], ids[k])
 
-    def insert(self, object_id: int, object_):
-        """Inserts an object with the given ID.
+    def update(self, object_):
+        """Updates the existing object having the same ID as the given object.
 
-        Raises if the ID already exists.
-        """
-        object_.id = object_id
-        data = self._entity._marshal(object_, object_id)
-        obx_box_insert(self._c_box, object_id, bytes(data), len(data))
-        if object_id != self._entity._get_object_id(object_):
-            self._entity._set_object_id(object_, object_id)
-
-    def update(self, object_id: int, object_):
-        """Updates an existing object given by its ID, with the given object.
-
-        Raises if the ID doesn't match any object."""
+        Raises if the object has no ID (i.e. it was never put) or the ID doesn't match any stored object."""
+        object_id = self._entity._get_object_id(object_)
+        if not object_id:
+            raise ValueError("Cannot update an object without an ID; use put() for new objects")
         data = self._entity._marshal(object_, object_id)
         obx_box_update(self._c_box, object_id, bytes(data), len(data))
-        if object_id != self._entity._get_object_id(object_):
-            self._entity._set_object_id(object_, object_id)
 
     def get(self, id: int):
         """Get object by given Id or None if not found."""
@@ -162,11 +152,8 @@ class Box:
         if not id_array:  # Empty
             return []
 
-        c_ids = (ctypes.c_uint64 * len(id_array))(*id_array)
-
-        c_id_array = OBX_id_array()
-        c_id_array.ids = ctypes.cast(c_ids, ctypes.POINTER(obx_id))
-        c_id_array.count = len(id_array)
+        c_ids = (obx_id * len(id_array))(*id_array)
+        c_id_array = OBX_id_array(ctypes.cast(c_ids, ctypes.POINTER(obx_id)), len(id_array))
 
         with self._store.read_tx():
             c_bytes_array_p = obx_box_get_many(self._c_box, ctypes.byref(c_id_array))

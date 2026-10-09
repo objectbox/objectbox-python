@@ -671,7 +671,7 @@ obx_box_put_many = c_fn_rc('obx_box_put_many', [OBX_box_p, OBX_bytes_array_p, ct
 obx_box_remove = c_fn_nocheck('obx_box_remove', obx_err, [OBX_box_p, obx_id])
 
 # OBX_C_API obx_err obx_box_remove_many(OBX_box* box, const OBX_id_array* ids, uint64_t* out_count);
-obx_box_remove_many = c_fn_rc('obx_box_remove_many', [OBX_id_array_p, ctypes.POINTER(ctypes.c_uint64)])
+obx_box_remove_many = c_fn_rc('obx_box_remove_many', [OBX_box_p, OBX_id_array_p, ctypes.POINTER(ctypes.c_uint64)])
 
 # OBX_C_API obx_err obx_box_remove_all(OBX_box* box, uint64_t* out_count);
 obx_box_remove_all = c_fn_rc('obx_box_remove_all', [OBX_box_p, ctypes.POINTER(ctypes.c_uint64)])
