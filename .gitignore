@@ -9,6 +9,13 @@
 
 # Test temporary files
 testdata/
+# Model JSON files written by tests (regenerated with new random UIDs on each run); depending on the working dir.
+# Note: do not ignore objectbox-model.json in general; apps (e.g. examples) shall commit theirs.
+/objectbox-model.json
+/test.json
+/tests/objectbox-model.json
+/tests/test.json
+/tests/test-model*.json
 
 # ObjectBox databases from example
 *.mdb
