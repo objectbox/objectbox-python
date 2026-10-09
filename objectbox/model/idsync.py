@@ -91,6 +91,8 @@ class IdSync:
                 "lastPropertyId": str(entity._last_property_iduid),
                 "properties": []
             }
+            if entity._flags != 0:
+                entity_json["flags"] = entity._flags  # E.g. Sync enabled; like the model JSON of other ObjectBox APIs
             for prop in entity._properties:
                 prop_json = {
                     "id": str(prop.iduid),

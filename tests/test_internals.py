@@ -1,6 +1,7 @@
 from objectbox import *
 from objectbox.model.idsync import sync_model
 import objectbox.c as c
+import json
 
 import os
 import os.path
@@ -119,6 +120,20 @@ def test_sync_entity():
 
     assert MySyncEntity._flags & c.OBXEntityFlags.SYNC_ENABLED
     assert MyLocalEntity._flags == 0
+
+    # The model JSON contains the entity flags
+    model = Model()
+    model.entity(MySyncEntity)
+    model.entity(MyLocalEntity)
+    model_json_file = "test-sync-entity-model.json"
+    if os.path.exists(model_json_file):
+        os.remove(model_json_file)
+    sync_model(model, model_json_file)
+    with open(model_json_file) as file:
+        entities_json = {entity["name"]: entity for entity in json.load(file)["entities"]}
+    os.remove(model_json_file)
+    assert entities_json["MySyncEntity"]["flags"] == c.OBXEntityFlags.SYNC_ENABLED
+    assert "flags" not in entities_json["MyLocalEntity"]
 
     with pytest.raises(TypeError, match="above @Entity"):
         @Entity(model="sync-entity-test")
