@@ -1,5 +1,7 @@
 import ctypes
+import threading
 import typing
+import weakref
 from enum import Enum, auto, IntEnum
 
 import objectbox.c as c
@@ -329,6 +331,10 @@ class SyncChangeListener:
         pass
 
 
+# The active (not closed) SyncClient of each store; weak references to not keep stores and clients alive
+_clients_by_store: 'weakref.WeakKeyDictionary[Store, weakref.ReferenceType[SyncClient]]' = weakref.WeakKeyDictionary()
+
+
 class SyncClient:
     """Sync client is used to connect to an ObjectBox sync server.
 
@@ -345,7 +351,14 @@ class SyncClient:
             store: The ObjectBox store to sync.
             server_urls: List of server URLs to connect to.
             filter_variables: Optional dictionary of filter variable names to values.
+
+        Raises:
+            ValueError: If a sync client is already active (not closed) for the given store.
         """
+        # Set first, so close() (e.g. via __del__) works if this constructor raises
+        self.__c_sync_client_ptr = None
+        self.__close_lock = threading.Lock()
+        self.__on_store_close = None
         self.__c_change_listener = None
         self.__c_login_listener = None
         self.__c_login_failure_listener = None
@@ -364,23 +377,36 @@ class SyncClient:
         self.__store = store
         self.__server_urls = [url.encode('utf-8') for url in server_urls]
 
-        self.__c_sync_client_ptr = c.obx_sync_urls(store.c_store(),
+        if not store._c_store:
+            raise ValueError("Store is closed")
+        existing_ref = _clients_by_store.get(store)
+        if existing_ref is not None and existing_ref() is not None and not existing_ref().is_closed():
+            raise ValueError("Only one sync client can be active for a store")
+
+        self.__c_sync_client_ptr = c.obx_sync_urls(store._c_store,
                                                    c.c_array_pointer(self.__server_urls, ctypes.c_char_p),
                                                    len(self.__server_urls))
 
+        # Close this client when the store is closed (the C API requires the client to be closed first).
+        # The store must not keep this client alive (would prevent closing it via __del__), so use a weak reference.
+        self.__on_store_close = SyncClient.__close_on_store_close_func(weakref.ref(self))
+        self.__store._add_close_listener(self.__on_store_close)
+        _clients_by_store[store] = weakref.ref(self)
+
         for name, value in (filter_variables or {}).items():
             self.add_filter_variable(name, value)
-
-        self.__store.add_store_close_listener(on_store_close=self.__close_sync_client_func())
 
     def __del__(self):
         # Close the SyncClient when this instance is destructed
         # for ex. when garbage collected.
         self.close()
 
-    def __close_sync_client_func(self):
+    @staticmethod
+    def __close_on_store_close_func(client_ref: 'weakref.ReferenceType[SyncClient]'):
         def close_sync_client():
-            self.close()
+            client = client_ref()
+            if client is not None:
+                client.close()
 
         return close_sync_client
 
@@ -566,17 +592,29 @@ class SyncClient:
 
         It can no longer be used afterwards, make a new sync client instead.
         Does nothing if this sync client has already been closed.
+        Also called when the store is closed, or when this client is no longer referenced (garbage collected).
+
+        Note: do not call this from a listener (it is called by the client's background thread, which this joins),
+        and do not use this client concurrently from other threads while closing.
         """
-        c.obx_sync_listener_error(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_error_t), None)
-        c.obx_sync_listener_login(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_login_t), None)
-        c.obx_sync_listener_login_failure(self.__c_sync_client_ptr,
-                                          ctypes.cast(None, c.OBX_sync_listener_login_failure_t), None)
-        c.obx_sync_listener_connect(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_connect_t), None)
-        c.obx_sync_listener_disconnect(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_disconnect_t),
-                                       None)
-        c.obx_sync_listener_change(self.__c_sync_client_ptr, ctypes.cast(None, c.OBX_sync_listener_change_t), None)
-        c.obx_sync_close(self.__c_sync_client_ptr)
-        self.__c_sync_client_ptr = None
+        with self.__close_lock:  # Only one thread may close, e.g. the user and the store (its close listener)
+            c_sync_client_ptr = self.__c_sync_client_ptr
+            if c_sync_client_ptr is None:
+                return
+            self.__c_sync_client_ptr = None
+        self.__store._remove_close_listener(self.__on_store_close)
+        active_ref = _clients_by_store.get(self.__store)
+        if active_ref is not None and active_ref() is self:
+            del _clients_by_store[self.__store]
+        # Stops the client and joins its background thread; thus, no listener is called after this returns
+        c.obx_sync_close(c_sync_client_ptr)
+        # Now the C callbacks are no longer used and can be released
+        self.__c_change_listener = None
+        self.__c_login_listener = None
+        self.__c_login_failure_listener = None
+        self.__c_connect_listener = None
+        self.__c_disconnect_listener = None
+        self.__c_error_listener = None
 
     def is_closed(self) -> bool:
         """Returns if this sync client is closed and can no longer be used."""
@@ -758,7 +796,6 @@ class Sync:
 
     Start a client using Sync.client() and connect to a remote server.
     """
-    __sync_clients: typing.Dict[Store, SyncClient] = {}
 
     @staticmethod
     def is_available() -> bool:
@@ -866,13 +903,7 @@ class Sync:
 
         Returns:
             A configured SyncClient instance.
-
-        Raises:
-            ValueError: If a sync client is already active for the given store.
         """
-        if store in Sync.__sync_clients:
-            raise ValueError('Only one sync client can be active for a store')
         client = SyncClient(store, server_urls, filter_variables)
         client.set_multiple_credentials(credentials_list)
-        Sync.__sync_clients[store] = client
         return client

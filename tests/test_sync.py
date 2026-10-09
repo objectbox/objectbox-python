@@ -1,3 +1,5 @@
+import gc
+import weakref
 from typing import Callable, Optional
 
 import pytest
@@ -111,6 +113,39 @@ def test_client_closed_when_store_closed(test_store, sync_client):
     assert not sync_client.is_closed()
     test_store.close()
     assert sync_client.is_closed()
+
+
+@pytest.mark.sync
+def test_one_client_per_store(test_store):
+    client = Sync.client(test_store, "ws://127.0.0.1:9999", SyncCredentials.none())
+    with pytest.raises(ValueError, match="Only one sync client can be active for a store"):
+        Sync.client_multi_urls(test_store, ["ws://127.0.0.1:9999"], SyncCredentials.none())
+    client.close()
+    Sync.client(test_store, "ws://127.0.0.1:9999", SyncCredentials.none()).close()
+
+
+@pytest.mark.sync
+def test_client_close_twice(sync_client):
+    sync_client.close()
+    sync_client.close()
+    assert sync_client.is_closed()
+
+
+@pytest.mark.sync
+def test_client_on_closed_store(test_store):
+    test_store.close()
+    with pytest.raises(ValueError, match="Store is closed"):
+        SyncClient(test_store, ["ws://127.0.0.1:9999"])
+
+
+@pytest.mark.sync
+def test_client_not_kept_alive_by_store(test_store):
+    client = SyncClient(test_store, ["ws://127.0.0.1:9999"])
+    client_ref = weakref.ref(client)
+    del client
+    gc.collect()
+    assert client_ref() is None  # Closed via __del__
+    assert len(test_store._close_listeners) == 0
 
 
 @pytest.mark.sync

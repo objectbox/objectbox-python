@@ -140,7 +140,7 @@ class Store:
 
         self._c_store = None
         self._c_log_callback = None
-        self._close_listeners: list[Callable[[], None]] = []
+        self._close_listeners: List[Callable[[], None]] = []  # Called before closing, e.g. to close a SyncClient
         if not c_store:
             options = StoreOptions()
             try:
@@ -324,13 +324,16 @@ class Store:
 
     def close(self):
         """Close database."""
-        for listener in self._close_listeners:
-            listener()
-        self._close_listeners.clear()
-        c_store_to_close = self._c_store
-        if c_store_to_close:
-            self._c_store = None
-            c.obx_store_close(c_store_to_close)
+        listeners = self._close_listeners
+        self._close_listeners = []
+        try:
+            for listener in listeners:
+                listener()
+        finally:
+            c_store_to_close = self._c_store
+            if c_store_to_close:
+                self._c_store = None
+                c.obx_store_close(c_store_to_close)
 
     @staticmethod
     def remove_db_files(db_dir: str):
@@ -341,8 +344,15 @@ class Store:
         """
         c.obx_remove_db_files(c.c_str(db_dir))
 
-    def c_store(self):
-        return self._c_store
+    def _add_close_listener(self, listener: Callable[[], None]):
+        """Internal: adds a listener that is called when the store is about to be closed (before the C store is closed).
+        Note: the store keeps a strong reference to the listener, so it should not reference e.g. a SyncClient strongly;
+        otherwise the SyncClient would be kept alive by the store."""
+        self._close_listeners.append(listener)
 
-    def add_store_close_listener(self, on_store_close: Callable[[], None]):
-        self._close_listeners.append(on_store_close)
+    def _remove_close_listener(self, listener: Callable[[], None]):
+        """Internal: removes a listener added via _add_close_listener(), if present."""
+        try:
+            self._close_listeners.remove(listener)
+        except ValueError:
+            pass
