@@ -3,6 +3,8 @@
 #   python setup-clib.py bdist_wheel --plat-name <platform tag>   (one of PLATFORMS below)
 #   python setup-clib.py all                                      (all platforms, run by `make build`)
 # There is no wheel for other platforms (e.g. no "any" wheel with all libraries); pip fails to install there.
+# With --sync as the first argument, builds objectbox-sync-clib instead (`make build-sync`): the Sync variant of the
+# library (package objectbox_sync_clib), which the binding prefers over objectbox_clib if installed.
 import os
 import shutil
 import subprocess
@@ -16,6 +18,11 @@ except ImportError:
     from wheel.bdist_wheel import bdist_wheel
 
 from build_info import clib_version
+
+SYNC = sys.argv[1:2] == ["--sync"]
+if SYNC:
+    del sys.argv[1]  # Not an argument for setuptools
+PACKAGE = "objectbox_sync_clib" if SYNC else "objectbox_clib"
 
 # Wheel platform tag -> library directory (inside objectbox_clib/lib) for that platform.
 # The tags express the minimum OS requirements of the libraries:
@@ -37,7 +44,8 @@ def build_all():
     for tag in PLATFORMS:
         # Remove build output from the previous platform; otherwise its library would end up in the next wheel too
         shutil.rmtree("build", ignore_errors=True)
-        subprocess.check_call([sys.executable, __file__, "bdist_wheel", "--plat-name", tag])
+        subprocess.check_call([sys.executable, __file__] + (["--sync"] if SYNC else []) +
+                              ["bdist_wheel", "--plat-name", tag])
     shutil.rmtree("build", ignore_errors=True)
 
 
@@ -69,19 +77,20 @@ def setup():
     if platform_tag not in PLATFORMS:
         raise ValueError(f"Missing or unsupported --plat-name: {platform_tag}; supported: {', '.join(PLATFORMS)}")
 
-    with open("objectbox_clib/README.md", "r") as fh:  # Not the main README (e.g. license differs)
+    with open(PACKAGE + "/README.md", "r") as fh:  # Not the main README (e.g. license differs)
         long_description = fh.read()
 
     setuptools.setup(
-        name="objectbox-clib",
+        name=PACKAGE.replace("_", "-"),
         version=clib_version(),
         author="ObjectBox",
-        description="ObjectBox C library (native binary) for the objectbox Python package",
+        description="ObjectBox C library (native binary" + (", Sync variant" if SYNC else "") +
+                    ") for the objectbox Python package",
         long_description=long_description,
         long_description_content_type="text/markdown",
         url="https://objectbox.io",
         packages=setuptools.find_packages(
-            include=['objectbox_clib']
+            include=[PACKAGE]
         ),
         project_urls={
             'GitHub': 'https://github.com/objectbox/objectbox-python',
@@ -91,9 +100,9 @@ def setup():
         },
         python_requires='>=3.4, <4',
         license='ObjectBox Binary License (https://objectbox.io/0209-ob-binary-license/)',
-        license_files=["objectbox_clib/LICENSE"],
+        license_files=[PACKAGE + "/LICENSE"],
         package_data={
-            'objectbox_clib': ['lib/' + PLATFORMS[platform_tag] + '/*'],
+            PACKAGE: ['lib/' + PLATFORMS[platform_tag] + '/*'],
         },
         cmdclass={'bdist_wheel': PlatformWheel},
         distclass=BinaryDistribution,

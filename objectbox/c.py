@@ -67,9 +67,26 @@ def lib_dir_name() -> str:
     return machine
 
 
+def lib_package():
+    """Returns the package providing the C library: objectbox_sync_clib (Sync variant of the library, installed via the
+    optional package objectbox-sync-clib, e.g. `pip install objectbox[sync]`) if available, otherwise objectbox_clib."""
+    try:
+        import objectbox_sync_clib
+        if os.path.exists(lib_path_in(objectbox_sync_clib)):  # The source tree has the package but maybe no libraries
+            return objectbox_sync_clib
+    except ImportError:
+        pass
+    return objectbox_clib
+
+
+def lib_path_in(package) -> str:
+    package_dir = os.path.dirname(os.path.realpath(package.__file__))
+    return os.path.join(package_dir, 'lib', lib_dir_name(), shlib_name('objectbox'))
+
+
 # initialize the C library
-lib_path = os.path.dirname(os.path.realpath(objectbox_clib.__file__))
-lib_path = os.path.join(lib_path, 'lib', lib_dir_name(), shlib_name('objectbox'))
+clib_package = lib_package()
+lib_path = lib_path_in(clib_package)
 C = ctypes.CDLL(lib_path)
 
 # load the core library version

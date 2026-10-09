@@ -30,6 +30,11 @@ build: ${VENV} clean	## Clean and build
 	${PYTHON} setup.py bdist_wheel ; \
 	ls -lh dist
 
+build-sync: ${VENV}		## Build the objectbox-sync-clib wheels (requires depend-sync; adds to dist, e.g. after build)
+	set -e ; \
+	${PYTHON} setup-clib.py --sync all ; \
+	ls -lh dist
+
 ${VENV}: ${VENVBIN}/activate
 
 venv-init:
@@ -50,7 +55,7 @@ depend:	${VENV}			## Prepare dependencies
 	set -e ; \
 	${PYTHON} download-c-lib.py
 
-depend-sync:	${VENV}			## Prepare dependencies
+depend-sync:	${VENV}		## Prepare dependencies: Sync variant of the C library (used instead if available)
 	set -e ; \
 	${PYTHON} download-c-lib.py --sync
 
@@ -84,4 +89,6 @@ publish:				## Publish the package built by `make build`
 	@echo "****************************************************************"
 	# objectbox-clib first, as objectbox depends on it
 	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_clib-*.whl
+	# objectbox-sync-clib, if built (make build-sync)
+	if ls dist/objectbox_sync_clib-*.whl > /dev/null 2>&1 ; then ${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_sync_clib-*.whl ; fi
 	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox-*.whl

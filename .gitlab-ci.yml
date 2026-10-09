@@ -27,7 +27,7 @@ build:
     paths:
       - dist/*.whl
 
-# Build the Sync version of the package
+# Build the objectbox-sync-clib wheels: the Sync variant of the C library (the objectbox wheel is the same for both)
 build-sync:
   tags: [ x64, docker, linux ]
   image: python:latest
@@ -102,17 +102,29 @@ test:windows:x64:
   variables:
     PYTHON: "python.exe"
 
-# Sync version test jobs
+# Sync version test jobs: test the objectbox wheel installed with the "sync" extra, i.e. with objectbox-sync-clib
 .test-sync:
   stage: test
-  needs: [ build-sync ]
+  needs: [ build, build-sync ]
   script:
     - pip3 install --user pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
-    - pip3 install --user --force-reinstall dist/*.whl  # Artifacts from build-sync
-    - ${PYTHON} -m pytest -s --runsync
+    - rm -r objectbox_clib objectbox_sync_clib
+    - pip3 install --user --force-reinstall "$(ls dist/objectbox-*.whl)[sync]" --find-links dist  # Artifacts from build and build-sync
+    - ${PYTHON} -m pytest -s -rs --runsync
   variables:
     PYTHON: "python3"
+
+.test-sync:venv:
+  extends: .test-sync
+  script:
+    - ${PYTHON} -m venv .venv
+    - source .venv/bin/activate
+    - python -m pip install pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - rm -r objectbox_clib objectbox_sync_clib
+    - python -m pip install --force-reinstall "$(ls dist/objectbox-*.whl)[sync]" --find-links dist  # Artifacts from build and build-sync
+    - python -m pytest -s -rs --runsync
 
 test-sync:linux:x64:
   extends: .test-sync
@@ -122,28 +134,10 @@ test-sync:linux:x64:
     matrix:
       - PYTHON_VERSION: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
 
-#test-sync:linux:armv7hf:
-#  extends: .test-sync
-#  tags: [ armv7hf, shell, linux, python3 ]
-
 test-sync:linux:aarch64:
-  extends: .test-sync
+  extends: .test-sync:venv
   tags: [ aarch64, shell, linux, python3 ]
 
-test-sync:mac:arm64:
-  extends: .test-sync
-  script:
-    - python3 -m venv .venv
-    - source .venv/bin/activate
-    - python3 -m pip install pytest
-    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
-    - pip3 install --force-reinstall dist/*.whl  # Artifacts from build-sync
-    - python -m pytest -s --runsync
-  tags: [ mac, arm64, shell, python3 ]
-
-#test-sync:windows:x64:
-#  extends: .test-sync
-#  tags: [ windows, x64, python ]
-#  variables:
-#    PYTHON: "python.exe"
-
+test-sync:mac:
+  extends: .test-sync:venv
+  tags: [ mac, arm64 ]

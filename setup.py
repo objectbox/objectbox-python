@@ -60,6 +60,10 @@ setuptools.setup(
        'flatbuffers>=24.3.25',
        'numpy'
     ],
+    extras_require={
+        # Sync variant of the C library (objectbox-sync-clib); used instead of objectbox-clib's library if installed
+        'sync': ['objectbox-sync-clib==' + clib_version() + '.*'],
+    },
 
-    packages=setuptools.find_packages(exclude=['exampl*', 'objectbox_clib*']), 
+    packages=setuptools.find_packages(exclude=['exampl*', 'objectbox_clib*', 'objectbox_sync_clib*']), 
 )
