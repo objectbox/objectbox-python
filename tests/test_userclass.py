@@ -42,3 +42,4 @@ def test_userclass():
     id_empty = box.put(Person())
     empty = box.get(id_empty)
     assert empty.fullname() == " "
+    store.close()

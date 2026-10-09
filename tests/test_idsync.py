@@ -589,6 +589,10 @@ def test_models_named(env):
     #      This might require to store the (Python) model in the Store.
     # with pytest.raises(ValueError):
     #     store_b.box(EntityA)
+    store_a.close()
+    store_b.close()
+
+
 def test_sync_dynamic_entities(env):
     def create_entity(entity_name: str, dimensions: int, distance_type: VectorDistanceType, uid=0):
         DynamicEntity = type(entity_name, (), {

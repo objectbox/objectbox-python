@@ -104,4 +104,5 @@ def test_log_callback():
     assert log_entries[0][1].startswith("Opening store:")
     assert log_entries[1][0] == LogLevel.Debug
     assert log_entries[1][1].startswith("Opening store:")
+    store.close()
     

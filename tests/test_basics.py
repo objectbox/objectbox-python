@@ -11,6 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
+import weakref
+
 import objectbox
 from objectbox.exceptions import DbError, NotFoundError
 from tests.common import create_test_store
@@ -33,6 +36,23 @@ def test_version():
 def test_open():
     store = create_test_store()
     store.close()
+
+
+def test_store_closed_when_dropped():
+    """A store that is no longer referenced must be closed right away, without relying on the cyclic GC."""
+    gc_was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        store = create_test_store()
+        store_ref = weakref.ref(store)
+        del store
+        assert store_ref() is None
+        # Reopen without deleting the DB files first; that would hide a still open store on Linux (not on Windows)
+        store = create_test_store(clear_db=False)  # Raises if the previous store at the same path is still open
+        store.close()
+    finally:
+        if gc_was_enabled:
+            gc.enable()
 
 
 def test_not_found_exception():

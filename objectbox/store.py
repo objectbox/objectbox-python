@@ -127,6 +127,7 @@ class Store:
         """
 
         self._c_store = None
+        self._c_log_callback = None
         if not c_store:
             options = StoreOptions()
             try:
@@ -185,6 +186,8 @@ class Store:
             except DbError:
                 options._free()
                 raise
+            # Keep the C callback object alive as long as the store, which may call it (options are freed by open)
+            self._c_log_callback = getattr(options, "_c_log_cb", None)
             self._c_store = c.obx_store_open(options._c_handle)
         else:
             self._c_store = c_store
@@ -220,24 +223,33 @@ class Store:
         def json_file_inside_module_path(module: Optional[ModuleType]) -> Optional[str]:
             module_path = get_module_path(module)
             if module_path:
-                logging.info("Using module path to locate objectbox-model.json: ", module_path)
+                logging.info("Using module path to locate objectbox-model.json: %s", module_path)
                 return os.path.join(module_path, "objectbox-model.json")
             return None
 
-        # The (direct) calling module seems like a good first choice
+        # The (direct) calling module seems like a good first choice, i.e. the user module that creates the Store.
+        # To find it, go up the call stack, one frame (function call) at a time via f_back (the caller's frame),
+        # and pick the first frame whose module (identified via the frame's globals) is outside the objectbox package.
+        # Note: do not use inspect.stack() and delete the frame reference when done (finally block).
+        #       Holding on to frames creates a reference cycle, which would keep the Store being constructed (a local
+        #       of a caller's frame) alive until the cyclic GC runs; i.e. the store would not be closed when dropped.
         this_module = sys.modules[__name__]
         this_module_path = get_module_path(this_module)
-        stack = inspect.stack()
         calling_module: Optional[ModuleType] = None
-        for stack_element in stack:
-            module = inspect.getmodule(stack_element[0])
-            if module is not this_module:
-                path = get_module_path(module)
-                if not path:  # Cannot get the direct caller's path, so do not try further
-                    break
-                if path != this_module_path:  # Not inside the objectbox package
-                    calling_module = module
-                    break
+        frame = inspect.currentframe()
+        try:
+            while frame is not None:
+                module = sys.modules.get(frame.f_globals.get("__name__"))
+                if module is not this_module:
+                    path = get_module_path(module)
+                    if not path:  # Cannot get the direct caller's path, so do not try further
+                        break
+                    if path != this_module_path:  # Not inside the objectbox package
+                        calling_module = module
+                        break
+                frame = frame.f_back
+        finally:
+            del frame
         model_json_file = json_file_inside_module_path(calling_module)
 
         if not model_json_file:
