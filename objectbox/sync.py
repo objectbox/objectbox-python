@@ -247,6 +247,14 @@ class SyncCode(IntEnum):
     """Transaction violated a unique constraint."""
 
 
+def _to_sync_code(code: int) -> typing.Union[SyncCode, int]:
+    """Converts to SyncCode; unknown codes (e.g. added by a newer library) are passed as int."""
+    try:
+        return SyncCode(code)
+    except ValueError:
+        return code
+
+
 class SyncChange:
     """Sync incoming data event."""
 
@@ -273,6 +281,9 @@ class SyncLoginListener:
 
     Implement this class and pass to SyncClient.set_login_listener() to receive
     notifications about login success or failure.
+
+    Note: like all Sync listeners, it is called from the sync client's background thread; it should return quickly
+    and must not close the client.
     """
 
     def on_logged_in(self):
@@ -283,7 +294,7 @@ class SyncLoginListener:
         """Called when login has failed.
 
         Args:
-            sync_login_code: The error code indicating why login failed.
+            sync_login_code: The error code indicating why login failed (an int if the code is unknown).
         """
         pass
 
@@ -321,6 +332,11 @@ class SyncErrorListener:
 
 
 class SyncChangeListener:
+    """Listener for incoming data changes from the server.
+
+    Implement this class and pass to SyncClient.set_change_listener(). Note: called from the sync client's background
+    thread (see SyncLoginListener).
+    """
 
     def on_change(self, sync_changes: typing.List[SyncChange]):
         """Called when incoming data changes are received from the server.
@@ -359,12 +375,9 @@ class SyncClient:
         self.__c_sync_client_ptr = None
         self.__close_lock = threading.Lock()
         self.__on_store_close = None
-        self.__c_change_listener = None
-        self.__c_login_listener = None
-        self.__c_login_failure_listener = None
-        self.__c_connect_listener = None
-        self.__c_disconnect_listener = None
-        self.__c_error_listener = None
+        # All ctypes callbacks passed to C: the C client may call them until it is closed, also replaced ones
+        # (e.g. while a listener is replaced, the client's thread may be calling the previous one), so keep them all.
+        self.__c_callbacks = []
         if not server_urls:
             raise ValueError("Provide at least one server URL")
 
@@ -421,7 +434,6 @@ class SyncClient:
             credentials: The credentials to use for authentication.
         """
         self.__check_sync_ptr_not_null()
-        self.__credentials = credentials
         if isinstance(credentials, SyncCredentialsNone):
             c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type, None, 0)
         elif isinstance(credentials, SyncCredentialsUserPassword):
@@ -433,6 +445,8 @@ class SyncClient:
             c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type,
                                    credentials.secret,
                                    len(credentials.secret))
+        else:
+            raise TypeError(f"Unsupported credentials: {credentials!r}; use the SyncCredentials factory methods")
 
     def set_multiple_credentials(self, credentials_list: typing.List[SyncCredentials]):
         """Like set_credentials, but accepts multiple credentials.
@@ -448,13 +462,16 @@ class SyncClient:
         self.__check_sync_ptr_not_null()
         if len(credentials_list) == 0:
             raise ValueError("Provide at least one credential")
+        # Check all before adding any, as the C client would be left with an incomplete set of credentials
+        for credentials in credentials_list:
+            if isinstance(credentials, SyncCredentialsNone):
+                raise ValueError("SyncCredentials.none() is not supported, use set_credentials() instead")
+            if not isinstance(credentials, (SyncCredentialsUserPassword, SyncCredentialsSecret)):
+                raise TypeError(f"Unsupported credentials: {credentials!r}; use the SyncCredentials factory methods")
 
         for i in range(len(credentials_list)):
             is_last = (i == len(credentials_list) - 1)
             credentials = credentials_list[i]
-
-            if isinstance(credentials, SyncCredentialsNone):
-                raise ValueError("SyncCredentials.none() is not supported, use set_credentials() instead")
 
             if isinstance(credentials, SyncCredentialsUserPassword):
                 c.obx_sync_credentials_add_user_password(self.__c_sync_client_ptr,
@@ -469,7 +486,6 @@ class SyncClient:
                                            credentials.secret,
                                            len(credentials.secret),
                                            is_last)
-
 
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
         """Configures how sync updates are received from the server.
@@ -609,12 +625,7 @@ class SyncClient:
         # Stops the client and joins its background thread; thus, no listener is called after this returns
         c.obx_sync_close(c_sync_client_ptr)
         # Now the C callbacks are no longer used and can be released
-        self.__c_change_listener = None
-        self.__c_login_listener = None
-        self.__c_login_failure_listener = None
-        self.__c_connect_listener = None
-        self.__c_disconnect_listener = None
-        self.__c_error_listener = None
+        self.__c_callbacks = []
 
     def is_closed(self) -> bool:
         """Returns if this sync client is closed and can no longer be used."""
@@ -627,17 +638,18 @@ class SyncClient:
             login_listener: The listener to receive login events.
         """
         self.__check_sync_ptr_not_null()
-        self.__c_login_listener = c.OBX_sync_listener_login_t(lambda arg: login_listener.on_logged_in())
-        self.__c_login_failure_listener = c.OBX_sync_listener_login_failure_t(
-            lambda arg, sync_login_code: login_listener.on_login_failed(sync_login_code))
+        c_login_listener = c.OBX_sync_listener_login_t(lambda arg: login_listener.on_logged_in())
+        c_login_failure_listener = c.OBX_sync_listener_login_failure_t(
+            lambda arg, sync_login_code: login_listener.on_login_failed(_to_sync_code(sync_login_code)))
+        self.__c_callbacks += [c_login_listener, c_login_failure_listener]
         c.obx_sync_listener_login(
             self.__c_sync_client_ptr,
-            self.__c_login_listener,
+            c_login_listener,
             None
         )
         c.obx_sync_listener_login_failure(
             self.__c_sync_client_ptr,
-            self.__c_login_failure_listener,
+            c_login_failure_listener,
             None
         )
 
@@ -648,17 +660,18 @@ class SyncClient:
             connection_listener: The listener to receive connection events.
         """
         self.__check_sync_ptr_not_null()
-        self.__c_connect_listener = c.OBX_sync_listener_connect_t(lambda arg: connection_listener.on_connected())
-        self.__c_disconnect_listener = c.OBX_sync_listener_disconnect_t(
+        c_connect_listener = c.OBX_sync_listener_connect_t(lambda arg: connection_listener.on_connected())
+        c_disconnect_listener = c.OBX_sync_listener_disconnect_t(
             lambda arg: connection_listener.on_disconnected())
+        self.__c_callbacks += [c_connect_listener, c_disconnect_listener]
         c.obx_sync_listener_connect(
             self.__c_sync_client_ptr,
-            self.__c_connect_listener,
+            c_connect_listener,
             None
         )
         c.obx_sync_listener_disconnect(
             self.__c_sync_client_ptr,
-            self.__c_disconnect_listener,
+            c_disconnect_listener,
             None
         )
 
@@ -669,11 +682,12 @@ class SyncClient:
             error_listener: The listener to receive error events.
         """
         self.__check_sync_ptr_not_null()
-        self.__c_error_listener = c.OBX_sync_listener_error_t(
+        c_error_listener = c.OBX_sync_listener_error_t(
             lambda arg, sync_error_code: error_listener.on_error(sync_error_code))
+        self.__c_callbacks.append(c_error_listener)
         c.obx_sync_listener_error(
             self.__c_sync_client_ptr,
-            self.__c_error_listener,
+            c_error_listener,
             None
         )
 
@@ -708,10 +722,11 @@ class SyncClient:
                 ))
             change_listener.on_change(changes)
 
-        self.__c_change_listener = c.OBX_sync_listener_change_t(c_change_callback)
+        c_change_listener = c.OBX_sync_listener_change_t(c_change_callback)
+        self.__c_callbacks.append(c_change_listener)
         c.obx_sync_listener_change(
             self.__c_sync_client_ptr,
-            self.__c_change_listener,
+            c_change_listener,
             None
         )
 

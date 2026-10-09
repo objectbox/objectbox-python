@@ -1346,7 +1346,7 @@ obx_sync_listener_login = c_fn('obx_sync_listener_login', None,
 obx_sync_listener_login_failure = c_fn('obx_sync_listener_login_failure', None,
                                        [OBX_sync_p, OBX_sync_listener_login_failure_t, ctypes.c_void_p])
 
-# void obx_sync_listener_complete(OBX_sync* sync, OBX_sync_listener_complete* listener, void* listener_arg);
+# void obx_sync_listener_error(OBX_sync* sync, OBX_sync_listener_error* listener, void* listener_arg);
 obx_sync_listener_error = c_fn('obx_sync_listener_error', None,
                                [OBX_sync_p, OBX_sync_listener_error_t, ctypes.c_void_p])
 

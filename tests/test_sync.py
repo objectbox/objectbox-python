@@ -160,6 +160,14 @@ def test_multiple_credentials(sync_client):
     with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported, use set_credentials\(\) instead'):
         sync_client.set_multiple_credentials([SyncCredentials.none()])
 
+    # Invalid elements are detected before adding any credentials
+    with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported'):
+        sync_client.set_multiple_credentials([SyncCredentials.google_auth("token"), SyncCredentials.none()])
+    with pytest.raises(TypeError, match='Unsupported credentials'):
+        sync_client.set_multiple_credentials([SyncCredentials.google_auth("token"), "token"])
+    with pytest.raises(TypeError, match='Unsupported credentials'):
+        sync_client.set_credentials("token")
+
     sync_client.set_multiple_credentials([
         SyncCredentials.google_auth("token_google"),
         SyncCredentials.user_and_password("user1", "password"),
@@ -176,6 +184,19 @@ def test_client_closed_when_store_closed(test_store, sync_client):
     assert not sync_client.is_closed()
     test_store.close()
     assert sync_client.is_closed()
+
+
+@pytest.mark.sync
+def test_login_failure_code(test_store, login_listener):
+    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
+    client.set_login_listener(login_listener)
+    # Call the C callback directly (would require a server rejecting the login)
+    c_login_failure_listener = client._SyncClient__c_callbacks[1]
+    c_login_failure_listener(None, SyncCode.CREDENTIALS_REJECTED)
+    assert login_listener.login_failure_code is SyncCode.CREDENTIALS_REJECTED
+    c_login_failure_listener(None, 12345)  # Unknown code
+    assert login_listener.login_failure_code == 12345
+    client.close()
 
 
 @pytest.mark.sync
