@@ -14,6 +14,9 @@ Unreleased
 * API reference documentation (docstrings for the public API; generated via Sphinx)
 * Example "tasks": added a command to remove tasks and improved the command line
 * Dependency flatbuffers: any version from 24.3.25 on is accepted now (was pinned to 24.3.25); tested up to 25.12.19
+* Store: a store that is no longer referenced is now closed right away (was: only when Python's cyclic GC ran);
+  e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
+  Still, prefer closing stores explicitly via `close()`.
 
 4.0.0 (2024-05-28)
 ------------------
