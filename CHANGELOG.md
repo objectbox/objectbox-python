@@ -13,6 +13,7 @@ Unreleased
 * Top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`
 * API reference documentation (docstrings for the public API; generated via Sphinx)
 * Example "tasks": added a command to remove tasks and improved the command line
+* Dependency flatbuffers: any version from 24.3.25 on is accepted now (was pinned to 24.3.25); tested up to 25.12.19
 
 4.0.0 (2024-05-28)
 ------------------

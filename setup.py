@@ -49,7 +49,10 @@ setuptools.setup(
     ],
 
     install_requires=[
-       'flatbuffers==24.3.25',
+       # A range instead of an exact pin, so we do not force a specific version on users that also depend on
+       # flatbuffers via other packages. The lower bound is the previously pinned version known to work; no upper bound as
+       # flatbuffers uses date-based versions (no semver), so its "major" version does not indicate breaking changes.
+       'flatbuffers>=24.3.25',
        'numpy'
     ],
 
