@@ -85,6 +85,7 @@ def setup():
         project_urls={
             'GitHub': 'https://github.com/objectbox/objectbox-python',
             'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
+            'Changelog': 'https://github.com/objectbox/objectbox-c/blob/main/CHANGELOG.md',  # Version of the C library
             'License': 'https://objectbox.io/0209-ob-binary-license/',
         },
         python_requires='>=3.4, <4',

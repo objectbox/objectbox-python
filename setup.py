@@ -16,6 +16,7 @@ setuptools.setup(
     project_urls={
         'GitHub': 'https://github.com/objectbox/objectbox-python',
         'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
+        'Changelog': 'https://github.com/objectbox/objectbox-python/blob/main/CHANGELOG.md',
     },
     python_requires='>=3.4, <4',
     license='Apache 2.0',
