@@ -7,7 +7,7 @@ import platform
 import glob
 import zipfile
 import tarfile
-import signal
+import shutil
 import urllib.request
 
 import pytest
@@ -52,10 +52,17 @@ def create_test_store(db_path: str = "testdata", clear_db: bool = True) -> objec
     return objectbox.Store(model=create_default_model(), directory=db_path)
 
 
+# Model JSON file of the Sync test model (SyncTestEntity in model.py, fixed UIDs); the Sync server must use it
+SYNC_MODEL_JSON_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "objectbox-model-sync.json")
+
+# A URL without a Sync server, for Sync tests not needing a server
+NO_SYNC_SERVER_URL = "ws://127.0.0.1:1"
+
+
 @dataclass
-class SyncServerConfig:
-    pid: int
-    port: int
+class SyncServer:
+    url: str
+    process: typing.Optional[subprocess.Popen] = None  # If started by the tests
 
 
 def _get_sync_server_job_name() -> str:
@@ -77,18 +84,39 @@ def _get_sync_server_job_name() -> str:
         raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
 
-def start_sync_server() -> typing.Union[SyncServerConfig, None]:
-    """ Downloads and starts the ObjectBox Sync Server binary. """
-    current_dir = os.path.dirname(os.path.realpath(__file__))
+def _wait_for_port(port: int, process: typing.Optional[subprocess.Popen] = None, timeout_seconds: float = 10):
+    start_time = time.time()
+    while (time.time() - start_time) < timeout_seconds:
+        if process is not None and process.poll() is not None:
+            raise RuntimeError(f"Sync server exited with code {process.returncode}")
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                return
+        except OSError:
+            time.sleep(0.2)
+    raise RuntimeError("Timed out waiting for the Sync server")
+
+
+def start_sync_server() -> typing.Optional[SyncServer]:
+    """Provides a Sync server using the model SYNC_MODEL_JSON_FILE; returns None (and logs why) if not available:
+    - if the environment variable OBX_SYNC_SERVER_URL is set (e.g. "ws://127.0.0.1:9999"), uses that running server
+      (e.g. started via Docker, see sync_server_config.json);
+    - in GitLab CI (CI_SERVER_URL and CI_JOB_TOKEN set), downloads the Sync server from CI artifacts and starts it."""
+    external_url = os.environ.get("OBX_SYNC_SERVER_URL")
+    if external_url:
+        return SyncServer(url=external_url)
 
     # Check for required environment variables
     ci_server_url = os.environ.get("CI_SERVER_URL")
     ci_job_token = os.environ.get("CI_JOB_TOKEN")
 
     if not ci_server_url or not ci_job_token:
-        test_logger.warning("CI_SERVER_URL or CI_JOB_TOKEN not set, cannot download sync server")
+        test_logger.warning("Neither OBX_SYNC_SERVER_URL nor CI_SERVER_URL and CI_JOB_TOKEN are set; no Sync server")
         return None
 
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    work_dir = os.path.join(current_dir, "sync-server")  # Contains downloads and the server's database
+    process = None
     try:
         # GitLab artifact download configuration
         project_id = "4"
@@ -103,17 +131,18 @@ def start_sync_server() -> typing.Union[SyncServerConfig, None]:
         print(f"Downloading sync-server artifact from: {artifact_url}")
 
         # Download the artifact
-        artifact_path = os.path.join(current_dir, "artifact.zip")
+        os.makedirs(work_dir, exist_ok=True)
+        artifact_path = os.path.join(work_dir, "artifact.zip")
         request = urllib.request.Request(artifact_url, headers={"JOB-TOKEN": ci_job_token})
         with urllib.request.urlopen(request) as response, open(artifact_path, "wb") as out_file:
             out_file.write(response.read())
 
         # Extract the outer artifact zip
         with zipfile.ZipFile(artifact_path, "r") as zip_ref:
-            zip_ref.extractall(current_dir)
+            zip_ref.extractall(work_dir)
 
         # Find and extract the sync-server archive (could be .zip or .tar.gz)
-        artifacts_dir = os.path.join(current_dir, "artifacts")
+        artifacts_dir = os.path.join(work_dir, "artifacts")
 
         # Look for both .zip and .tar.gz files
         sync_server_zips = glob.glob(os.path.join(artifacts_dir, "objectbox-sync-server-*.zip"))
@@ -123,17 +152,17 @@ def start_sync_server() -> typing.Union[SyncServerConfig, None]:
             sync_server_archive = sync_server_zips[0]
             print(f"Found sync-server zip archive: {sync_server_archive}")
             with zipfile.ZipFile(sync_server_archive, "r") as zip_ref:
-                zip_ref.extractall(current_dir)
+                zip_ref.extractall(work_dir)
         elif sync_server_tarballs:
             sync_server_archive = sync_server_tarballs[0]
             print(f"Found sync-server tar.gz archive: {sync_server_archive}")
             with tarfile.open(sync_server_archive, "r:gz") as tar_ref:
-                tar_ref.extractall(current_dir)
+                tar_ref.extractall(work_dir)
         else:
             raise RuntimeError("Could not find objectbox-sync-server-*.zip or *.tar.gz in artifacts")
 
         # Verify sync-server executable exists
-        sync_server_executable = os.path.join(current_dir, "sync-server")
+        sync_server_executable = os.path.join(work_dir, "sync-server")
         if platform.system().lower() == "windows":
             sync_server_executable += ".exe"
 
@@ -146,77 +175,49 @@ def start_sync_server() -> typing.Union[SyncServerConfig, None]:
 
         print("Starting sync-server in background...")
 
-        # Run sync-server in background
+        # Run sync-server in background, with a new database
+        db_dir = os.path.join(work_dir, "db")
+        if os.path.exists(db_dir):
+            shutil.rmtree(db_dir)
+        port = 9999
         process = subprocess.Popen(
             [
                 sync_server_executable,
-                "--model", os.path.join(current_dir, "objectbox-model.json"),
+                "--model", SYNC_MODEL_JSON_FILE,
+                "--db-directory", db_dir,
+                "--bind", f"ws://127.0.0.1:{port}",
+                "--admin-off",
                 "--unsecured-no-authentication",
-                "--debug"
             ],
-            cwd=current_dir,
+            cwd=work_dir,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-
         print(f"Sync server started with PID: {process.pid}")
-
-        # Wait for server to be ready
-        time.sleep(2)
-
-        # Check if server is still running
-        if process.poll() is not None:
-            raise RuntimeError("Sync server failed to start")
-
-        # Wait for port to be available
-        start_time = time.time()
-        while (time.time() - start_time) < 10:
-            try:
-                with socket.create_connection(("127.0.0.1", 9999), timeout=1):
-                    break
-            except (OSError, socket.timeout):
-                time.sleep(0.5)
-        else:
-            raise RuntimeError("Timed out waiting for Sync Server to start")
-
+        _wait_for_port(port, process)
         print("Sync server is running")
-        return SyncServerConfig(pid=process.pid, port=9999)
+        return SyncServer(url=f"ws://127.0.0.1:{port}", process=process)
 
     except Exception as e:
+        if process is not None:
+            stop_sync_server(SyncServer(url="", process=process))
         test_logger.warning(f"Could not start ObjectBox Sync Server: {e}")
         return None
 
 
-def stop_sync_server(pid: int):
-    """ Stops the ObjectBox Sync Server process. """
+def stop_sync_server(server: SyncServer):
+    """Stops the Sync server if it was started by start_sync_server()."""
+    if server.process is None:
+        return
+    print(f"Stopping sync server (PID: {server.process.pid})...")
+    server.process.terminate()
     try:
-        print(f"Stopping sync server (PID: {pid})...")
-
-        # Send SIGTERM (or equivalent on Windows)
-        if os.name == "nt":
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)], check=False)
-        else:
-            os.kill(pid, signal.SIGTERM)
-
-        # Wait for process to stop
-        for i in range(10):
-            try:
-                os.kill(pid, 0)  # Check if process exists
-                time.sleep(1)
-            except OSError:
-                print(f"Sync server stopped after {i + 1}s")
-                return
-
-        # Force kill if still running
-        print("Sync server still running after 10s, sending SIGKILL...")
-        if os.name == "nt":
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)], check=False)
-        else:
-            os.kill(pid, signal.SIGKILL)
-
-        print("Stopped ObjectBox Sync Server")
-    except Exception as e:
-        test_logger.warning(f"Could not stop ObjectBox Sync Server: {e}")
+        server.process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        print("Sync server still running after 10s, killing it...")
+        server.process.kill()
+        server.process.wait()
+    print("Stopped ObjectBox Sync Server")
 
 
 def assert_equal_prop(actual, expected, default):

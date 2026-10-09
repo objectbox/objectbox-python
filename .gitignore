@@ -9,6 +9,8 @@
 
 # Test temporary files
 testdata/
+testdata-*/
+/tests/sync-server/
 # Model JSON files written by tests (regenerated with new random UIDs on each run); depending on the working dir.
 # Note: do not ignore objectbox-model.json in general; apps (e.g. examples) shall commit theirs.
 /objectbox-model.json

@@ -80,3 +80,11 @@ class VectorEntity:
     #        distance_type=VectorDistanceType.DOT_PRODUCT_NON_NORMALIZED,
     #    ),
     #)
+
+
+# Synced via a Sync server in Sync tests; fixed UIDs to match objectbox-model-sync.json, which the server uses
+@SyncEntity
+@Entity(uid=8406432358373262241, model="sync-test")
+class SyncTestEntity:
+    id = Id(uid=2896564358014426066)
+    text = String(uid=6237012470962430713)

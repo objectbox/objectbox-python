@@ -1,11 +1,18 @@
 import gc
+import os
+import shutil
+import threading
+import uuid
 import weakref
 from typing import Callable, Optional
 
 import pytest
 
+from objectbox import Store
 from objectbox.exceptions import IllegalArgumentError
 from objectbox.sync import *
+from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE
+from tests.model import SyncTestEntity
 
 
 def test_sync_is_available():
@@ -38,12 +45,13 @@ def test_sync_client_states(sync_client):
 
 
 @pytest.mark.sync
-def test_sync_listener(sync_server, sync_client, login_listener, connection_listener):
-    if not sync_server:
-        pytest.skip("Sync server not available")
-
+def test_sync_listener(sync_server, test_store, login_listener, connection_listener):
+    sync_client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
+    sync_client.set_login_listener(login_listener)
+    sync_client.set_connection_listener(connection_listener)
     sync_client.start()
-    sync_client.wait_for_logged_in_state(timeout_millis=5000)
+    assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
+    assert sync_client.protocol_server_version() >= 1
     sync_client.stop()
     sync_client.close()
 
@@ -52,15 +60,70 @@ def test_sync_listener(sync_server, sync_client, login_listener, connection_list
     assert connection_listener.connected_called
 
 
+def open_sync_test_store(name: str) -> Store:
+    db_dir = "testdata-" + name
+    if os.path.exists(db_dir):
+        shutil.rmtree(db_dir)
+    os.makedirs(db_dir)
+    # Copy the model JSON file (shared with the server): the store (re-)writes it
+    model_json_file = os.path.join(db_dir, "objectbox-model.json")
+    shutil.copyfile(SYNC_MODEL_JSON_FILE, model_json_file)
+    return Store(model="sync-test", directory=db_dir, model_json_file=model_json_file)
+
+
+class ChangeCollector(SyncChangeListener):
+    def __init__(self):
+        self.put_ids_by_entity_id = {}
+        self.condition = threading.Condition()
+
+    def on_change(self, sync_changes):
+        with self.condition:
+            for change in sync_changes:
+                self.put_ids_by_entity_id.setdefault(change.entity_id, set()).update(change.puts)
+            self.condition.notify_all()
+
+    def wait_for(self, predicate: Callable[[], bool], timeout_seconds: float) -> bool:
+        """Waits until the predicate is true, checking it after each change."""
+        with self.condition:
+            return self.condition.wait_for(predicate, timeout=timeout_seconds)
+
+
+@pytest.mark.sync
+def test_sync_data(sync_server):
+    """Syncs an object from one client to another via the server."""
+    store1 = open_sync_test_store("sync1")
+    store2 = open_sync_test_store("sync2")
+    try:
+        client1 = Sync.client(store1, sync_server.url, SyncCredentials.none())
+        client2 = Sync.client(store2, sync_server.url, SyncCredentials.none())
+        change_collector = ChangeCollector()
+        client2.set_change_listener(change_collector)
+        client1.start()
+        client2.start()
+        assert client1.wait_for_logged_in_state(timeout_millis=5000)
+        assert client2.wait_for_logged_in_state(timeout_millis=5000)
+
+        text = "synced " + str(uuid.uuid4())  # An external server may have objects from previous runs
+        store1.box(SyncTestEntity).put(SyncTestEntity(text=text))
+
+        # Note: object IDs are local to each store (the server maps them), so find the object by its text
+        def received():
+            put_ids = change_collector.put_ids_by_entity_id.get(SyncTestEntity._id, ())
+            return any(obj.text == text for obj in store2.box(SyncTestEntity).get_many(list(put_ids)) if obj)
+
+        assert change_collector.wait_for(received, timeout_seconds=10)
+    finally:
+        store1.close()  # Also closes the sync clients
+        store2.close()
+
+
 @pytest.mark.sync
 def test_filter_variables(test_store):
-    server_urls = ["ws://localhost:9999"]
-
     filter_vars = {
         "name1": "val1",
         "name2": "val2"
     }
-    client = SyncClient(test_store, server_urls, filter_vars)
+    client = SyncClient(test_store, [NO_SYNC_SERVER_URL], filter_vars)
 
     client.add_filter_variable("name3", "val3")
     client.remove_filter_variable("name1")
@@ -117,11 +180,11 @@ def test_client_closed_when_store_closed(test_store, sync_client):
 
 @pytest.mark.sync
 def test_one_client_per_store(test_store):
-    client = Sync.client(test_store, "ws://127.0.0.1:9999", SyncCredentials.none())
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
     with pytest.raises(ValueError, match="Only one sync client can be active for a store"):
-        Sync.client_multi_urls(test_store, ["ws://127.0.0.1:9999"], SyncCredentials.none())
+        Sync.client_multi_urls(test_store, [NO_SYNC_SERVER_URL], SyncCredentials.none())
     client.close()
-    Sync.client(test_store, "ws://127.0.0.1:9999", SyncCredentials.none()).close()
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
 
 
 @pytest.mark.sync
@@ -135,12 +198,12 @@ def test_client_close_twice(sync_client):
 def test_client_on_closed_store(test_store):
     test_store.close()
     with pytest.raises(ValueError, match="Store is closed"):
-        SyncClient(test_store, ["ws://127.0.0.1:9999"])
+        SyncClient(test_store, [NO_SYNC_SERVER_URL])
 
 
 @pytest.mark.sync
 def test_client_not_kept_alive_by_store(test_store):
-    client = SyncClient(test_store, ["ws://127.0.0.1:9999"])
+    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
     client_ref = weakref.ref(client)
     del client
     gc.collect()
@@ -148,7 +211,6 @@ def test_client_not_kept_alive_by_store(test_store):
     assert len(test_store._close_listeners) == 0
 
 
-@pytest.mark.sync
 def assert_raises_value_error(fn: Callable[[], Optional[object]], message: Optional[str] = None):
     with pytest.raises(ValueError, match=message):
         fn()

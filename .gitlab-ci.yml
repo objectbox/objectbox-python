@@ -111,7 +111,7 @@ test:windows:x64:
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - rm -r objectbox_clib objectbox_sync_clib
     - pip3 install --user --force-reinstall "$(ls dist/objectbox-*.whl)[sync]" --find-links dist  # Artifacts from build and build-sync
-    - ${PYTHON} -m pytest -s -rs --runsync
+    - ${PYTHON} -m pytest -s -rs
   variables:
     PYTHON: "python3"
 
@@ -124,7 +124,7 @@ test:windows:x64:
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - rm -r objectbox_clib objectbox_sync_clib
     - python -m pip install --force-reinstall "$(ls dist/objectbox-*.whl)[sync]" --find-links dist  # Artifacts from build and build-sync
-    - python -m pytest -s -rs --runsync
+    - python -m pytest -s -rs
 
 test-sync:linux:x64:
   extends: .test-sync

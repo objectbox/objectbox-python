@@ -4,7 +4,8 @@ import pytest
 from objectbox import experimental
 from objectbox.logger import logger
 from common import *
-from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener, SyncClient, SyncCredentials
+from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener, SyncClient, SyncCredentials, \
+    Sync
 
 
 def pytest_addoption(parser):
@@ -14,13 +15,10 @@ def pytest_addoption(parser):
     parser.addoption("--flatbuffers-codegen", action="store_true",
                      help="Run all tests with the experimental FlatBuffers codegen, verifying each marshalled object "
                           "against the reference (also: environment variable OBX_TEST_FLATBUFFERS_CODEGEN=1)")
-    parser.addoption(
-        "--runsync", action="store_true", default=False, help="run Sync tests"
-    )
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "sync: run Sync tests")
+    config.addinivalue_line("markers", "sync: Sync test, requires the Sync variant of the library (make depend-sync)")
     fast_builder = (config.getoption("--fast-flatbuffers-builder") or
                     os.environ.get("OBX_TEST_FAST_FLATBUFFERS_BUILDER") == "1")
     codegen = config.getoption("--flatbuffers-codegen") or os.environ.get("OBX_TEST_FLATBUFFERS_CODEGEN") == "1"
@@ -115,8 +113,7 @@ def error_listener():
 
 @pytest.fixture
 def sync_client(test_store, login_listener, connection_listener, error_listener):
-    server_urls = ["ws://127.0.0.1:9999"]
-    client = SyncClient(test_store, server_urls)
+    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
     client.set_credentials(SyncCredentials.none())
     client.set_login_listener(login_listener)
     client.set_connection_listener(connection_listener)
@@ -127,16 +124,19 @@ def sync_client(test_store, login_listener, connection_listener, error_listener)
 
 @pytest.fixture(scope="session")
 def sync_server():
-    server_config = start_sync_server()
-    yield server_config
-    if server_config:
-        stop_sync_server(server_config.pid)
+    """A Sync server using the model objectbox-model-sync.json (see start_sync_server() for how it is provided);
+    skips the test if no server is available."""
+    server = start_sync_server()
+    if server is None:
+        pytest.skip("Sync server not available (e.g. set OBX_SYNC_SERVER_URL)")
+    yield server
+    stop_sync_server(server)
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runsync"):
+    if Sync.is_available():
         return
-    skip_sync = pytest.mark.skip(reason="need --runsync option to run")
+    skip_sync = pytest.mark.skip(reason="Sync is not available in the loaded library (see make depend-sync)")
     for item in items:
         if "sync" in item.keywords:
             item.add_marker(skip_sync)
