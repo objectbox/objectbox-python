@@ -4,7 +4,7 @@ import objectbox
 from objectbox.logger import logger
 from tests.model import *
 import numpy as np
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from objectbox import *
 
 def remove_json_model_file():
@@ -79,6 +79,9 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop_approx(actual.longs_list, expected.longs_list, [])
     assert_equal_prop_approx(actual.floats_list, expected.floats_list, [])
     assert_equal_prop_approx(actual.doubles_list, expected.doubles_list, [])
-    assert_equal_prop_approx(actual.date, expected.date, datetime.fromtimestamp(0, timezone.utc))
+    if isinstance(expected.date, objectbox.model.properties.Property):
+        assert actual.date == datetime.fromtimestamp(0, timezone.utc)
+    else:  # Date has millisecond precision
+        assert actual.date == pytest.approx(expected.date, abs=timedelta(milliseconds=1))
     assert_equal_prop(actual.date_nano, expected.date_nano, 0)
     assert_equal_prop(actual.flex, expected.flex, None)
