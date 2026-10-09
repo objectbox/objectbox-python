@@ -1,6 +1,7 @@
 from objectbox import Store
 from objectbox.c import *  # TODO ideally we wouldn't have to import c.py
 from objectbox.store_options import StoreOptions
+from objectbox.exceptions import SchemaError
 from tests.common import *
 
 def test_set_options():
@@ -48,6 +49,15 @@ def test_set_options():
     assert options.get_debug_flags() == (OBXDebugFlags_LOG_TRANSACTIONS_READ | OBXDebugFlags_LOG_CACHE_HITS)
 
     del options
+
+@pytest.mark.parametrize("option", ["model_bytes", "model_bytes_direct"])
+def test_model_bytes(option):
+    """ The bytes must reach the C library, which rejects these invalid model bytes. """
+    Store.remove_db_files("testdata")
+    invalid_model = b"invalid model"
+    with pytest.raises(SchemaError, match=f"Verification of the model object \\({len(invalid_model)} bytes\\) failed"):
+        Store(model=None, directory="testdata", **{option: invalid_model})
+
 
 def test_store_with_options():
     Store.remove_db_files("testdata")

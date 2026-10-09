@@ -27,6 +27,7 @@ ObjectBox Python ChangeLog
 * Store: a store that is no longer referenced is now closed right away (was: only when Python's cyclic GC ran);
   e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
   Still, prefer closing stores explicitly via `close()`.
+* Store: fix the `model_bytes` and `model_bytes_direct` options (failed with a `TypeError`)
 
 4.0.0 (2024-05-28)
 ------------------

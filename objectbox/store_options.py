@@ -39,10 +39,12 @@ class StoreOptions:
         obx_opt_model(self._c_handle, c_model)
 
     def model_bytes(self, bytes_: bytes):
-        obx_opt_model_bytes(self._c_handle, len(bytes_))
+        obx_opt_model_bytes(self._c_handle, bytes_, len(bytes_))
 
     def model_bytes_direct(self, bytes_: bytes):
-        obx_opt_model_bytes_direct(self._c_handle, len(bytes_))
+        # The bytes are not copied by the C library; keep them alive until the store is opened (options are freed then)
+        self._model_bytes_direct = bytes_
+        obx_opt_model_bytes_direct(self._c_handle, bytes_, len(bytes_))
 
     def validate_on_open_pages(self, page_limit: int, flags: int):
         raise NotImplementedError  # TODO
