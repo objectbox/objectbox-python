@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 
 
 class OrderFlags(IntEnum):
+    """ Flags to adjust the order of query results, see :func:`QueryBuilder.order`.
+    Combine multiple flags using ``|``. """
+
     DESCENDING = OBXOrderFlags_DESCENDING
     """Reverses the order from ascending (default) to descending."""
 
@@ -265,10 +268,24 @@ class QueryBuilder:
         cond = obx_qb_all(self._c_builder, c_conditions, len(conditions))
         return cond
 
-    def order(self, prop: Union[int, str, Property], order_flags: OrderFlags = 0) -> 'QueryBuilder':
-        """Configures an order for results in the query."""
+    def order(self, prop: Union[int, str, Property], flags: Union[OrderFlags, int] = 0) -> 'QueryBuilder':
+        """ Orders the query results by the given property, ascending by default.
+        Call multiple times to order by multiple properties: the first call sets the primary order,
+        the following ones are used for results that are equal according to the preceding orders.
+        Applies to ``find()`` and ``find_ids()``; note that ordering requires to sort all matching objects.
+
+        Example: ``box.query(Person.age.greater_than(17)).order(Person.name).build()``
+
+        :param prop:
+            The property (or its name or ID) to order by.
+        :param flags:
+            :class:`OrderFlags` to adjust the order; combine multiple using ``|``,
+            e.g. ``OrderFlags.DESCENDING | OrderFlags.CASE_SENSITIVE``.
+        :return:
+            This QueryBuilder (to chain calls).
+        """
         prop_id = self._entity._get_property_id(prop)
-        obx_qb_order(self._c_builder, prop_id, order_flags)
+        obx_qb_order(self._c_builder, prop_id, flags)
         return self
 
     def build(self) -> Query:

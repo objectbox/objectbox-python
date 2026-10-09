@@ -53,7 +53,8 @@ class Query:
                 obx_bytes_array_free(c_bytes_array_p)
 
     def find_ids(self) -> List[int]:
-        """ Finds a list of object IDs matching query. The result is sorted by ID (ascending order). """
+        """ Finds a list of object IDs matching query.
+        The result is sorted by ID (ascending order), unless an order was set (see ``QueryBuilder.order()``). """
         c_id_array_p = obx_query_find_ids(self._c_query)
         try:
             c_id_array: OBX_id_array = c_id_array_p.contents
