@@ -80,6 +80,32 @@ Now you are ready to use ObjectBox in your Python project.
 Head over to the **[ObjectBox documentation](https://docs.objectbox.io)**
 and learn how to setup your first entity classes.
 
+### Sync
+
+[ObjectBox Sync](https://objectbox.io/sync/) synchronizes data with an ObjectBox Sync server (and other devices).
+It requires the Sync variant of the ObjectBox library, which is installed with the `sync` extra:
+
+```bash
+pip install --upgrade objectbox[sync]
+```
+
+Enable Sync for an entity with `@SyncEntity` (above `@Entity()`) and start a Sync client for the store:
+
+```python
+from objectbox import Entity, Id, String, Store, SyncEntity
+from objectbox.sync import Sync, SyncCredentials
+
+@SyncEntity
+@Entity()
+class Task:
+    id = Id
+    text = String
+
+store = Store()
+client = Sync.client(store, "ws://127.0.0.1:9999", SyncCredentials.none())
+client.start()  # Connects and syncs in the background; closed with the store
+```
+
 ### Examples
 
 Do you prefer to dive right into working examples?
