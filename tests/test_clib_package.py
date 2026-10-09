@@ -38,3 +38,19 @@ def test_clib_platform_wheel():
     assert os.path.dirname(lib_dir) == os.path.join(package_dir, "lib"), "Library not loaded from objectbox-clib"
     assert os.listdir(os.path.join(package_dir, "lib")) == [os.path.basename(lib_dir)], \
         "Only the library for this platform shall be installed"
+
+
+@pytest.mark.parametrize("system, machine, maxsize, expected", [
+    ("Linux", "x86_64", 2 ** 63 - 1, "x86_64"),
+    ("Linux", "aarch64", 2 ** 63 - 1, "aarch64"),
+    ("Linux", "aarch64", 2 ** 31 - 1, "armv7l"),  # 32-bit Python on a 64-bit kernel (e.g. Raspberry Pi OS 32-bit)
+    ("Linux", "armv7l", 2 ** 31 - 1, "armv7l"),
+    ("Windows", "AMD64", 2 ** 63 - 1, "AMD64"),
+    ("Darwin", "arm64", 2 ** 63 - 1, "macos-universal"),
+    ("Darwin", "x86_64", 2 ** 63 - 1, "macos-universal"),
+])
+def test_lib_dir_name(monkeypatch, system, machine, maxsize, expected):
+    monkeypatch.setattr(c.platform, "system", lambda: system)
+    monkeypatch.setattr(c.platform, "machine", lambda: machine)
+    monkeypatch.setattr(c.sys, "maxsize", maxsize)
+    assert c.lib_dir_name() == expected

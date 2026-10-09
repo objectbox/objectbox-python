@@ -8,6 +8,8 @@ Unreleased
   There is a wheel for each platform, so only the library for your platform is downloaded (was: libraries for all platforms):
   Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 13+ (universal) and Windows x64.
   **Breaking:** Linux ARMv6hf (e.g. Raspberry Pi Zero/1) is no longer supported, as PyPI does not support wheels for it.
+* Linux: support 32-bit Python on a 64-bit kernel, e.g. Raspberry Pi OS 32-bit on a Raspberry Pi 4/5
+  (64-bit kernel by default); this failed to load the library before.
 * Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`
   (the latter raises if the object does not exist yet, i.e. unlike `put()` it never inserts)
 * Exceptions: all exceptions raised by the database now derive from `DbError`, with a specific subclass per error,
