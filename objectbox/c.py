@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import objectbox_clib
 import ctypes.util
 import os
 import platform
+import sys
 from objectbox.version import Version
 from typing import *
 import numpy as np
@@ -42,11 +43,22 @@ def shlib_name(library: str) -> str:
         assert False, 'Unsupported platform: ' + platform.system()
 
 
+def lib_dir_name() -> str:
+    """Returns the name of the library directory (inside objectbox_clib/lib) for the current platform."""
+    if platform.system() == 'Darwin':
+        return 'macos-universal'
+    machine = platform.machine()
+    # platform.machine() reports the kernel's architecture, but the library must match the (Python) process.
+    # These differ for a 32-bit Python on a 64-bit kernel, e.g. Raspberry Pi OS 32-bit on a Raspberry Pi 4/5
+    # (64-bit kernel by default since Bookworm). pip also handles this case and installs the armv7l wheel.
+    if machine == 'aarch64' and sys.maxsize <= 2 ** 32:
+        return 'armv7l'
+    return machine
+
+
 # initialize the C library
-lib_path = os.path.dirname(os.path.realpath(__file__))
-lib_path = os.path.join(lib_path, 'lib',
-                        platform.machine() if platform.system() != 'Darwin' else 'macos-universal',
-                        shlib_name('objectbox'))
+lib_path = os.path.dirname(os.path.realpath(objectbox_clib.__file__))
+lib_path = os.path.join(lib_path, 'lib', lib_dir_name(), shlib_name('objectbox'))
 C = ctypes.CDLL(lib_path)
 
 # load the core library version

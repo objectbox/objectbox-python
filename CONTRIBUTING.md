@@ -23,7 +23,7 @@ Internally, ObjectBox uses [FlatBuffers](https://google.github.io/flatbuffers/) 
 
 The main prerequisite to using the Python APIs is the ObjectBox binary library (.so, .dylib, .dll depending on your
 platform) which actually implements the database functionality. The library should be placed in the
-`objectbox/lib/[architecture]/` folder of the checked out repository. You can get/update it by running `make depend`.
+`objectbox_clib/lib/[architecture]/` folder of the checked out repository. You can get/update it by running `make depend`.
 
 ### Getting started as a contributor
 #### Initial setup

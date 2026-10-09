@@ -31,7 +31,6 @@ Feature Highlights
 💐 **[Queries](https://docs.objectbox.io/queries)** - filter data as needed, even across relations.\
 💻 **Multiplatform** - Get native speed on your favorite platforms.\
 * Linux x86-64 (64-bit)
-* Linux ARMv6hf (e.g. Raspberry PI Zero)
 * Linux ARMv7hf (e.g. Raspberry PI 3)
 * Linux ARMv8   (e.g. Raspberry PI 4, 5, etc.)
 * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
