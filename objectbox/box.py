@@ -31,6 +31,12 @@ class Box:
         self._entity = entity
         self._c_box = obx_box(store._c_store, entity._id)
 
+    def contains(self, object_id: int) -> bool:
+        """Checks whether the box contains the given object ID."""
+        contained = ctypes.c_bool()
+        obx_box_contains(self._c_box, object_id, ctypes.byref(contained))
+        return bool(contained.value)
+
     def is_empty(self) -> bool:
         """Returns true if box is empty (i.e. no objects of entity type are available)."""
         is_empty = ctypes.c_bool()
@@ -112,6 +118,16 @@ class Box:
         for k in new.keys():
             self._entity._set_object_id(objects[k], ids[k])
 
+    def update(self, object_):
+        """Updates the existing object having the same ID as the given object.
+
+        Raises if the object has no ID (i.e. it was never put) or the ID doesn't match any stored object."""
+        object_id = self._entity._get_object_id(object_)
+        if not object_id:
+            raise ValueError("Cannot update an object without an ID; use put() for new objects")
+        data = self._entity._marshal(object_, object_id)
+        obx_box_update(self._c_box, object_id, bytes(data), len(data))
+
     def get(self, id: int):
         """Get object by given Id or None if not found."""
         with self._store.read_tx():
@@ -125,6 +141,36 @@ class Box:
                 raise DbError.from_code(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
             return self._entity._unmarshal(data)
+
+    def get_many(self, id_array: List[int]) -> list:
+        """Gets objects matching the given ID list.
+
+        :return: objects matching the ID list, preserving the order.
+            If an invalid ID is supplied, the corresponding object is None.
+        """
+
+        if not id_array:  # Empty
+            return []
+
+        c_ids = (obx_id * len(id_array))(*id_array)
+        c_id_array = OBX_id_array(ctypes.cast(c_ids, ctypes.POINTER(obx_id)), len(id_array))
+
+        with self._store.read_tx():
+            c_bytes_array_p = obx_box_get_many(self._c_box, ctypes.byref(c_id_array))
+
+            result = []
+            try:
+                c_bytes_array = c_bytes_array_p.contents
+                for i in range(c_bytes_array.count):
+                    c_bytes = c_bytes_array.data[i]
+                    if c_bytes.data is None or c_bytes.size == 0:  # User supplied an invalid ID
+                        result.append(None)
+                    else:
+                        data = c_voidp_as_bytes(c_bytes.data, c_bytes.size)
+                        result.append(self._entity._unmarshal(data))
+            finally:
+                obx_bytes_array_free(c_bytes_array_p)
+            return result
 
     def get_all(self) -> list:
         """Get all objects."""

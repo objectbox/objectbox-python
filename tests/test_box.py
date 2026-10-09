@@ -1,11 +1,13 @@
 import pytest
-import objectbox
-from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex
-from tests.common import *
 import numpy as np
 from datetime import datetime, timezone
 import time
 from math import floor
+
+import objectbox
+from objectbox.exceptions import *
+from tests.common import *
+from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex
 
 
 def test_box_basics(test_store):
@@ -280,3 +282,83 @@ def test_flex_values(test_store):
     obj_id = box.put(TestEntityFlex(flex=dict_))
     read_obj = box.get(obj_id)
     assert read_obj.flex == dict_
+
+
+def test_contains(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put([TestEntity(str=f"Object {i}") for i in range(1, 4)])
+    assert box.count() == 3
+
+    assert box.contains(1)
+    assert box.contains(2)
+    assert box.contains(3)
+    assert not box.contains(4)
+    assert not box.contains(3248)
+
+    with pytest.raises(IllegalArgumentError, match="Illegal ID value: 0"):
+        box.contains(0)
+
+
+def test_update(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put([TestEntity(str=f"Object {i}") for i in range(1, 4)])
+    assert box.count() == 3
+
+    with test_store.write_tx():
+        for obj in box.get_all():
+            obj.str += " (updated)"
+            box.update(obj)
+
+    assert box.get(1).str == "Object 1 (updated)"
+    assert box.get(2).str == "Object 2 (updated)"
+    assert box.get(3).str == "Object 3 (updated)"
+    assert box.count() == 3
+
+    with pytest.raises(ValueError, match="without an ID"):
+        box.update(TestEntity(str="New object"))
+
+    obj = box.get(1)
+    box.remove(1)
+    with pytest.raises(IdNotFoundError, match="Update failed, given ID doesn't exist: 1"):
+        box.update(obj)
+    assert not box.contains(1)  # Failed update must not re-create the object
+
+
+def test_get_many(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put([TestEntity(str=f"Object {i}") for i in range(1, 6)])
+    assert box.count() == 5
+
+    objects = box.get_many([1, 3, 4])
+    assert len(objects) == 3
+    assert objects[0].str == "Object 1"
+    assert objects[1].str == "Object 3"
+    assert objects[2].str == "Object 4"
+
+    objects = box.get_many([5, 2])
+    assert len(objects) == 2
+    assert objects[0].str == "Object 5"
+    assert objects[1].str == "Object 2"
+
+    objects = box.get_many([5, 5, 2])
+    assert len(objects) == 3
+    assert objects[0].str == "Object 5"
+    assert objects[1].str == "Object 5"
+    assert objects[2].str == "Object 2"
+
+    objects = box.get_many([2])
+    assert len(objects) == 1
+    assert objects[0].str == "Object 2"
+
+    objects = box.get_many([])
+    assert len(objects) == 0
+
+    objects = box.get_many([1, 789, 2, 10])
+    assert len(objects) == 4
+    assert objects[0].str == "Object 1"
+    assert objects[1] is None
+    assert objects[2].str == "Object 2"
+    assert objects[3] is None
