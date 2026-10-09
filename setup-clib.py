@@ -68,14 +68,14 @@ def setup():
     if platform_tag not in PLATFORMS:
         raise ValueError(f"Missing or unsupported --plat-name: {platform_tag}; supported: {', '.join(PLATFORMS)}")
 
-    with open("README.md", "r") as fh:
+    with open("objectbox_clib/README.md", "r") as fh:  # Not the main README (e.g. license differs)
         long_description = fh.read()
 
     setuptools.setup(
         name="objectbox-clib",
         version=clib_version(),
         author="ObjectBox",
-        description="ObjectBox is a superfast lightweight database for objects (clib backend)",
+        description="ObjectBox C library (native binary) for the objectbox Python package",
         long_description=long_description,
         long_description_content_type="text/markdown",
         url="https://objectbox.io",
