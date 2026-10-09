@@ -1,6 +1,19 @@
 ObjectBox Python ChangeLog
 ==========================
 
+Unreleased
+----------
+
+* Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`
+  (the latter raises if the object does not exist yet, i.e. unlike `put()` it never inserts)
+* Exceptions: all exceptions raised by the database now derive from `DbError`, with a specific subclass per error,
+  e.g. `IdNotFoundError`, `UniqueViolatedError` or `DbFullError` (see module `objectbox.exceptions`).
+  **Breaking:** this replaces `CoreException` and `NotFoundException` (the latter was exported by the top-level module).
+* Store: new `log_callback` option to receive the database's log messages
+* Top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`
+* API reference documentation (docstrings for the public API; generated via Sphinx)
+* Example "tasks": added a command to remove tasks and improved the command line
+
 4.0.0 (2024-05-28)
 ------------------
 
