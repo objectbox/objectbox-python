@@ -654,64 +654,64 @@ def test_bytes(test_store):
 def test_order(test_store):
     box = test_store.box(TestEntity)
 
-    box.put(TestEntity(str="mango", int64=-423))
-    box.put(TestEntity(str="apricot", int64=456))
-    box.put(TestEntity(str="Apple", int64=5))
-    box.put(TestEntity(str="Banana", int64=67))
-    box.put(TestEntity(str="coconut", int64=2859))
+    id1 = box.put(TestEntity(str="mango", int64=-423))
+    id2 = box.put(TestEntity(str="apricot", int64=456))
+    id3 = box.put(TestEntity(str="Apple", int64=5))
+    id4 = box.put(TestEntity(str="Banana", int64=67))
+    id5 = box.put(TestEntity(str="coconut", int64=2859))
     assert box.count() == 5
 
     # Order by int64 (ascending)
     query = box.query().order(TestEntity.int64).build()
     assert query.count() == 5
-    objects = query.find()
-    assert objects[0].id == 1
-    assert objects[1].id == 3
-    assert objects[2].id == 4
-    assert objects[3].id == 2
-    assert objects[4].id == 5
+    assert [o.id for o in query.find()] == [id1, id3, id4, id2, id5]
+    assert query.find_ids() == [id1, id3, id4, id2, id5]
 
     # Order by int64 (descending)
     query = box.query().order(TestEntity.int64, OrderFlags.DESCENDING).build()
-    assert query.count() == 5
-    objects = query.find()
-    assert objects[0].id == 5
-    assert objects[1].id == 2
-    assert objects[2].id == 4
-    assert objects[3].id == 3
-    assert objects[4].id == 1
+    assert [o.id for o in query.find()] == [id5, id2, id4, id3, id1]
+    assert query.find_ids() == [id5, id2, id4, id3, id1]
 
-    # Order by int64 (unsigned ordering)
+    # Order by int64 (unsigned ordering): -423 is the largest
     query = box.query().order(TestEntity.int64, OrderFlags.UNSIGNED).build()
-    assert query.count() == 5
-    objects = query.find()
-    assert objects[0].id == 3
-    assert objects[1].id == 4
-    assert objects[2].id == 2
-    assert objects[3].id == 5
-    assert objects[4].id == 1  # -423
+    assert [o.id for o in query.find()] == [id3, id4, id2, id5, id1]
 
     # Order by str (case-insensitive)
     query = box.query().order(TestEntity.str).build()
-    assert query.count() == 5
-    objects = query.find()
-    assert objects[0].str == "Apple"
-    assert objects[1].str == "apricot"
-    assert objects[2].str == "Banana"
-    assert objects[3].str == "coconut"
-    assert objects[4].str == "mango"
+    assert [o.str for o in query.find()] == ["Apple", "apricot", "Banana", "coconut", "mango"]
 
     # Order by str (case-sensitive)
     query = box.query().order(TestEntity.str, OrderFlags.CASE_SENSITIVE).build()
-    assert query.count() == 5
-    objects = query.find()
-    assert objects[0].str == "Apple"
-    assert objects[1].str == "Banana"
-    assert objects[2].str == "apricot"
-    assert objects[3].str == "coconut"
-    assert objects[4].str == "mango"
+    assert [o.str for o in query.find()] == ["Apple", "Banana", "apricot", "coconut", "mango"]
+
+    # Combined flags; property given by name
+    query = box.query().order("str", OrderFlags.CASE_SENSITIVE | OrderFlags.DESCENDING).build()
+    assert [o.str for o in query.find()] == ["mango", "coconut", "apricot", "Banana", "Apple"]
+
+    # With a condition, offset and limit
+    query = box.query(TestEntity.int64.greater_than(0)).order(TestEntity.str).build()
+    assert [o.str for o in query.find()] == ["Apple", "apricot", "Banana", "coconut"]
+    query.offset(1)
+    query.limit(2)
+    assert [o.str for o in query.find()] == ["apricot", "Banana"]
 
     # TODO test NULLS_LAST/NULLS_ZERO when None values will be supported (i.e. optional properties)
+
+
+def test_order_multiple(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(str="b", int64=1))
+    id2 = box.put(TestEntity(str="a", int64=2))
+    id3 = box.put(TestEntity(str="B", int64=0))
+    id4 = box.put(TestEntity(str="a", int64=3))
+
+    # The first order is the primary one; the second one orders within equal values ("b" == "B" by default)
+    query = box.query().order(TestEntity.str).order(TestEntity.int64, OrderFlags.DESCENDING).build()
+    assert query.find_ids() == [id4, id2, id1, id3]
+
+    query = box.query().order(TestEntity.str).order(TestEntity.int64).build()
+    assert query.find_ids() == [id2, id4, id3, id1]
 
 
 def test_remove(test_store):
