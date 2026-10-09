@@ -28,6 +28,11 @@ ObjectBox Python ChangeLog
   **Breaking:** this replaces `CoreException` and `NotFoundException` (the latter was exported by the top-level module).
   `IllegalArgumentError` is also a `ValueError`, `IllegalStateError` and `FeatureNotAvailable` are also a
   `RuntimeError`, so they can be caught as the matching built-in exception, too.
+* Query: order results via `QueryBuilder.order(property, flags)`, e.g. `box.query().order(Person.name).build()`;
+  `OrderFlags` (exported by the top-level module) adjust the order, e.g. `DESCENDING` or `CASE_SENSITIVE`
+* Query: new "one of" conditions `String.one_of(values)` and, for integer properties, `one_of(values)` and
+  `not_one_of(values)`; their values can be changed on a built query via `set_parameter_strings()`/`set_parameter_ints()`
+  and the `set_parameter_alias_*` variants
 * Store: new `log_callback` option to receive the database's log messages
 * Top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`
 * API reference documentation (docstrings for the public API; generated via Sphinx)
