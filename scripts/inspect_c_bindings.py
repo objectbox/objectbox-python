@@ -1,4 +1,4 @@
-# Script used to inspect differences between objectbox/lib/objectbox.h and c.py (e.g. missing function declarations)
+# Script used to inspect differences between objectbox_clib/lib/objectbox.h and c.py (e.g. missing function declarations)
 # Usage:
 #   python inspect_c_bindings.py
 # Requirements:
@@ -48,9 +48,9 @@ def _parse_header_file(filename):
 
 
 def _main():
-    objectbox_h = path.join(script_dir, "../objectbox/lib/objectbox.h")
+    objectbox_h = path.join(script_dir, "../objectbox_clib/lib/objectbox.h")
     if not path.exists(objectbox_h):
-        raise Exception("File not found: objectbox/lib/objectbox.h")
+        raise Exception("File not found: objectbox_clib/lib/objectbox.h")
     _parse_header_file(objectbox_h)
 
 

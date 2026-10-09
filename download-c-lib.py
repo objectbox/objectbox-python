@@ -5,7 +5,7 @@ import os
 
 from build_info import clib_version
 
-# Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make get-lib`
+# Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make depend`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
 
 version = "v" + clib_version()  # i.e. objectbox/c.py required_version
