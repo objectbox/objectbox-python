@@ -730,7 +730,7 @@ def test_remove(test_store):
     assert box.count() == 1
 
 
-def test_in_strings(test_store):
+def test_string_one_of(test_store):
     box = test_store.box(TestEntity)
 
     box.put(TestEntity(str="Apple"))
@@ -740,25 +740,25 @@ def test_in_strings(test_store):
     box.put(TestEntity(str="Strawberry"))
     assert box.count() == 5
 
-    query = box.query(TestEntity.str.in_(["Apple", "Banana", "Peach"])).build()
+    query = box.query(TestEntity.str.one_of(["Apple", "Banana", "Peach"])).build()
     objects = query.find()
     assert len(objects) == 2
     assert objects[0].str == "Apple"
     assert objects[1].str == "Peach"
 
-    query = box.query(TestEntity.str.in_(["Apple", "Banana", "Peach"], case_sensitive=False)).build()
+    query = box.query(TestEntity.str.one_of(["Apple", "Banana", "Peach"], case_sensitive=False)).build()
     objects = query.find()
     assert len(objects) == 3
     assert objects[0].str == "Apple"
     assert objects[1].str == "banana"
     assert objects[2].str == "Peach"
 
-    query = box.query(TestEntity.str.in_(["MANGO"])).build()
+    query = box.query(TestEntity.str.one_of(["MANGO"])).build()
     objects = query.find()
     assert len(objects) == 1
     assert objects[0].str == "MANGO"
 
-    query = box.query(TestEntity.str.in_([])).build()
+    query = box.query(TestEntity.str.one_of([])).build()
     assert query.count() == 0
 
 

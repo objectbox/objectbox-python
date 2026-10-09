@@ -467,11 +467,12 @@ class String(Property):
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
 
-    def in_(self, values: List[str], case_sensitive: bool = True):
-        """*in-string* condition (opt-in: case-sensitive) to be passed to :func:`Box.query`"""
+    def one_of(self, values: List[str], case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *one of* (``in``) condition (opt-in: case-sensitive) to be passed to :func:`Box.query`;
+        matches if the property value equals any of the given values. """
         self._assert_ids_assigned()
         args = {'values': values, 'case_sensitive': case_sensitive}
-        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.IN_STRINGS, args)
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ONE_OF, args)
  
 # Signed Integer Numeric Properties
 class Int8(_IntProperty):
