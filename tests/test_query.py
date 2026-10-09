@@ -815,3 +815,35 @@ def test_int_one_of(test_store):
     # Not supported by the C API for 8/16-bit integers
     with pytest.raises(DbError):
         box.query(TestEntity.int8.one_of([1]))
+
+
+def test_set_parameter_one_of(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(str="Apple", int32=1, int64=10))
+    id2 = box.put(TestEntity(str="Banana", int32=2, int64=20))
+    id3 = box.put(TestEntity(str="Cherry", int32=3, int64=30))
+
+    # Via property
+    query = box.query(TestEntity.str.one_of(["Apple"])).build()
+    assert query.find_ids() == [id1]
+    assert query.set_parameter_strings(TestEntity.str, ["Banana", "Cherry"]).find_ids() == [id2, id3]
+    assert query.set_parameter_strings(TestEntity.str, []).count() == 0
+
+    query = box.query(TestEntity.int32.one_of([1])).build()
+    assert query.set_parameter_ints(TestEntity.int32, [2, 3]).find_ids() == [id2, id3]
+    query = box.query(TestEntity.int64.not_one_of([10])).build()
+    assert query.set_parameter_ints("int64", [10, 20]).find_ids() == [id3]
+
+    # Via alias; int32 and int64 conditions need different C API calls
+    query = box.query(TestEntity.str.one_of(["Apple"], case_sensitive=False).alias("names")
+                      & TestEntity.int32.one_of([1]).alias("ints32")
+                      | TestEntity.int64.one_of([]).alias("ints64")).build()
+    assert query.find_ids() == [id1]
+    query.set_parameter_alias_strings("names", ["BANANA", "cherry"])
+    assert query.find_ids() == []
+    query.set_parameter_alias_ints("ints32", [2, 3])
+    assert query.find_ids() == [id2, id3]
+    query.set_parameter_alias_strings("names", [])
+    query.set_parameter_alias_ints("ints64", [10])
+    assert query.find_ids() == [id1]

@@ -183,6 +183,24 @@ class Query:
         obx_query_param_vector_float32(self._c_query, self._entity._id, prop_id, c_value, num_el)
         return self
 
+    def set_parameter_strings(self, prop: Union[int, str, 'Property'], values: List[str]) -> 'Query':
+        """ Sets the values of a string "one of" condition (see ``String.one_of()``) on the given property. """
+        prop_id = self._entity._get_property_id(prop)
+        c_values = c_array([c_str(value) for value in values], ctypes.c_char_p)
+        obx_query_param_strings(self._c_query, self._entity._id, prop_id, c_values, len(values))
+        return self
+
+    def set_parameter_ints(self, prop: Union[int, str, 'Property'], values: List[int]) -> 'Query':
+        """ Sets the values of an integer "one of"/"not one of" condition on the given property. """
+        prop_id = self._entity._get_property_id(prop)
+        if obx_query_param_get_type_size(self._c_query, self._entity._id, prop_id) == 4:
+            c_values = c_array([int(value) for value in values], ctypes.c_int32)
+            obx_query_param_int32s(self._c_query, self._entity._id, prop_id, c_values, len(values))
+        else:
+            c_values = c_array([int(value) for value in values], ctypes.c_int64)
+            obx_query_param_int64s(self._c_query, self._entity._id, prop_id, c_values, len(values))
+        return self
+
     def set_parameter_alias_string(self, alias: str, value: str):
         return obx_query_param_alias_string(self._c_query, c_str(alias), c_str(value))
 
@@ -192,3 +210,21 @@ class Query:
     def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]):
         return obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float),
                                                     len(value))
+
+    def set_parameter_alias_strings(self, alias: str, values: List[str]) -> 'Query':
+        """ Sets the values of the string "one of" condition (see ``String.one_of()``) having the given alias. """
+        c_values = c_array([c_str(value) for value in values], ctypes.c_char_p)
+        obx_query_param_alias_strings(self._c_query, c_str(alias), c_values, len(values))
+        return self
+
+    def set_parameter_alias_ints(self, alias: str, values: List[int]) -> 'Query':
+        """ Sets the values of the integer "one of"/"not one of" condition having the given alias. """
+        c_alias = c_str(alias)
+        # The C API has separate functions for 32-bit and 64-bit integer properties
+        if obx_query_param_alias_get_type_size(self._c_query, c_alias) == 4:
+            c_values = c_array([int(value) for value in values], ctypes.c_int32)
+            obx_query_param_alias_int32s(self._c_query, c_alias, c_values, len(values))
+        else:
+            c_values = c_array([int(value) for value in values], ctypes.c_int64)
+            obx_query_param_alias_int64s(self._c_query, c_alias, c_values, len(values))
+        return self
