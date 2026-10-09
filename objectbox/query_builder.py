@@ -121,6 +121,35 @@ class QueryBuilder:
         cond = obx_qb_not_equals_int(self._c_builder, prop_id, value)
         return cond
 
+    def in_ints(self, prop: Union[int, str, Property], values: List[int]) -> obx_qb_cond:
+        """ Matches if the integer property equals any of the given values.
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties. """
+        prop_id = self._entity._get_property_id(prop)
+        if self._is_int32_property(prop_id):
+            c_values = c_array([int(value) for value in values], ctypes.c_int32)
+            return obx_qb_in_int32s(self._c_builder, prop_id, c_values, len(values))
+        else:
+            c_values = c_array([int(value) for value in values], ctypes.c_int64)
+            return obx_qb_in_int64s(self._c_builder, prop_id, c_values, len(values))
+
+    def not_in_ints(self, prop: Union[int, str, Property], values: List[int]) -> obx_qb_cond:
+        """ Matches if the integer property equals none of the given values.
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties. """
+        prop_id = self._entity._get_property_id(prop)
+        if self._is_int32_property(prop_id):
+            c_values = c_array([int(value) for value in values], ctypes.c_int32)
+            return obx_qb_not_in_int32s(self._c_builder, prop_id, c_values, len(values))
+        else:
+            c_values = c_array([int(value) for value in values], ctypes.c_int64)
+            return obx_qb_not_in_int64s(self._c_builder, prop_id, c_values, len(values))
+
+    def _is_int32_property(self, prop_id: int) -> bool:
+        """ The C API has separate functions for 32-bit and 64-bit integer properties (e.g. for "in" conditions). """
+        for prop in self._entity._properties:
+            if prop.id == prop_id:
+                return prop._ob_type == OBXPropertyType_Int
+        raise Exception(f"Property ID {prop_id} not found in Entity \"{self._entity._name}\"")
+
     def greater_than_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
         prop_id = self._entity._get_property_id(prop)
         cond = obx_qb_greater_than_int(self._c_builder, prop_id, value)

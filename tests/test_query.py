@@ -786,3 +786,32 @@ def test_contains_string(test_store):
 
     query = box.query(TestEntity.str.contains("pear")).build()
     assert query.count() == 0
+
+
+def test_int_one_of(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(int32=1, int64=-10, date=1000))
+    id2 = box.put(TestEntity(int32=2, int64=20, date=2000))
+    id3 = box.put(TestEntity(int32=3, int64=2 ** 40, date=3000))
+    id4 = box.put(TestEntity(int32=-4, int64=40, date=4000))
+
+    # Int32 uses the 32-bit C API variant, the others the 64-bit one
+    assert box.query(TestEntity.int32.one_of([1, 3, 5])).build().find_ids() == [id1, id3]
+    assert box.query(TestEntity.int32.not_one_of([1, 3, 5])).build().find_ids() == [id2, id4]
+    assert box.query(TestEntity.int64.one_of([-10, 2 ** 40])).build().find_ids() == [id1, id3]
+    assert box.query(TestEntity.int64.not_one_of([-10, 2 ** 40])).build().find_ids() == [id2, id4]
+    assert box.query(TestEntity.id.one_of([id2, id4])).build().find_ids() == [id2, id4]
+    assert box.query(TestEntity.date.one_of([2000, 4000])).build().find_ids() == [id2, id4]
+
+    # Tuples are accepted as well; combined with other conditions
+    query = box.query(TestEntity.int32.one_of((1, 2, 3)) & TestEntity.int64.greater_than(0)).build()
+    assert query.find_ids() == [id2, id3]
+
+    # Empty lists: nothing is "in" it; everything is "not in" it
+    assert box.query(TestEntity.int64.one_of([])).build().count() == 0
+    assert box.query(TestEntity.int64.not_one_of([])).build().count() == 4
+
+    # Not supported by the C API for 8/16-bit integers
+    with pytest.raises(DbError):
+        box.query(TestEntity.int8.one_of([1]))

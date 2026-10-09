@@ -394,6 +394,22 @@ class _IntProperty(_NumericProperty):
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
 
+    def one_of(self, values: List[int]) -> PropertyQueryCondition:
+        """ *one of* (``in``) condition to be passed to :func:`Box.query`;
+        matches if the property value equals any of the given values.
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties. """
+        self._assert_ids_assigned()
+        args = {'values': values}
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ONE_OF, args)
+
+    def not_one_of(self, values: List[int]) -> PropertyQueryCondition:
+        """ *not one of* (``not in``) condition to be passed to :func:`Box.query`;
+        matches if the property value equals none of the given values.
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties. """
+        self._assert_ids_assigned()
+        args = {'values': values}
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_ONE_OF, args)
+
 
 # ID property (primary key)
 class Id(_IntProperty):
@@ -471,7 +487,7 @@ class String(Property):
         """ *one of* (``in``) condition (opt-in: case-sensitive) to be passed to :func:`Box.query`;
         matches if the property value equals any of the given values. """
         self._assert_ids_assigned()
-        args = {'values': values, 'case_sensitive': case_sensitive}
+        args = {'values': values, 'case_sensitive': case_sensitive, 'string': True}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ONE_OF, args)
  
 # Signed Integer Numeric Properties
