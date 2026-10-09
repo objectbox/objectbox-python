@@ -17,6 +17,7 @@ import ctypes.util
 import os
 import platform
 import sys
+import sysconfig
 from objectbox.version import Version
 from typing import *
 import numpy as np
@@ -47,6 +48,11 @@ def lib_dir_name() -> str:
     """Returns the name of the library directory (inside objectbox_clib/lib) for the current platform."""
     if platform.system() == 'Darwin':
         return 'macos-universal'
+    if platform.system() == 'Windows':
+        # Use the architecture the Python interpreter was built for (derived from sys.version), e.g. "win-arm64";
+        # the library must match the Python process, which may differ from the OS (e.g. x64 Python on Windows ARM64).
+        windows_dirs = {'win-amd64': 'AMD64', 'win-arm64': 'ARM64'}
+        return windows_dirs.get(sysconfig.get_platform(), platform.machine())
     machine = platform.machine()
     # platform.machine() reports the kernel's architecture, but the library must match the (Python) process.
     # These differ for a 32-bit Python on a 64-bit kernel, e.g. Raspberry Pi OS 32-bit on a Raspberry Pi 4/5

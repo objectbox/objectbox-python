@@ -5,11 +5,12 @@ ObjectBox Python ChangeLog
 --------------------
 
 * Update to ObjectBox C library 5.3.2 (was 4.0.0), see https://github.com/objectbox/objectbox-c/blob/main/CHANGELOG.md;
+* New platform: Windows ARM64 (64-bit ARM, e.g. Snapdragon-based devices)
 * Log callback (`log_callback`): the log level values passed to the callback changed (see `LogLevel`, now also `Trace`);
   code comparing against `LogLevel` members is not affected.
 * The ObjectBox C library is now a separate package, `objectbox-clib`, which is installed automatically as a dependency.
   There is a wheel for each platform, so only the library for your platform is downloaded (was: libraries for all platforms):
-  Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 11+ (universal) and Windows x64.
+  Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 11+ (universal) and Windows x64 and ARM64 (new).
   **Breaking:** Linux ARMv6hf (e.g. Raspberry Pi Zero/1) is no longer supported, as PyPI does not support wheels for it.
 * Linux: support 32-bit Python on a 64-bit kernel, e.g. Raspberry Pi OS 32-bit on a Raspberry Pi 4/5
   (64-bit kernel by default); this failed to load the library before.

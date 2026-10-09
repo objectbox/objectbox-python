@@ -40,17 +40,20 @@ def test_clib_platform_wheel():
         "Only the library for this platform shall be installed"
 
 
-@pytest.mark.parametrize("system, machine, maxsize, expected", [
-    ("Linux", "x86_64", 2 ** 63 - 1, "x86_64"),
-    ("Linux", "aarch64", 2 ** 63 - 1, "aarch64"),
-    ("Linux", "aarch64", 2 ** 31 - 1, "armv7l"),  # 32-bit Python on a 64-bit kernel (e.g. Raspberry Pi OS 32-bit)
-    ("Linux", "armv7l", 2 ** 31 - 1, "armv7l"),
-    ("Windows", "AMD64", 2 ** 63 - 1, "AMD64"),
-    ("Darwin", "arm64", 2 ** 63 - 1, "macos-universal"),
-    ("Darwin", "x86_64", 2 ** 63 - 1, "macos-universal"),
+@pytest.mark.parametrize("system, machine, maxsize, sys_platform, expected", [
+    ("Linux", "x86_64", 2 ** 63 - 1, "linux-x86_64", "x86_64"),
+    ("Linux", "aarch64", 2 ** 63 - 1, "linux-aarch64", "aarch64"),
+    ("Linux", "aarch64", 2 ** 31 - 1, "linux-aarch64", "armv7l"),  # 32-bit Python on a 64-bit kernel (e.g. Raspberry Pi OS 32-bit)
+    ("Linux", "armv7l", 2 ** 31 - 1, "linux-armv7l", "armv7l"),
+    ("Windows", "AMD64", 2 ** 63 - 1, "win-amd64", "AMD64"),
+    ("Windows", "ARM64", 2 ** 63 - 1, "win-arm64", "ARM64"),
+    ("Windows", "ARM64", 2 ** 63 - 1, "win-amd64", "AMD64"),  # x64 Python (emulated) on Windows ARM64
+    ("Darwin", "arm64", 2 ** 63 - 1, "macosx-11.0-arm64", "macos-universal"),
+    ("Darwin", "x86_64", 2 ** 63 - 1, "macosx-11.0-x86_64", "macos-universal"),
 ])
-def test_lib_dir_name(monkeypatch, system, machine, maxsize, expected):
+def test_lib_dir_name(monkeypatch, system, machine, maxsize, sys_platform, expected):
     monkeypatch.setattr(c.platform, "system", lambda: system)
     monkeypatch.setattr(c.platform, "machine", lambda: machine)
     monkeypatch.setattr(c.sys, "maxsize", maxsize)
+    monkeypatch.setattr(c.sysconfig, "get_platform", lambda: sys_platform)
     assert c.lib_dir_name() == expected

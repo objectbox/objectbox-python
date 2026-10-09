@@ -29,6 +29,7 @@ files = {
 
     # windows
     "AMD64/objectbox.dll": "windows-x64.zip",
+    "ARM64/objectbox.dll": "windows-arm64.zip",
 }
 
 def url_for(rel_path: str) -> str:

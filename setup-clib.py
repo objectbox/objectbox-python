@@ -29,6 +29,7 @@ PLATFORMS = {
     "manylinux_2_28_armv7l": "armv7l",
     "macosx_11_0_universal2": "macos-universal",
     "win_amd64": "AMD64",
+    "win_arm64": "ARM64",
 }
 
 

@@ -16,7 +16,11 @@ jobs:
           python: "3.7" # Prevent "The version '3.7' with architecture 'arm64' was not found for macOS 14.4.1"
         - os: "ubuntu"
           python: "3.7" # Python 3.7 is not available in ubuntu-latest i.e. version 24.04
-    runs-on: ${{ matrix.os }}-latest
+        include:
+        - os: "windows-arm64"
+          runner: "windows-11-arm" # Python for Windows ARM64 is available from 3.11
+          python: "3.12"
+    runs-on: ${{ matrix.runner || format('{0}-latest', matrix.os) }}
 
     steps:
       - uses: actions/checkout@v7

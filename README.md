@@ -35,6 +35,7 @@ Feature Highlights
 * Linux ARMv8   (e.g. Raspberry PI 4, 5, etc.)
 * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
 * Windows x86-64 (64-bit)
+* Windows ARM64
 
 Code Example: CRUD (Create, Read, Update, Delete)
 -------------------------------------------------
