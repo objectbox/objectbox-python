@@ -28,6 +28,10 @@ ObjectBox Python ChangeLog
   e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
   Still, prefer closing stores explicitly via `close()`.
 * Store: fix the `model_bytes` and `model_bytes_direct` options (failed with a `TypeError`)
+* Store: faster opening of many stores, e.g. one store per user or agent. A model is synced with the model JSON file
+  only once per process (also when given by name, e.g. the default model), saving about 0.1 ms per open.
+  The new option `skip_model_sync` additionally opens existing stores with the schema stored in their database
+  instead of checking it against the model, which halves the time to open (see its documentation for when to use it).
 
 4.0.0 (2024-05-28)
 ------------------

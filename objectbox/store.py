@@ -28,6 +28,10 @@ from objectbox.model.model import Model
 from typing import *
 
 
+# Models created for model names (Store(model="name")): name -> (registered entities, model)
+_models_by_name: Dict[str, Tuple[Tuple[_Entity, ...], Model]] = {}
+
+
 class Store:
     """ObjectBox Database"""
     def __init__(self,
@@ -57,6 +61,7 @@ class Store:
                  async_object_bytes_max_cache_size: Optional[int] = None,
                  async_object_bytes_max_size_to_cache: Optional[int] = None,
                  log_callback: Callable[[c.OBXLogLevel, str],None] = None,
+                 skip_model_sync: bool = False,
                  c_store: Optional[c.OBX_store_p] = None):
 
         """Opens an ObjectBox database Store
@@ -122,6 +127,13 @@ class Store:
             Maximum size for an object to be cached.
         :param log_callback:
             Callback function for logging with the parameters, OBXLogLevel and message.
+        :param skip_model_sync:
+            Faster opening of existing stores, e.g. when opening many stores (one per user or agent).
+            Skips syncing the model: the model JSON file is not synced again once the model was synced in this process
+            (e.g. by a previous Store), and an existing store is opened with the schema stored in its database
+            instead of checking it against the model. New stores are created with the model as usual.
+            Only use this if existing stores already have the current schema: after changing the model (e.g. adding
+            a property), open each existing store once without this option, which updates its schema.
         :param c_store:
             Internal parameter for deprecated ObjectBox interface. Do not use it; other options would be ignored if passed.
         """
@@ -132,8 +144,9 @@ class Store:
             options = StoreOptions()
             try:
                 if model is not None:
-                    model = Store._sync_model(model, model_json_file)
-                    options.model(model)
+                    model = Store._sync_model(model, model_json_file, skip_model_sync)
+                    if not (skip_model_sync and Store._store_exists(directory)):
+                        options.model(model)
                 if directory is not None:
                     options.directory(directory)
                 if max_db_size_in_kb is not None:
@@ -194,17 +207,19 @@ class Store:
 
     @staticmethod
     def _sync_model(model: Optional[Union[Model, str]],
-                    model_json_file: Optional[str]) -> Model:
+                    model_json_file: Optional[str],
+                    skip_model_sync: bool = False) -> Model:
         if isinstance(model, str):  # Model name provided; get entities collected via @Entity
-            metadata_set = objectbox.model.entity.obx_models_by_name.get(model)
-            if metadata_set is None:
-                raise ValueError(
-                    f"Model \"{model}\" not found; ensure to set the name attribute on the model class.")
-            model = Model()
-            for metadata in metadata_set:
-                model.entity(metadata)
+            model = Store._model_for_name(model)
         elif not isinstance(model, Model):
             raise ValueError("Model must be a Model object or a string.")
+
+        # A model already synced with the model JSON file (e.g. by a previous Store) does not need to be synced again
+        if model._synced_json_file is not None:
+            if skip_model_sync or not model_json_file or model_json_file == model._synced_json_file_given:
+                return model
+            if os.path.realpath(model_json_file) == model._synced_json_file:  # Resolving needs file system access
+                return model
 
         if not model_json_file:
             model_json_file = Store._locate_model_json_file()
@@ -212,6 +227,30 @@ class Store:
         sync_model(model, model_json_file)
 
         return model
+
+    @staticmethod
+    def _model_for_name(name: str) -> Model:
+        """Returns the model consisting of the entities registered for the given name (via @Entity);
+        the model is cached (and thus synced only once) as long as the registered entities do not change."""
+        entities = objectbox.model.entity.obx_models_by_name.get(name)
+        if entities is None:
+            raise ValueError(f"Model \"{name}\" not found; ensure to set the name attribute on the model class.")
+        cached = _models_by_name.get(name)
+        if cached is not None and cached[0] == tuple(entities):
+            return cached[1]
+        model = Model()
+        for entity in entities:
+            model.entity(entity)
+        _models_by_name[name] = (tuple(entities), model)
+        return model
+
+    @staticmethod
+    def _store_exists(directory: Optional[str]) -> bool:
+        """Whether there is an existing (file-based) store in the given directory (default directory if None)."""
+        directory = directory if directory is not None else "objectbox"
+        if directory.startswith("memory:"):
+            return False
+        return os.path.exists(os.path.join(directory, "data.mdb"))
 
     @staticmethod
     def _locate_model_json_file():

@@ -1,3 +1,4 @@
+import os
 import random
 from typing import *
 from objectbox.logger import logger
@@ -308,4 +309,7 @@ def sync_model(model: Model, model_filepath: str = "objectbox-model.json") -> bo
     Returns True if changes were made and the model JSON was written. """
 
     id_sync = IdSync(model, model_filepath)
-    return id_sync.sync()
+    written = id_sync.sync()
+    model._synced_json_file = os.path.realpath(model_filepath)
+    model._synced_json_file_given = model_filepath
+    return written

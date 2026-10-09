@@ -35,6 +35,11 @@ class Model:
 
         self._c_model = None
 
+        # Model JSON file (real path) this model's IDs were synced with; None if not synced (yet).
+        # Used by Store to skip syncing again, e.g. when opening many stores with the same model.
+        self._synced_json_file: Optional[str] = None
+        self._synced_json_file_given: Optional[str] = None  # ...as given (not resolved), for a quick comparison
+
     def on_sync(self):
         """ Method called once ID/UID are synced with the model file. """
         for entity in self.entities:
@@ -48,6 +53,8 @@ class Model:
             if entity._name == other_entity._name:
                 raise Exception(f"Duplicate entity: \"{entity._name}\"")
         self.entities.append(entity)
+        self._synced_json_file = None  # Changed model; must be synced again
+        self._synced_json_file_given = None
 
     def validate_ids_assigned(self):
         # TODO validate last_relation_iduid
