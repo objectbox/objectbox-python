@@ -142,8 +142,8 @@ def test_datetime(test_store):
     # create with a given ID and some data
     object = TestEntityDatetime()
     object.id = 5
-    object.date = datetime.utcnow()  # milliseconds since UNIX epoch
-    object.date_nano = datetime.utcnow()  # nanoseconds since UNIX epoch
+    object.date = datetime.now(timezone.utc)  # milliseconds since UNIX epoch
+    object.date_nano = datetime.now(timezone.utc)  # nanoseconds since UNIX epoch
 
     id = box.put(object)
     assert id == 5
@@ -159,8 +159,8 @@ def test_datetime(test_store):
     assert pytest.approx(read.date) == object.date.timestamp()
 
     # update
-    object.date = datetime.utcnow()
-    object.date_nano = datetime.utcnow()
+    object.date = datetime.now(timezone.utc)
+    object.date_nano = datetime.now(timezone.utc)
     id = box.put(object)
     assert id == 5
 
