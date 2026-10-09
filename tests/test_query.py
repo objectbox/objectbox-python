@@ -586,8 +586,8 @@ def test_set_parameter_alias_advanced(test_store):
         str_prop.equals("Dummy", case_sensitive=False).alias("str_filter")
         & bool_prop.equals(False).alias("bool_filter")
         & (
-                int64_prop.greater_than(0).alias("int64_filter")
-                | int32_prop.less_than(100).alias("int32_filter")
+            int64_prop.greater_than(0).alias("int64_filter")
+            | int32_prop.less_than(100).alias("int32_filter")
         )
     ).build()
     assert len(query.find_ids()) == 0
