@@ -4,6 +4,10 @@ ObjectBox Python ChangeLog
 Unreleased
 ----------
 
+* The ObjectBox C library is now a separate package, `objectbox-clib`, which is installed automatically as a dependency.
+  There is a wheel for each platform, so only the library for your platform is downloaded (was: libraries for all platforms):
+  Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 13+ (universal) and Windows x64.
+  Other platforms, e.g. Linux armv6l (Raspberry Pi Zero), get a fallback wheel with all libraries.
 * Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`
   (the latter raises if the object does not exist yet, i.e. unlike `put()` it never inserts)
 * Exceptions: all exceptions raised by the database now derive from `DbError`, with a specific subclass per error,
