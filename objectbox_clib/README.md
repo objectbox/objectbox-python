@@ -9,7 +9,7 @@ pip install objectbox
 ```
 
 There is a wheel for each supported platform, so only the library for your platform is installed:
-Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 13+ (Intel and Apple Silicon) and Windows x64.
+Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 11+ (Intel and Apple Silicon) and Windows x64.
 
 The version of this package is the version of the ObjectBox C library it contains.
 

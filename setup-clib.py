@@ -20,14 +20,14 @@ from build_info import clib_version
 # Wheel platform tag -> library directory (inside objectbox_clib/lib) for that platform.
 # The tags express the minimum OS requirements of the libraries:
 # - Linux: glibc 2.28 (as documented for objectbox-c); manylinux tags are required for PyPI.
-# - macOS: the library requires 13.6; since macOS 11, pip only considers major versions (13.0) for wheel tags.
+# - macOS: 11.0 (the library's minimum version); since macOS 11, pip only considers major versions for wheel tags.
 # Linux armv6l (e.g. Raspberry Pi Zero) is not supported: pip does not support manylinux for armv6l and PyPI does not
 # accept plain "linux_armv6l" wheels.
 PLATFORMS = {
     "manylinux_2_28_x86_64": "x86_64",
     "manylinux_2_28_aarch64": "aarch64",
     "manylinux_2_28_armv7l": "armv7l",
-    "macosx_13_0_universal2": "macos-universal",
+    "macosx_11_0_universal2": "macos-universal",
     "win_amd64": "AMD64",
 }
 

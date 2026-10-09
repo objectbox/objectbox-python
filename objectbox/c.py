@@ -28,7 +28,7 @@ from enum import IntEnum
 
 # Version of the library used by the binding. This version is checked at runtime to ensure binary compatibility.
 # Don't forget to update download-c-lib.py when upgrading to a newer version.
-required_version = "4.0.0"
+required_version = "5.3.2"
 
 
 def shlib_name(library: str) -> str:
@@ -102,11 +102,13 @@ from enum import IntEnum
 
 
 class LogLevel(IntEnum):
-    Verbose = 10
-    Debug   = 20
-    Info    = 30
-    Warn    = 40
-    Error   = 50
+    # Values match OBXLogLevel (changed with C library 5.3.0, was: 10 to 50 for Verbose to Error)
+    Trace   = 1
+    Verbose = 2
+    Debug   = 3
+    Info    = 4
+    Warn    = 6
+    Error   = 8
 
 
 class DebugFlags(IntEnum):
