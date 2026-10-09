@@ -26,8 +26,7 @@ all: depend build test	## Get dependencies, clean, build and test
 
 build: ${VENV} clean	## Clean and build
 	set -e ; \
-	${PYTHON} setup-clib.py bdist_wheel ; \
-	rm -rf build ; \
+	${PYTHON} setup-clib.py all ; \
 	${PYTHON} setup.py bdist_wheel ; \
 	ls -lh dist
 
@@ -71,4 +70,6 @@ publish:				## Publish the package built by `make build`
 	@echo ">>>  The API token starts with the prefix 'pypi-'.          <<<"
 	@echo ">>>  See https://pypi.org/help/#apitoken for details.       <<<"
 	@echo "****************************************************************"
-	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox*.whl
+	# objectbox-clib first, as objectbox depends on it
+	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_clib-*.whl
+	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox-*.whl
