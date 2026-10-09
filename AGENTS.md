@@ -38,4 +38,4 @@ Python binding for the ObjectBox C API (objectbox-c) via `ctypes`; objects are s
 
 ## CI
 
-GitHub Actions (`.github/workflows/test.yaml`) runs `make depend && make test` on Linux/Windows/macOS for Python 3.7–3.12, so code must stay compatible with Python 3.7. GitLab CI additionally tests the built wheel installed in place of the source package.
+GitHub Actions (`.github/workflows/test.yaml`) runs `make depend && make test` on Linux/Windows/macOS for Python 3.7–3.12, so code must stay compatible with Python 3.7. GitLab CI (`.gitlab-ci.yml`) builds the wheel with `make depend test build` on Linux x64, then tests the built wheel (installed in place of the source package, which is deleted) on Linux x64 (Python 3.7–3.12 Docker images), Linux armv7hf and aarch64, macOS (arm64 runner; the macOS library is universal) and Windows x64.
