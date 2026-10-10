@@ -1265,8 +1265,8 @@ OBX_sync_listener_login_failure_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctyp
 OBX_sync_listener_complete_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
 OBX_sync_listener_error_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)  # arg, OBXSyncError
 OBX_sync_listener_change_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_change_array))
-OBX_sync_listener_server_time = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int64)
-OBX_sync_listener_msg_objects = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_msg_objects))
+OBX_sync_listener_server_time_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int64)
+OBX_sync_listener_msg_objects_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.POINTER(OBX_sync_msg_objects))
 
 # OBX_sync* obx_sync(OBX_store* store, const char* server_url);
 obx_sync = c_fn("obx_sync", OBX_sync_p, [OBX_store_p, ctypes.c_char_p])
@@ -1370,6 +1370,9 @@ obx_sync_filter_variables_remove = c_fn_rc('obx_sync_filter_variables_remove',
 # obx_err obx_sync_filter_variables_remove_all(OBX_sync* sync);
 obx_sync_filter_variables_remove_all = c_fn_rc('obx_sync_filter_variables_remove_all',
                                                [OBX_sync_p])
+
+# obx_err obx_sync_filter_variables_apply(OBX_sync* sync);
+obx_sync_filter_variables_apply = c_fn_rc('obx_sync_filter_variables_apply', [OBX_sync_p])
 
 # OBX_C_API obx_err obx_sync_outgoing_message_count(OBX_sync* sync, uint64_t limit, uint64_t* out_count);
 obx_sync_outgoing_message_count = c_fn_rc('obx_sync_outgoing_message_count',

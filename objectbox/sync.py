@@ -9,6 +9,14 @@ from objectbox import Store
 from objectbox.c import OBX_sync_change_array
 
 
+def _to_bytes(value: typing.Union[str, bytes]) -> bytes:
+    if isinstance(value, str):
+        return value.encode('utf-8')
+    if isinstance(value, (bytes, bytearray)):
+        return bytes(value)
+    raise TypeError(f"Expected str or bytes, got {type(value).__name__}")
+
+
 class SyncCredentials:
     """Credentials used to authenticate a sync client against a server."""
 
@@ -26,28 +34,28 @@ class SyncCredentials:
         return SyncCredentialsNone()
 
     @staticmethod
-    def shared_secret_string(secret: str) -> 'SyncCredentials':
+    def shared_secret(secret: typing.Union[str, bytes]) -> 'SyncCredentials':
         """Shared secret authentication.
 
         Args:
-            secret: The shared secret string.
+            secret: The shared secret, a string or bytes.
 
         Returns:
             A SyncCredentials instance for shared secret authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.SHARED_SECRET_SIPPED, secret.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.SHARED_SECRET_SIPPED, _to_bytes(secret))
 
     @staticmethod
-    def google_auth(secret: str) -> 'SyncCredentials':
+    def google_auth(token: typing.Union[str, bytes]) -> 'SyncCredentials':
         """Google authentication.
 
         Args:
-            secret: The Google authentication token.
+            token: The Google ID token, a string or bytes.
 
         Returns:
             A SyncCredentials instance for Google authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.GOOGLE_AUTH, secret.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.GOOGLE_AUTH, _to_bytes(token))
 
     @staticmethod
     def user_and_password(username: str, password: str) -> 'SyncCredentials':
@@ -179,44 +187,20 @@ class SyncState(Enum):
     """Invalid access to the client after it was closed."""
 
 
-class SyncRequestUpdatesMode:
+class SyncRequestUpdatesMode(IntEnum):
     """Configuration of how SyncClient fetches remote updates from the server."""
 
-    MANUAL = 'manual'
+    MANUAL = c.RequestUpdatesMode.MANUAL
     """No updates, SyncClient.request_updates() must be called manually."""
 
-    AUTO = 'auto'
+    AUTO = c.RequestUpdatesMode.AUTO
     """Automatic updates, including subsequent pushes from the server, same as
     calling SyncClient.request_updates(True). This is the default unless
     changed by SyncClient.set_request_updates_mode()."""
 
-    AUTO_NO_PUSHES = 'auto_no_pushes'
+    AUTO_NO_PUSHES = c.RequestUpdatesMode.AUTO_NO_PUSHES
     """Automatic update after connection, without subscribing for pushes from the
     server. Similar to calling SyncClient.request_updates(False)."""
-
-
-class SyncConnectionEvent:
-    """Connection state change event."""
-
-    CONNECTED = 'connected'
-    """Connection to the server is established."""
-
-    DISCONNECTED = 'disconnected'
-    """Connection to the server is lost."""
-
-
-class SyncLoginEvent:
-    """Login state change event."""
-
-    LOGGED_IN = 'logged_in'
-    """Client has successfully logged in to the server."""
-
-    CREDENTIALS_REJECTED = 'credentials_rejected'
-    """Client's credentials have been rejected by the server.
-    Connection will NOT be retried until new credentials are provided."""
-
-    UNKNOWN_ERROR = 'unknown_error'
-    """An unknown error occurred during authentication."""
 
 
 class SyncCode(IntEnum):
@@ -247,12 +231,28 @@ class SyncCode(IntEnum):
     """Transaction violated a unique constraint."""
 
 
+class SyncError(IntEnum):
+    """Sync-level errors, passed to SyncErrorListener.on_error()."""
+
+    REJECT_TX_NO_PERMISSION = c.OBXSyncError.REJECT_TX_NO_PERMISSION
+    """The client received a rejection of transaction writes due to missing permissions.
+    Until reconnecting with new credentials the client will run in receive-only mode."""
+
+
 def _to_sync_code(code: int) -> typing.Union[SyncCode, int]:
     """Converts to SyncCode; unknown codes (e.g. added by a newer library) are passed as int."""
     try:
         return SyncCode(code)
     except ValueError:
         return code
+
+
+def _to_sync_error(error: int) -> typing.Union[SyncError, int]:
+    """Converts to SyncError; unknown errors (e.g. added by a newer library) are passed as int."""
+    try:
+        return SyncError(error)
+    except ValueError:
+        return error
 
 
 class SyncChange:
@@ -322,11 +322,11 @@ class SyncErrorListener:
     notifications about sync errors.
     """
 
-    def on_error(self, sync_error_code: int):
+    def on_error(self, sync_error: SyncError):
         """Called when a sync error occurs.
 
         Args:
-            sync_error_code: The error code indicating what error occurred.
+            sync_error: The error that occurred (an int if the error is unknown).
         """
         pass
 
@@ -354,7 +354,7 @@ _clients_by_store: 'weakref.WeakKeyDictionary[Store, weakref.ReferenceType[SyncC
 class SyncClient:
     """Sync client is used to connect to an ObjectBox sync server.
 
-    Use through the Sync class factory methods.
+    Usually created via Sync.client().
     """
 
     def __init__(self, store: Store, server_urls: typing.List[str],
@@ -407,7 +407,7 @@ class SyncClient:
         _clients_by_store[store] = weakref.ref(self)
 
         for name, value in (filter_variables or {}).items():
-            self.add_filter_variable(name, value)
+            self.put_filter_variable(name, value)
 
     def __del__(self):
         # Close the SyncClient when this instance is destructed
@@ -427,86 +427,68 @@ class SyncClient:
         if self.__c_sync_client_ptr is None:
             raise ValueError('SyncClient already closed')
 
-    def set_credentials(self, credentials: SyncCredentials):
+    def set_credentials(self, credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]]):
         """Configure authentication credentials, depending on your server config.
 
-        Args:
-            credentials: The credentials to use for authentication.
-        """
-        self.__check_sync_ptr_not_null()
-        if isinstance(credentials, SyncCredentialsNone):
-            c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type, None, 0)
-        elif isinstance(credentials, SyncCredentialsUserPassword):
-            c.obx_sync_credentials_user_password(self.__c_sync_client_ptr,
-                                                 credentials.type,
-                                                 credentials.username.encode('utf-8'),
-                                                 credentials.password.encode('utf-8'))
-        elif isinstance(credentials, SyncCredentialsSecret):
-            c.obx_sync_credentials(self.__c_sync_client_ptr, credentials.type,
-                                   credentials.secret,
-                                   len(credentials.secret))
-        else:
-            raise TypeError(f"Unsupported credentials: {credentials!r}; use the SyncCredentials factory methods")
-
-    def set_multiple_credentials(self, credentials_list: typing.List[SyncCredentials]):
-        """Like set_credentials, but accepts multiple credentials.
-
-        However, does **not** support SyncCredentials.none().
+        Any credentials set before are replaced. Usually, credentials are passed to Sync.client(), but this can be used
+        to update them later, e.g. when a token expires.
 
         Args:
-            credentials_list: List of credentials to use for authentication.
+            credentials: The credentials to use for authentication; a list to pass multiple credentials (the server
+                accepts the client if any of them is valid), which must not include SyncCredentials.none().
 
         Raises:
-            ValueError: If credentials_list is empty or contains SyncCredentials.none().
+            ValueError: If the list is empty or contains SyncCredentials.none() (along with other credentials).
+            TypeError: If credentials were not created by the SyncCredentials factory methods.
         """
         self.__check_sync_ptr_not_null()
+        credentials_list = list(credentials) if isinstance(credentials, (list, tuple)) else [credentials]
         if len(credentials_list) == 0:
             raise ValueError("Provide at least one credential")
         # Check all before adding any, as the C client would be left with an incomplete set of credentials
-        for credentials in credentials_list:
-            if isinstance(credentials, SyncCredentialsNone):
-                raise ValueError("SyncCredentials.none() is not supported, use set_credentials() instead")
-            if not isinstance(credentials, (SyncCredentialsUserPassword, SyncCredentialsSecret)):
-                raise TypeError(f"Unsupported credentials: {credentials!r}; use the SyncCredentials factory methods")
+        for creds in credentials_list:
+            if not isinstance(creds, (SyncCredentialsNone, SyncCredentialsUserPassword, SyncCredentialsSecret)):
+                raise TypeError(f"Unsupported credentials: {creds!r}; use the SyncCredentials factory methods")
+            if isinstance(creds, SyncCredentialsNone) and len(credentials_list) > 1:
+                raise ValueError("SyncCredentials.none() is not supported with multiple credentials")
 
-        for i in range(len(credentials_list)):
+        if len(credentials_list) == 1:
+            creds = credentials_list[0]
+            if isinstance(creds, SyncCredentialsNone):
+                c.obx_sync_credentials(self.__c_sync_client_ptr, creds.type, None, 0)
+            elif isinstance(creds, SyncCredentialsUserPassword):
+                c.obx_sync_credentials_user_password(self.__c_sync_client_ptr, creds.type,
+                                                     creds.username.encode('utf-8'), creds.password.encode('utf-8'))
+            else:
+                c.obx_sync_credentials(self.__c_sync_client_ptr, creds.type, creds.secret, len(creds.secret))
+            return
+
+        for i, creds in enumerate(credentials_list):
             is_last = (i == len(credentials_list) - 1)
-            credentials = credentials_list[i]
-
-            if isinstance(credentials, SyncCredentialsUserPassword):
-                c.obx_sync_credentials_add_user_password(self.__c_sync_client_ptr,
-                                                         credentials.type,
-                                                         credentials.username.encode('utf-8'),
-                                                         credentials.password.encode('utf-8'),
-                                                         is_last
-                                                         )
-            elif isinstance(credentials, SyncCredentialsSecret):
-                c.obx_sync_credentials_add(self.__c_sync_client_ptr,
-                                           credentials.type,
-                                           credentials.secret,
-                                           len(credentials.secret),
+            if isinstance(creds, SyncCredentialsUserPassword):
+                c.obx_sync_credentials_add_user_password(self.__c_sync_client_ptr, creds.type,
+                                                         creds.username.encode('utf-8'),
+                                                         creds.password.encode('utf-8'), is_last)
+            else:
+                c.obx_sync_credentials_add(self.__c_sync_client_ptr, creds.type, creds.secret, len(creds.secret),
                                            is_last)
 
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
         """Configures how sync updates are received from the server.
 
         If automatic updates are turned off, they will need to be requested manually.
+        Must be called before start().
 
         Args:
             mode: The request updates mode to use.
+
+        Raises:
+            ValueError: If mode is not a SyncRequestUpdatesMode value.
         """
         self.__check_sync_ptr_not_null()
-        if mode == SyncRequestUpdatesMode.MANUAL:
-            c_mode = c.RequestUpdatesMode.MANUAL
-        elif mode == SyncRequestUpdatesMode.AUTO:
-            c_mode = c.RequestUpdatesMode.AUTO
-        elif mode == SyncRequestUpdatesMode.AUTO_NO_PUSHES:
-            c_mode = c.RequestUpdatesMode.AUTO_NO_PUSHES
-        else:
-            raise ValueError(f"Invalid mode: {mode}")
-        c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, c_mode)
+        c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, SyncRequestUpdatesMode(mode))
 
-    def get_sync_state(self) -> SyncState:
+    def state(self) -> SyncState:
         """Gets the current sync client state.
 
         Returns:
@@ -596,7 +578,7 @@ class SyncClient:
         """Returns the protocol version this client uses."""
         return c.obx_sync_protocol_version()
 
-    def protocol_server_version(self) -> int:
+    def protocol_version_server(self) -> int:
         """Returns the protocol version of the server after a connection is
         established (or attempted), zero otherwise.
         """
@@ -631,71 +613,65 @@ class SyncClient:
         """Returns if this sync client is closed and can no longer be used."""
         return self.__c_sync_client_ptr is None
 
-    def set_login_listener(self, login_listener: SyncLoginListener):
-        """Sets a listener to observe login events (success/failure).
+    def __c_callback(self, c_callback_type, callback: typing.Optional[typing.Callable]):
+        """Returns a C callback for the given Python function (keeps it referenced), or a NULL one if None."""
+        if callback is None:
+            return c_callback_type()  # NULL function pointer (ctypes does not accept None for a CFUNCTYPE argument)
+        c_callback = c_callback_type(callback)
+        self.__c_callbacks.append(c_callback)
+        return c_callback
+
+    def set_login_listener(self, login_listener: typing.Optional[SyncLoginListener]):
+        """Sets a listener to observe login events (success/failure), replacing a previously set one.
 
         Args:
-            login_listener: The listener to receive login events.
+            login_listener: The listener to receive login events; None to remove the listener.
         """
         self.__check_sync_ptr_not_null()
-        c_login_listener = c.OBX_sync_listener_login_t(lambda arg: login_listener.on_logged_in())
-        c_login_failure_listener = c.OBX_sync_listener_login_failure_t(
-            lambda arg, sync_login_code: login_listener.on_login_failed(_to_sync_code(sync_login_code)))
-        self.__c_callbacks += [c_login_listener, c_login_failure_listener]
-        c.obx_sync_listener_login(
-            self.__c_sync_client_ptr,
-            c_login_listener,
-            None
-        )
-        c.obx_sync_listener_login_failure(
-            self.__c_sync_client_ptr,
-            c_login_failure_listener,
-            None
-        )
+        c_login_listener = self.__c_callback(
+            c.OBX_sync_listener_login_t,
+            None if login_listener is None else (lambda arg: login_listener.on_logged_in()))
+        c_login_failure_listener = self.__c_callback(
+            c.OBX_sync_listener_login_failure_t,
+            None if login_listener is None else (lambda arg, sync_login_code: login_listener.on_login_failed(
+                _to_sync_code(sync_login_code))))
+        c.obx_sync_listener_login(self.__c_sync_client_ptr, c_login_listener, None)
+        c.obx_sync_listener_login_failure(self.__c_sync_client_ptr, c_login_failure_listener, None)
 
-    def set_connection_listener(self, connection_listener: SyncConnectionListener):
-        """Sets a listener to observe connection state changes (connect/disconnect).
+    def set_connection_listener(self, connection_listener: typing.Optional[SyncConnectionListener]):
+        """Sets a listener to observe connection state changes (connect/disconnect), replacing a previously set one.
 
         Args:
-            connection_listener: The listener to receive connection events.
+            connection_listener: The listener to receive connection events; None to remove the listener.
         """
         self.__check_sync_ptr_not_null()
-        c_connect_listener = c.OBX_sync_listener_connect_t(lambda arg: connection_listener.on_connected())
-        c_disconnect_listener = c.OBX_sync_listener_disconnect_t(
-            lambda arg: connection_listener.on_disconnected())
-        self.__c_callbacks += [c_connect_listener, c_disconnect_listener]
-        c.obx_sync_listener_connect(
-            self.__c_sync_client_ptr,
-            c_connect_listener,
-            None
-        )
-        c.obx_sync_listener_disconnect(
-            self.__c_sync_client_ptr,
-            c_disconnect_listener,
-            None
-        )
+        c_connect_listener = self.__c_callback(
+            c.OBX_sync_listener_connect_t,
+            None if connection_listener is None else (lambda arg: connection_listener.on_connected()))
+        c_disconnect_listener = self.__c_callback(
+            c.OBX_sync_listener_disconnect_t,
+            None if connection_listener is None else (lambda arg: connection_listener.on_disconnected()))
+        c.obx_sync_listener_connect(self.__c_sync_client_ptr, c_connect_listener, None)
+        c.obx_sync_listener_disconnect(self.__c_sync_client_ptr, c_disconnect_listener, None)
 
-    def set_error_listener(self, error_listener: SyncErrorListener):
-        """Sets a listener to observe sync error events.
+    def set_error_listener(self, error_listener: typing.Optional[SyncErrorListener]):
+        """Sets a listener to observe sync error events, replacing a previously set one.
 
         Args:
-            error_listener: The listener to receive error events.
+            error_listener: The listener to receive error events; None to remove the listener.
         """
         self.__check_sync_ptr_not_null()
-        c_error_listener = c.OBX_sync_listener_error_t(
-            lambda arg, sync_error_code: error_listener.on_error(sync_error_code))
-        self.__c_callbacks.append(c_error_listener)
-        c.obx_sync_listener_error(
-            self.__c_sync_client_ptr,
-            c_error_listener,
-            None
-        )
+        c_error_listener = self.__c_callback(
+            c.OBX_sync_listener_error_t,
+            None if error_listener is None else (
+                lambda arg, sync_error: error_listener.on_error(_to_sync_error(sync_error))))
+        c.obx_sync_listener_error(self.__c_sync_client_ptr, c_error_listener, None)
 
-    def set_change_listener(self, change_listener: SyncChangeListener):
-        """Sets a listener to observe incoming data changes from the server.
+    def set_change_listener(self, change_listener: typing.Optional[SyncChangeListener]):
+        """Sets a listener to observe incoming data changes from the server, replacing a previously set one.
 
         Args:
-            change_listener: The listener to receive change events.
+            change_listener: The listener to receive change events; None to remove the listener.
         """
         self.__check_sync_ptr_not_null()
 
@@ -722,13 +698,9 @@ class SyncClient:
                 ))
             change_listener.on_change(changes)
 
-        c_change_listener = c.OBX_sync_listener_change_t(c_change_callback)
-        self.__c_callbacks.append(c_change_listener)
-        c.obx_sync_listener_change(
-            self.__c_sync_client_ptr,
-            c_change_listener,
-            None
-        )
+        c_change_listener = self.__c_callback(c.OBX_sync_listener_change_t,
+                                              None if change_listener is None else c_change_callback)
+        c.obx_sync_listener_change(self.__c_sync_client_ptr, c_change_listener, None)
 
     def wait_for_logged_in_state(self, timeout_millis: int) -> bool:
         """Waits for the sync client to reach the logged-in state.
@@ -743,16 +715,16 @@ class SyncClient:
         self.__check_sync_ptr_not_null()
         return c.obx_sync_wait_for_logged_in_state(self.__c_sync_client_ptr, timeout_millis)
 
-    def add_filter_variable(self, name: str, value: str):
+    def put_filter_variable(self, name: str, value: str):
         """Adds or replaces a Sync filter variable value for the given name.
 
         Eventually, existing values for the same name are replaced.
 
         Sync client filter variables can be used in server-side Sync filters to
-        filter out objects that do not match the filters. Filter variables must be
-        added before login, so before calling start().
+        filter out objects that do not match the filters. Variables put before login (e.g. before start()) are used
+        for the login; changes after login are pending until apply_filter_variables() is called.
 
-        See also remove_filter_variable() and remove_all_filter_variables().
+        See also remove_filter_variable(), remove_all_filter_variables() and apply_filter_variables().
 
         Args:
             name: The name of the filter variable.
@@ -764,7 +736,7 @@ class SyncClient:
     def remove_filter_variable(self, name: str):
         """Removes a previously added Sync filter variable value.
 
-        See also add_filter_variable() and remove_all_filter_variables().
+        See also put_filter_variable(), remove_all_filter_variables() and apply_filter_variables().
 
         Args:
             name: The name of the filter variable to remove.
@@ -775,12 +747,24 @@ class SyncClient:
     def remove_all_filter_variables(self):
         """Removes all previously added Sync filter variable values.
 
-        See also add_filter_variable() and remove_filter_variable().
+        See also put_filter_variable(), remove_filter_variable() and apply_filter_variables().
         """
         self.__check_sync_ptr_not_null()
         c.obx_sync_filter_variables_remove_all(self.__c_sync_client_ptr)
 
-    def get_outgoing_message_count(self, limit: int = 0) -> int:
+    def apply_filter_variables(self):
+        """Applies all pending filter variable changes (put or removed after login).
+
+        If the client is connected, sends the updated variables to the server: the client then reconnects and the
+        server brings the client's data in line with the new variables. If the client is not connected, the updated
+        variables are used with the next login.
+
+        See also put_filter_variable(), remove_filter_variable() and remove_all_filter_variables().
+        """
+        self.__check_sync_ptr_not_null()
+        c.obx_sync_filter_variables_apply(self.__c_sync_client_ptr)
+
+    def outgoing_message_count(self, limit: int = 0) -> int:
         """Count the number of messages in the outgoing queue, i.e. those waiting
         to be sent to the server.
 
@@ -820,8 +804,8 @@ class Sync:
     @staticmethod
     def client(
             store: Store,
-            server_url: str,
-            credential: SyncCredentials,
+            server_url: typing.Union[str, typing.List[str]],
+            credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]],
             filter_variables: typing.Optional[typing.Dict[str, str]] = None
     ) -> SyncClient:
         """Creates a Sync client associated with the given store and configures it
@@ -839,86 +823,21 @@ class Sync:
 
         Args:
             store: The ObjectBox store to sync.
-            server_url: The URL of the sync server to connect to.
-            credential: The credentials to use for authentication.
+            server_url: The URL of the Sync server to connect to, e.g. "ws://127.0.0.1:9999" ("wss://" for an encrypted
+                connection); or a list of URLs to work with multiple servers (a random URL is selected for each
+                connection attempt).
+            credentials: The credentials to use for authentication; or a list of credentials (see
+                SyncClient.set_credentials()).
             filter_variables: Optional dictionary of filter variable names to values.
 
         Returns:
             A configured SyncClient instance.
         """
-        client = SyncClient(store, [server_url], filter_variables)
-        client.set_credentials(credential)
-        return client
-
-    @staticmethod
-    def client_multi_creds(
-            store: Store,
-            server_url: str,
-            credentials_list: typing.List[SyncCredentials],
-            filter_variables: typing.Optional[typing.Dict[str, str]] = None
-    ) -> SyncClient:
-        """Like client(), but accepts a list of credentials.
-
-        When passing multiple credentials, does **not** support
-        SyncCredentials.none().
-
-        Args:
-            store: The ObjectBox store to sync.
-            server_url: The URL of the sync server to connect to.
-            credentials_list: List of credentials to use for authentication.
-            filter_variables: Optional dictionary of filter variable names to values.
-
-        Returns:
-            A configured SyncClient instance.
-        """
-        client = SyncClient(store, [server_url], filter_variables)
-        client.set_multiple_credentials(credentials_list)
-        return client
-
-    @staticmethod
-    def client_multi_urls(
-            store: Store,
-            server_urls: typing.List[str],
-            credential: SyncCredentials,
-            filter_variables: typing.Optional[typing.Dict[str, str]] = None
-    ) -> SyncClient:
-        """Like client(), but accepts a list of URLs to work with multiple servers.
-
-        Args:
-            store: The ObjectBox store to sync.
-            server_urls: List of server URLs to connect to.
-            credential: The credentials to use for authentication.
-            filter_variables: Optional dictionary of filter variable names to values.
-
-        Returns:
-            A configured SyncClient instance.
-        """
+        server_urls = [server_url] if isinstance(server_url, str) else list(server_url)
         client = SyncClient(store, server_urls, filter_variables)
-        client.set_credentials(credential)
-        return client
-
-    @staticmethod
-    def client_multi_creds_multi_urls(
-            store: Store,
-            server_urls: typing.List[str],
-            credentials_list: typing.List[SyncCredentials],
-            filter_variables: typing.Optional[typing.Dict[str, str]] = None
-    ) -> SyncClient:
-        """Like client(), but accepts a list of credentials and a list of URLs to
-        work with multiple servers.
-
-        When passing multiple credentials, does **not** support
-        SyncCredentials.none().
-
-        Args:
-            store: The ObjectBox store to sync.
-            server_urls: List of server URLs to connect to.
-            credentials_list: List of credentials to use for authentication.
-            filter_variables: Optional dictionary of filter variable names to values.
-
-        Returns:
-            A configured SyncClient instance.
-        """
-        client = SyncClient(store, server_urls, filter_variables)
-        client.set_multiple_credentials(credentials_list)
+        try:
+            client.set_credentials(credentials)
+        except BaseException:
+            client.close()
+            raise
         return client

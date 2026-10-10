@@ -82,10 +82,10 @@ class TestConnectionListener(SyncConnectionListener):
 
 class TestErrorListener(SyncErrorListener):
     def __init__(self):
-        self.sync_error_code = None
+        self.sync_error = None
 
-    def on_error(self, sync_error_code: int):
-        self.sync_error_code = sync_error_code
+    def on_error(self, sync_error):
+        self.sync_error = sync_error
 
 
 @pytest.fixture
@@ -108,7 +108,7 @@ def login_listener():
 def error_listener():
     listener = TestErrorListener()
     yield listener
-    listener.sync_error_code = None
+    listener.sync_error = None
 
 
 @pytest.fixture

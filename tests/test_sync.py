@@ -23,10 +23,30 @@ def test_sync_is_available():
 @pytest.mark.sync
 def test_sync_results_without_server(sync_client):
     # Non-error "failures" are returned as values (not raised)
-    assert sync_client.protocol_server_version() == 0
+    assert sync_client.protocol_version_server() == 0
     assert sync_client.request_updates(True) is False
     assert sync_client.cancel_updates() is False
     assert sync_client.wait_for_logged_in_state(timeout_millis=1) is False
+
+
+@pytest.mark.sync
+def test_request_updates_mode(sync_client):
+    for mode in SyncRequestUpdatesMode:
+        sync_client.set_request_updates_mode(mode)
+    with pytest.raises(ValueError):
+        sync_client.set_request_updates_mode("manual")
+
+
+@pytest.mark.sync
+def test_request_updates_manual(sync_server, test_store):
+    client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
+    client.set_request_updates_mode(SyncRequestUpdatesMode.MANUAL)
+    client.start()
+    assert client.wait_for_logged_in_state(timeout_millis=5000)
+    assert client.request_updates(subscribe_for_future_pushes=True)
+    assert client.cancel_updates()
+    assert client.request_updates(subscribe_for_future_pushes=False)
+    client.close()
 
 
 @pytest.mark.sync
@@ -37,11 +57,11 @@ def test_sync_protocol_version():
 
 @pytest.mark.sync
 def test_sync_client_states(sync_client):
-    assert sync_client.get_sync_state() == SyncState.CREATED
+    assert sync_client.state() == SyncState.CREATED
     sync_client.start()
-    assert sync_client.get_sync_state() == SyncState.STARTED
+    assert sync_client.state() == SyncState.STARTED
     sync_client.stop()
-    assert sync_client.get_sync_state() == SyncState.STOPPED
+    assert sync_client.state() == SyncState.STOPPED
 
 
 @pytest.mark.sync
@@ -51,13 +71,33 @@ def test_sync_listener(sync_server, test_store, login_listener, connection_liste
     sync_client.set_connection_listener(connection_listener)
     sync_client.start()
     assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
-    assert sync_client.protocol_server_version() >= 1
+    assert sync_client.protocol_version_server() >= 1
     sync_client.stop()
     sync_client.close()
 
     assert login_listener.logged_in_called
     assert login_listener.login_failure_code is None
     assert connection_listener.connected_called
+
+
+@pytest.mark.sync
+def test_sync_listener_removed(sync_server, test_store, login_listener, connection_listener, error_listener):
+    sync_client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
+    sync_client.set_login_listener(login_listener)
+    sync_client.set_connection_listener(connection_listener)
+    sync_client.set_error_listener(error_listener)
+    sync_client.set_change_listener(ChangeCollector())
+    # None removes the listeners
+    sync_client.set_login_listener(None)
+    sync_client.set_connection_listener(None)
+    sync_client.set_error_listener(None)
+    sync_client.set_change_listener(None)
+    sync_client.start()
+    assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
+    sync_client.close()
+
+    assert not login_listener.logged_in_called
+    assert not connection_listener.connected_called
 
 
 def open_sync_test_store(name: str) -> Store:
@@ -125,58 +165,69 @@ def test_filter_variables(test_store):
     }
     client = SyncClient(test_store, [NO_SYNC_SERVER_URL], filter_vars)
 
-    client.add_filter_variable("name3", "val3")
+    client.put_filter_variable("name3", "val3")
     client.remove_filter_variable("name1")
-    client.add_filter_variable("name4", "val4")
+    client.put_filter_variable("name4", "val4")
     client.remove_all_filter_variables()
+    client.apply_filter_variables()  # Not logged in: used with the next login
 
     with pytest.raises(IllegalArgumentError, match="Filter variables must have a name"):
-        client.add_filter_variable("", "val5")
+        client.put_filter_variable("", "val5")
 
     client.close()
 
 
 @pytest.mark.sync
 def test_outgoing_message_count(sync_client):
-    count = sync_client.get_outgoing_message_count()
+    count = sync_client.outgoing_message_count()
     assert count == 0
 
-    count_limited = sync_client.get_outgoing_message_count(limit=10)
+    count_limited = sync_client.outgoing_message_count(limit=10)
     assert count_limited == 0
 
     sync_client.close()
 
     with pytest.raises(ValueError, match='SyncClient already closed'):
-        sync_client.get_outgoing_message_count()
+        sync_client.outgoing_message_count()
 
 
 @pytest.mark.sync
 def test_multiple_credentials(sync_client):
     # empty list should raise ValueError
     with pytest.raises(ValueError, match='Provide at least one credential'):
-        sync_client.set_multiple_credentials([])
+        sync_client.set_credentials([])
 
+    # A list with a single element is fine, also SyncCredentials.none()
+    sync_client.set_credentials([SyncCredentials.none()])
+    sync_client.set_credentials([SyncCredentials.jwt_id_token("token")])
+
+    # Invalid elements are detected before adding any credentials;
     # SyncCredentials.none() is not supported with multiple credentials
-    with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported, use set_credentials\(\) instead'):
-        sync_client.set_multiple_credentials([SyncCredentials.none()])
-
-    # Invalid elements are detected before adding any credentials
-    with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported'):
-        sync_client.set_multiple_credentials([SyncCredentials.google_auth("token"), SyncCredentials.none()])
+    with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported with multiple credentials'):
+        sync_client.set_credentials([SyncCredentials.google_auth("token"), SyncCredentials.none()])
     with pytest.raises(TypeError, match='Unsupported credentials'):
-        sync_client.set_multiple_credentials([SyncCredentials.google_auth("token"), "token"])
+        sync_client.set_credentials([SyncCredentials.google_auth("token"), "token"])
     with pytest.raises(TypeError, match='Unsupported credentials'):
         sync_client.set_credentials("token")
 
-    sync_client.set_multiple_credentials([
+    sync_client.set_credentials([
         SyncCredentials.google_auth("token_google"),
         SyncCredentials.user_and_password("user1", "password"),
-        SyncCredentials.shared_secret_string("secret1"),
+        SyncCredentials.shared_secret("secret1"),
+        SyncCredentials.shared_secret(b"\x00\x2e\x4f\xc1"),
         SyncCredentials.jwt_id_token("token1"),
         SyncCredentials.jwt_access_token("token2"),
         SyncCredentials.jwt_refresh_token("token3"),
         SyncCredentials.jwt_custom_token("token4")
     ])
+
+
+def test_credentials_str_or_bytes():
+    assert SyncCredentials.shared_secret("secret").secret == b"secret"
+    assert SyncCredentials.shared_secret(b"\x00\xff").secret == b"\x00\xff"
+    assert SyncCredentials.google_auth(bytearray(b"token")).secret == b"token"
+    with pytest.raises(TypeError, match="Expected str or bytes"):
+        SyncCredentials.shared_secret(42)
 
 
 @pytest.mark.sync
@@ -200,11 +251,41 @@ def test_login_failure_code(test_store, login_listener):
 
 
 @pytest.mark.sync
+def test_sync_error(test_store, error_listener):
+    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
+    client.set_error_listener(error_listener)
+    # Call the C callback directly (would require a server rejecting a TX)
+    c_error_listener = client._SyncClient__c_callbacks[0]
+    c_error_listener(None, SyncError.REJECT_TX_NO_PERMISSION)
+    assert error_listener.sync_error is SyncError.REJECT_TX_NO_PERMISSION
+    c_error_listener(None, 12345)  # Unknown error
+    assert error_listener.sync_error == 12345
+    client.close()
+
+
+@pytest.mark.sync
 def test_one_client_per_store(test_store):
     client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
     with pytest.raises(ValueError, match="Only one sync client can be active for a store"):
-        Sync.client_multi_urls(test_store, [NO_SYNC_SERVER_URL], SyncCredentials.none())
+        Sync.client(test_store, [NO_SYNC_SERVER_URL], SyncCredentials.none())
     client.close()
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
+
+
+@pytest.mark.sync
+def test_client_multiple_urls_and_credentials(test_store):
+    client = Sync.client(test_store, [NO_SYNC_SERVER_URL, NO_SYNC_SERVER_URL + "1"],
+                         [SyncCredentials.jwt_id_token("token"), SyncCredentials.user_and_password("user", "pw")],
+                         filter_variables={"name": "value"})
+    assert client.state() == SyncState.CREATED
+    client.close()
+
+
+@pytest.mark.sync
+def test_client_closed_if_credentials_fail(test_store):
+    with pytest.raises(TypeError, match='Unsupported credentials'):
+        Sync.client(test_store, NO_SYNC_SERVER_URL, "token")
+    # The failed client is closed, i.e. not active for the store
     Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
 
 
@@ -247,12 +328,12 @@ def test_client_access_after_close_throws_error(sync_client):
 
     assert_raises_value_error(message=match_error, fn=lambda: sync_client.start())
     assert_raises_value_error(message=match_error, fn=lambda: sync_client.stop())
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.get_sync_state())
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.get_outgoing_message_count())
+    assert_raises_value_error(message=match_error, fn=lambda: sync_client.state())
+    assert_raises_value_error(message=match_error, fn=lambda: sync_client.outgoing_message_count())
     assert_raises_value_error(message=match_error, fn=lambda: sync_client.set_credentials(SyncCredentials.none()))
     assert_raises_value_error(message=match_error,
                               fn=lambda: sync_client.set_credentials(SyncCredentials.google_auth("token_google")))
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.set_multiple_credentials([
+    assert_raises_value_error(message=match_error, fn=lambda: sync_client.set_credentials([
         SyncCredentials.google_auth("token_google"),
         SyncCredentials.user_and_password("user1", "password")
     ]))
