@@ -506,7 +506,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
     assert query.find()[0].str == "FooBar"
 
-    query.set_parameter_alias_int("greater_than_filter", 1)
+    assert query.set_parameter_alias_int("greater_than_filter", 1) is query
 
     assert query.count() == 2
 
@@ -519,7 +519,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
     assert query.find()[0].str == "Foo"
 
-    query.set_parameter_alias_string("str condition", "FooBar")  # FooBar int32 isn't higher than 700 (49)
+    assert query.set_parameter_alias_string("str condition", "FooBar") is query  # FooBar int32 isn't higher than 700 (49)
     assert query.count() == 0
 
     query.set_parameter_alias_int("int32 condition", 40)
@@ -539,7 +539,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 3
     assert query.find_ids() == sorted([3, 4, 2])
 
-    query.set_parameter_alias_vector_f32("nearest_neighbour_filter", [4.9, 4.9])
+    assert query.set_parameter_alias_vector_f32("nearest_neighbour_filter", [4.9, 4.9]) is query
     assert query.count() == 3
     assert query.find_ids() == sorted([5, 4, 3])
 

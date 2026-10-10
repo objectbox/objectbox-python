@@ -202,15 +202,18 @@ class Query:
             obx_query_param_int64s(self._c_query, self._entity._id, prop_id, c_values, len(values))
         return self
 
-    def set_parameter_alias_string(self, alias: str, value: str):
-        return obx_query_param_alias_string(self._c_query, c_str(alias), c_str(value))
+    def set_parameter_alias_string(self, alias: str, value: str) -> 'Query':
+        obx_query_param_alias_string(self._c_query, c_str(alias), c_str(value))
+        return self
 
-    def set_parameter_alias_int(self, alias: str, value: int):
-        return obx_query_param_alias_int(self._c_query, c_str(alias), value)
+    def set_parameter_alias_int(self, alias: str, value: int) -> 'Query':
+        obx_query_param_alias_int(self._c_query, c_str(alias), value)
+        return self
 
-    def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]):
-        return obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float),
-                                                    len(value))
+    def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]) -> 'Query':
+        obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float),
+                                             len(value))
+        return self
 
     def set_parameter_alias_strings(self, alias: str, values: List[str]) -> 'Query':
         """ Sets the values of the string "one of" condition (see ``String.one_of()``) having the given alias. """

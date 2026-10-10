@@ -64,7 +64,8 @@ ObjectBox Python ChangeLog
   this failed with a `TypeError`. They read as the default now, like unset properties: the epoch (UTC), an empty array
   and `None`.
 * Query: fix `offset()` and `limit()` to return the query (as documented), e.g. for `query.offset(10).limit(5).find()`;
-  they returned a C result code (int), so chaining failed
+  they returned a C result code (int), so chaining failed. `set_parameter_alias_*()` now also return the query, like
+  `set_parameter_*()`.
 * Faster import: `import objectbox` no longer imports numpy (also not via flatbuffers, which imports numpy) and takes
   about half the time. numpy is imported when needed, e.g. for vector properties or the first put or get.
   Importing numpy may start BLAS threads (OpenBLAS: one per CPU core) that busy-wait for ~0.1 s, slowing down
