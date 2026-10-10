@@ -4,7 +4,8 @@
 #   python setup-clib.py all                                      (all platforms, run by `make build`)
 # There is no wheel for other platforms (e.g. no "any" wheel with all libraries); pip fails to install there.
 # With --sync as the first argument, builds objectbox-sync-clib instead (`make build-sync`): the Sync variant of the
-# library (package objectbox_sync_clib), which the binding prefers over objectbox_clib if installed.
+# library (package objectbox_sync_clib; installed via the metapackage objectbox-sync, see setup-meta.py), which the
+# binding prefers over objectbox_clib if installed.
 import os
 import shutil
 import subprocess

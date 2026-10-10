@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-import objectbox_clib
 import ctypes.util
+import importlib
 import os
 import platform
 import sys
@@ -68,15 +68,21 @@ def lib_dir_name() -> str:
 
 
 def lib_package():
-    """Returns the package providing the C library: objectbox_sync_clib (Sync variant of the library, installed via the
-    optional package objectbox-sync-clib, e.g. `pip install objectbox[sync]`) if available, otherwise objectbox_clib."""
-    try:
-        import objectbox_sync_clib
-        if os.path.exists(lib_path_in(objectbox_sync_clib)):  # The source tree has the package but maybe no libraries
-            return objectbox_sync_clib
-    except ImportError:
-        pass
-    return objectbox_clib
+    """Returns the package providing the C library: objectbox_sync_clib (Sync variant of the library, installed via
+    the metapackage objectbox-sync) if available, otherwise objectbox_clib (installed via the metapackage objectbox).
+    Raises ImportError if neither is available (e.g. only objectbox-api is installed)."""
+    # Note: the source tree has both packages, but maybe without libraries (see make depend and make depend-sync)
+    for package_name in ('objectbox_sync_clib', 'objectbox_clib'):
+        try:
+            package = importlib.import_module(package_name)
+        except ImportError:
+            continue
+        if os.path.exists(lib_path_in(package)):
+            return package
+    raise ImportError(
+        'The ObjectBox C library for this platform (%s) was not found: neither package objectbox-clib nor '
+        'objectbox-sync-clib provides it. Install ObjectBox via "pip install objectbox" (or "pip install objectbox-sync" '
+        'for ObjectBox Sync) instead of the package objectbox-api alone (from source: make depend).' % lib_dir_name())
 
 
 def lib_path_in(package) -> str:
@@ -102,8 +108,9 @@ version_core = Version(__major.value, __minor.value, __patch.value)
 assert str(version_core) == required_version, \
     "Incorrect ObjectBox version loaded: %s instead of expected %s (from %s)%s" % (
         str(version_core), required_version, lib_path,
-        # pip does not keep extras: upgrading objectbox without [sync] keeps the previous objectbox-sync-clib
-        "; please update the Sync library via: pip install --upgrade objectbox[sync]"
+        # E.g. objectbox-sync installed and objectbox upgraded (or both installed): the previous objectbox-sync-clib,
+        # which is preferred, stays installed
+        "; please update the Sync library via: pip install --upgrade objectbox-sync"
         if clib_package.__name__ == "objectbox_sync_clib" else "")
 
 # define some basic types

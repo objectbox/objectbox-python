@@ -1,4 +1,5 @@
-# Versions for building/packaging, read from the sources (single source of truth).
+# Versions for building/packaging, read from the sources (single source of truth), and metadata shared by the
+# Python packages (objectbox-api and the metapackages objectbox and objectbox-sync).
 # Note: the objectbox package is not imported, as this would load the C library (not needed or available for a build).
 
 import ast
@@ -40,3 +41,44 @@ def binding_version() -> str:
 def clib_version() -> str:
     """Version of the ObjectBox C library required by the binding; also the version of the objectbox-clib package."""
     return _find_in_file("objectbox/c.py", r'^required_version = "([^"]+)"').group(1)
+
+
+# Metadata shared by objectbox-api (setup.py) and the metapackages (setup-meta.py)
+AUTHOR = "ObjectBox"
+URL = "https://objectbox.io"
+PROJECT_URLS = {
+    'GitHub': 'https://github.com/objectbox/objectbox-python',
+    'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
+    'Changelog': 'https://github.com/objectbox/objectbox-python/blob/main/CHANGELOG.md',
+}
+PYTHON_REQUIRES = '>=3.4, <4'
+LICENSE = 'Apache 2.0'
+CLASSIFIERS = [
+    "Development Status :: 5 - Production/Stable",
+
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C",
+    "Programming Language :: C++",
+
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: MacOS',
+    'Operating System :: Microsoft :: Windows',
+
+    "Topic :: Database",
+    "Topic :: Database :: Database Engines/Servers",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+]

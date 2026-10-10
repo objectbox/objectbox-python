@@ -397,7 +397,8 @@ class SyncClient:
         if not Sync.is_available():
             raise RuntimeError(
                 'Sync is not available in the loaded ObjectBox runtime library. '
-                'Install the Sync variant of the library via "pip install objectbox[sync]"; '
+                'Install ObjectBox with the Sync variant of the library via "pip install objectbox-sync" '
+                '(instead of objectbox); '
                 'please visit https://objectbox.io/sync/ for options.')
 
         self.__store = store

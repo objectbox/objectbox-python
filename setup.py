@@ -1,69 +1,47 @@
+# Builds the objectbox-api package: the Python binding (import package "objectbox"), without the C library.
+# Users install one of the metapackages instead (setup-meta.py), which add the C library package:
+# objectbox (with objectbox-clib) or objectbox-sync (with objectbox-sync-clib).
 import setuptools
 
-from build_info import binding_version, clib_version
+from build_info import binding_version, AUTHOR, URL, PROJECT_URLS, PYTHON_REQUIRES, LICENSE, CLASSIFIERS
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+long_description = """ObjectBox Python API
+====================
+This package contains the Python API of [ObjectBox](https://objectbox.io), a superfast lightweight database for
+objects and vectors (import package `objectbox`), but not the ObjectBox C library it requires.
+
+You do not need to install this package directly: install [objectbox](https://pypi.org/project/objectbox/) instead,
+or [objectbox-sync](https://pypi.org/project/objectbox-sync/) for [ObjectBox Sync](https://objectbox.io/sync/).
+Both depend on this package and add the matching C library.
+```bash
+pip install objectbox
+```
+
+See [objectbox](https://pypi.org/project/objectbox/) and
+[objectbox-python](https://github.com/objectbox/objectbox-python) for documentation.
+"""
 
 setuptools.setup(
-    name="objectbox",
+    name="objectbox-api",
     version=binding_version(),
-    author="ObjectBox",
-    description="ObjectBox is a superfast lightweight database for objects",
+    author=AUTHOR,
+    description="ObjectBox Python API (without the C library; install objectbox or objectbox-sync)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://objectbox.io",
-    project_urls={
-        'GitHub': 'https://github.com/objectbox/objectbox-python',
-        'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
-        'Changelog': 'https://github.com/objectbox/objectbox-python/blob/main/CHANGELOG.md',
-    },
-    python_requires='>=3.4, <4',
-    license='Apache 2.0',
-    classifiers=[
-        "Development Status :: 5 - Production/Stable"
+    url=URL,
+    project_urls=PROJECT_URLS,
+    python_requires=PYTHON_REQUIRES,
+    license=LICENSE,
+    classifiers=CLASSIFIERS,
 
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: C",
-        "Programming Language :: C++",
-
-        'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS',
-        'Operating System :: Microsoft :: Windows',
-
-        "Topic :: Database",
-        "Topic :: Database :: Database Engines/Servers",
-        "Topic :: Database :: Front-Ends",
-        "Topic :: Software Development",
-        "Topic :: Software Development :: Libraries",
-
-        "License :: OSI Approved :: Apache Software License",
-        "Intended Audience :: Developers",
-    ],
-
+    # No C library dependency: the metapackages objectbox and objectbox-sync add objectbox-clib or objectbox-sync-clib
     install_requires=[
-       # The binding requires an exact C library version (checked at runtime); the ".*" allows post-releases
-       # of objectbox-clib, e.g. 4.0.0.post1 to fix packaging issues.
-       'objectbox-clib==' + clib_version() + '.*',
        # A range instead of an exact pin, so we do not force a specific version on users that also depend on
        # flatbuffers via other packages. The lower bound is the previously pinned version known to work; no upper bound as
        # flatbuffers uses date-based versions (no semver), so its "major" version does not indicate breaking changes.
        'flatbuffers>=24.3.25',
        'numpy'
     ],
-    extras_require={
-        # Sync variant of the C library (objectbox-sync-clib); used instead of objectbox-clib's library if installed
-        'sync': ['objectbox-sync-clib==' + clib_version() + '.*'],
-    },
 
-    packages=setuptools.find_packages(exclude=['exampl*', 'objectbox_clib*', 'objectbox_sync_clib*']), 
+    packages=setuptools.find_packages(exclude=['exampl*', 'objectbox_clib*', 'objectbox_sync_clib*']),
 )

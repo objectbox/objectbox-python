@@ -9,7 +9,7 @@ All `make` targets use (and create if needed) the virtualenv in `.venv` from `re
 - `make depend` — set up venv and download the ObjectBox C shared libraries (`download-c-lib.py`) into `objectbox_clib/lib/<arch>/`. Required once after checkout and whenever the C library version changes.
 - `make depend-sync` — download the Sync variant of the C libraries into `objectbox_sync_clib/lib/<arch>/`; if present, it is loaded instead (needed for the Sync tests).
 - `make test` — run all tests (`python -m pytest --capture=no --verbose`)
-- `make build` — clean and build the wheels into `dist/`: `objectbox` and `objectbox-clib` (one per platform); `make build-sync` adds the `objectbox-sync-clib` wheels
+- `make build` — clean and build the wheels into `dist/`: `objectbox-clib` (one per platform), `objectbox-api` and the `objectbox` metapackage; `make build-sync` adds the `objectbox-sync-clib` wheels and the `objectbox-sync` metapackage
 - `make test-fast-flatbuffers-builder` — all tests with the experimental fast FlatBuffers builder in verify mode (`pytest --fast-flatbuffers-builder` or `OBX_TEST_FAST_FLATBUFFERS_BUILDER=1`): every object put by any test is compared byte by byte with the reference
 - `make test-flatbuffers-codegen` — the same with the experimental FlatBuffers codegen (`pytest --flatbuffers-codegen` or `OBX_TEST_FLATBUFFERS_CODEGEN=1`)
 - `make benchmark` — CRUD benchmark (`benchmark.py`; `BENCHMARK_ARGS=--fast-flatbuffers-builder` or `--flatbuffers-codegen` for the experimental builders)
@@ -23,7 +23,7 @@ There is no linter configured; CONTRIBUTING.md asks for PEP-8 formatting.
 
 Python binding for the ObjectBox C API (objectbox-c) via `ctypes`; objects are serialized with FlatBuffers.
 
-- **`objectbox/c.py`** — all C bindings. Loads the library from the `objectbox_clib` package (`objectbox_clib/lib/<platform.machine()>/`, or `macos-universal`) at import and asserts the core version equals `required_version`. `required_version` is the single source of the C library version (see Packaging). Functions are declared with helpers: `c_fn` (checks result/pointer), `c_fn_rc` (returns `obx_err`, raises via `check_obx_err`), `c_fn_qb_cond`, `c_fn_nocheck`.
+- **`objectbox/c.py`** — all C bindings. Loads the library at import from the `objectbox_sync_clib` package if it has one for the platform, else from `objectbox_clib` (`lib/<platform.machine()>/`, or `macos-universal`; `lib_package()`; ImportError if neither has one) and asserts the core version equals `required_version`. `required_version` is the single source of the C library version (see Packaging). Functions are declared with helpers: `c_fn` (checks result/pointer), `c_fn_rc` (returns `obx_err`, raises via `check_obx_err`), `c_fn_qb_cond`, `c_fn_nocheck`.
 - **`objectbox/exceptions.py`** — `DbError` base class plus one subclass per `DbErrorCode`; `create_db_error(code)` maps C error codes to exception classes (message taken from `obx_last_error_message()`).
 - **Model definition** (`objectbox/model/`):
   - `@Entity()` (`entity.py`) wraps a user class into an `_Entity` (handles FlatBuffers `_marshal`/`_unmarshal`; `_marshal_builder` is the generic `flatbuffers.Builder` path) and registers it in the global `obx_models_by_name` under a model name (default `"default"`). Property classes used as bare class members (e.g. `name = String`) are instantiated by the decorator.
@@ -36,16 +36,20 @@ Python binding for the ObjectBox C API (objectbox-c) via `ctypes`; objects are s
 - **Sync** (`sync.py`) — `SyncClient` wraps the C sync client (`obx_sync_*`; ctypes callbacks passed to C, also replaced ones, are kept referenced until the client is closed). A client is closed via a (weakly referencing) store close listener before the store is closed. `@SyncEntity()` sets the entity's Sync flags.
 - **Deprecated API**: `ObjectBox` and `Builder` are thin wrappers around `Store` kept for backward compatibility (`tests/test_deprecated.py`).
 - numpy and flatbuffers (which imports numpy) are imported lazily, only where needed (vector/flex properties, the reference FlatBuffers paths); no module-level imports of either (`tests/test_lazy_imports.py`). Use `is_ndarray()` (`c.py`) for type checks and `prop._fb_format` (struct format) instead of `prop._fb_type` outside the reference paths.
-- Public API is the flat export list in `objectbox/__init__.py`; the binding version (`version = Version(...)`) is also defined there and used by `setup.py`.
+- Public API is the flat export list in `objectbox/__init__.py`; the binding version (`version = Version(...)`) is also defined there and used by `setup.py` and `setup-meta.py` (via `build_info.py`).
 
 ## Packaging
 
-Two pip packages are built from this repository:
-- `objectbox` (`setup.py`): the Python binding; depends on the matching `objectbox-clib` version (`==<C version>.*`).
+Five pip packages are built from this repository:
+- `objectbox-api` (`setup.py`): the Python binding (import package `objectbox`); no C library dependency.
+- `objectbox` (`setup-meta.py`): metapackage without code, the one users install; depends on `objectbox-api` (exact binding version) and `objectbox-clib` (`==<C version>.*`). Its PyPI description is `README.md`.
+- `objectbox-sync` (`setup-meta.py --sync`): metapackage like `objectbox`, but depends on `objectbox-sync-clib` instead of `objectbox-clib`. Sync users install it instead of `objectbox`.
 - `objectbox-clib` (`setup-clib.py`, package `objectbox_clib/`): only the C libraries, no Python code. Built as one wheel per platform (wheel platform tags in `PLATFORMS`, so pip picks the platform's library). There is no fallback wheel: other platforms, e.g. Linux armv6l (no manylinux support), are not supported. Versioned like the C library.
-- `objectbox-sync-clib` (`setup-clib.py --sync`, package `objectbox_sync_clib/`): like `objectbox-clib`, but the Sync variant of the C libraries; optional, installed via the `sync` extra (`pip install objectbox[sync]`). `objectbox/c.py` (`lib_package()`) loads its library if available, otherwise the one of `objectbox_clib`.
+- `objectbox-sync-clib` (`setup-clib.py --sync`, package `objectbox_sync_clib/`): like `objectbox-clib`, but the Sync variant of the C libraries. `objectbox/c.py` (`lib_package()`) prefers its library over `objectbox_clib`'s (e.g. if both metapackages are installed).
 
-`build_info.py` reads the binding version (`objectbox/__init__.py`) and the C library version (`required_version` in `objectbox/c.py`) as text for the build scripts and `download-c-lib.py`. Build scripts must not import `objectbox`: that loads the C library. To bump the C library, only change `required_version`, run `make depend`, and re-check the platform tags in `setup-clib.py` against the new libraries' minimum glibc/macOS versions.
+Upgrade caveat: up to 4.x, the distribution `objectbox` contained the code. An in-place `pip install -U objectbox` from such a version breaks the installation (pip removes the old `objectbox` files, now owned by `objectbox-api`, after installing it); README.md and CHANGELOG.md document uninstalling first. `make publish` uploads the C libraries first, then `objectbox-api`, then the metapackages.
+
+`build_info.py` reads the binding version (`objectbox/__init__.py`) and the C library version (`required_version` in `objectbox/c.py`) as text for the build scripts and `download-c-lib.py`; it also holds the metadata shared by `setup.py` and `setup-meta.py`. Build scripts must not import `objectbox`: that loads the C library. To bump the C library, only change `required_version`, run `make depend`, and re-check the platform tags in `setup-clib.py` against the new libraries' minimum glibc/macOS versions.
 
 ## Tests
 

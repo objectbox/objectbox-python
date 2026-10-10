@@ -27,7 +27,8 @@ build:
     paths:
       - dist/*.whl
 
-# Build the objectbox-sync-clib wheels: the Sync variant of the C library (the objectbox wheel is the same for both)
+# Build the objectbox-sync-clib wheels (the Sync variant of the C library) and the objectbox-sync metapackage;
+# it uses the objectbox-api wheel built by "build"
 build-sync:
   tags: [ x64, docker, linux ]
   image: python:latest
@@ -43,14 +44,17 @@ build-sync:
     paths:
       - dist/*.whl
 
-# Next, test the packaged wheel built by "build"
+# Next, test the packaged wheels built by "build": the objectbox metapackage, i.e. objectbox-api and objectbox-clib
 .test:
   stage: test
   script:
     - pip3 install --user pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - rm -r objectbox_clib  # todo this is ugly; let's copy required files in a sub-folder instead?
-    - pip3 install --user --force-reinstall dist/objectbox-*.whl --find-links dist  # Artifacts from the previous stage (downloaded by default); objectbox-clib for the platform via --find-links
+    - rm -r objectbox_sync_clib  # Separate command for PowerShell (Windows)
+    # Artifacts from the previous stage (downloaded by default). Note: wheel file names use "_", so objectbox-*.whl only
+    # matches the metapackage; objectbox-api and objectbox-clib (for the platform) are installed via --find-links.
+    - pip3 install --user --force-reinstall dist/objectbox-*.whl --find-links dist
     - ${PYTHON} -m pytest -rs  # -rs: list skipped tests with reason
     - ${PYTHON} -m pytest -rs --fast-flatbuffers-builder  # experimental; each object is verified against the reference
     - ${PYTHON} -m pytest -rs --flatbuffers-codegen  # experimental; each object is verified against the reference
@@ -67,8 +71,8 @@ build-sync:
     - source .venv/bin/activate
     - python -m pip install pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
-    - rm -r objectbox_clib
-    - python -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # Artifacts from the previous stage (downloaded by default); objectbox-clib for the platform via --find-links
+    - rm -r objectbox_clib objectbox_sync_clib
+    - python -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # See .test
     - python -m pytest -rs
     - python -m pytest -rs --fast-flatbuffers-builder
     - python -m pytest -rs --flatbuffers-codegen
@@ -102,7 +106,8 @@ test:windows:x64:
   variables:
     PYTHON: "python.exe"
 
-# Sync version test jobs: test the objectbox wheel installed with the "sync" extra, i.e. with objectbox-sync-clib
+# Sync version test jobs: test the objectbox-sync metapackage, i.e. objectbox-api and objectbox-sync-clib (without
+# objectbox-clib)
 .test-sync:
   stage: test
   needs: [ build, build-sync ]
@@ -110,7 +115,8 @@ test:windows:x64:
     - pip3 install --user pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - rm -r objectbox_clib objectbox_sync_clib
-    - pip3 install --user --force-reinstall "$(ls dist/objectbox-*.whl)[sync]" --find-links dist  # Artifacts from build and build-sync
+    - pip3 install --user --force-reinstall dist/objectbox_sync-*.whl --find-links dist  # Artifacts from build and build-sync
+    - ${PYTHON} -c "import importlib.util; assert importlib.util.find_spec('objectbox_clib') is None, 'objectbox-clib must not be installed'"
     - ${PYTHON} -m pytest -s -rs
   variables:
     PYTHON: "python3"
@@ -123,7 +129,8 @@ test:windows:x64:
     - python -m pip install pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - rm -r objectbox_clib objectbox_sync_clib
-    - python -m pip install --force-reinstall "$(ls dist/objectbox-*.whl)[sync]" --find-links dist  # Artifacts from build and build-sync
+    - python -m pip install --force-reinstall dist/objectbox_sync-*.whl --find-links dist  # Artifacts from build and build-sync
+    - python -c "import importlib.util; assert importlib.util.find_spec('objectbox_clib') is None, 'objectbox-clib must not be installed'"
     - python -m pytest -s -rs
 
 test-sync:linux:x64:

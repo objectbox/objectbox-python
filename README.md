@@ -10,6 +10,23 @@ The ObjectBox database delivers high-performance on commodity hardware - locally
 On top, as an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
 (via [Sync](https://objectbox.io/sync/)).
 
+> **Upgrading from ObjectBox 4.x (or earlier) with pip? Uninstall `objectbox` first**, then install the new version:
+>
+> ```bash
+> pip uninstall objectbox
+> pip install objectbox
+> ```
+>
+> Since version 5, the Python code is in the package `objectbox-api`, which `objectbox` installs along with the
+> ObjectBox library. An in-place `pip install --upgrade objectbox` from 4.x breaks the installation: pip installs the
+> new packages first, then removes the files of the previous `objectbox` version, which are now part of
+> `objectbox-api`. `import objectbox` fails afterwards, e.g. with
+> `ImportError: cannot import name 'Store' from 'objectbox' (unknown location)` or a `ModuleNotFoundError`;
+> running the upgrade again does not fix it. To repair such an installation, run:
+> `pip install --force-reinstall --no-deps objectbox-api`.
+> Fresh installs and upgrades via uv (e.g. `uv pip install --upgrade objectbox`) are not affected.
+> For [ObjectBox Sync](#sync), install `objectbox-sync` instead of `objectbox` (also uninstall `objectbox` first).
+
 _Table of Contents_
 
 - [Feature Highlights](#feature-highlights)
@@ -83,13 +100,13 @@ and learn how to setup your first entity classes.
 ### Sync
 
 [ObjectBox Sync](https://objectbox.io/sync/) synchronizes data with an ObjectBox Sync server (and other devices).
-It requires the Sync variant of the ObjectBox library, which is installed with the `sync` extra:
+It requires the Sync variant of the ObjectBox library: install the package `objectbox-sync` **instead of** `objectbox`
+(not in addition; it provides the same Python API and module `objectbox`, plus the Sync variant of the library):
 
 ```bash
-pip install --upgrade objectbox[sync]
+pip uninstall objectbox  # If installed
+pip install --upgrade objectbox-sync
 ```
-
-Note: when upgrading, include the extra (as above); otherwise, the previous Sync variant of the library stays installed.
 
 Enable Sync for an entity with `@SyncEntity()` (above `@Entity()`) and start a Sync client for the store:
 
