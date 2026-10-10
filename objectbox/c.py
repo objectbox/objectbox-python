@@ -100,8 +100,11 @@ C.obx_version(ctypes.byref(__major), ctypes.byref(
 version_core = Version(__major.value, __minor.value, __patch.value)
 
 assert str(version_core) == required_version, \
-    "Incorrect ObjectBox version loaded: %s instead of expected %s " % (
-        str(version_core), required_version)
+    "Incorrect ObjectBox version loaded: %s instead of expected %s (from %s)%s" % (
+        str(version_core), required_version, lib_path,
+        # pip does not keep extras: upgrading objectbox without [sync] keeps the previous objectbox-sync-clib
+        "; please update the Sync library via: pip install --upgrade objectbox[sync]"
+        if clib_package.__name__ == "objectbox_sync_clib" else "")
 
 # define some basic types
 obx_err = ctypes.c_int

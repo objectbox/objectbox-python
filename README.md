@@ -89,6 +89,8 @@ It requires the Sync variant of the ObjectBox library, which is installed with t
 pip install --upgrade objectbox[sync]
 ```
 
+Note: when upgrading, include the extra (as above); otherwise, the previous Sync variant of the library stays installed.
+
 Enable Sync for an entity with `@SyncEntity` (above `@Entity()`) and start a Sync client for the store:
 
 ```python
