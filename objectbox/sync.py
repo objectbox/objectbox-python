@@ -315,6 +315,19 @@ class SyncConnectionListener:
         pass
 
 
+class SyncCompletedListener:
+    """Listener for sync completed events.
+
+    Implement this class and pass to SyncClient.set_completed_listener() to be notified when synchronization has
+    completed. Note: called from the sync client's background thread (see SyncLoginListener).
+    """
+
+    def on_updates_completed(self):
+        """Called each time a sync has completed, i.e. the client caught up with the current server state
+        (the client is "up-to-date")."""
+        pass
+
+
 class SyncErrorListener:
     """Listener for sync error events.
 
@@ -653,6 +666,18 @@ class SyncClient:
             None if connection_listener is None else (lambda arg: connection_listener.on_disconnected()))
         c.obx_sync_listener_connect(self.__c_sync_client_ptr, c_connect_listener, None)
         c.obx_sync_listener_disconnect(self.__c_sync_client_ptr, c_disconnect_listener, None)
+
+    def set_completed_listener(self, completed_listener: typing.Optional[SyncCompletedListener]):
+        """Sets a listener to observe when synchronization has completed, replacing a previously set one.
+
+        Args:
+            completed_listener: The listener to receive "updates completed" events; None to remove the listener.
+        """
+        self.__check_sync_ptr_not_null()
+        c_complete_listener = self.__c_callback(
+            c.OBX_sync_listener_complete_t,
+            None if completed_listener is None else (lambda arg: completed_listener.on_updates_completed()))
+        c.obx_sync_listener_complete(self.__c_sync_client_ptr, c_complete_listener, None)
 
     def set_error_listener(self, error_listener: typing.Optional[SyncErrorListener]):
         """Sets a listener to observe sync error events, replacing a previously set one.

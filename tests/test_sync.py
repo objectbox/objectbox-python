@@ -64,14 +64,25 @@ def test_sync_client_states(sync_client):
     assert sync_client.state() == SyncState.STOPPED
 
 
+class CompletedListener(SyncCompletedListener):
+    def __init__(self):
+        self.completed = threading.Event()
+
+    def on_updates_completed(self):
+        self.completed.set()
+
+
 @pytest.mark.sync
 def test_sync_listener(sync_server, test_store, login_listener, connection_listener):
     sync_client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
     sync_client.set_login_listener(login_listener)
     sync_client.set_connection_listener(connection_listener)
+    completed_listener = CompletedListener()
+    sync_client.set_completed_listener(completed_listener)
     sync_client.start()
     assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
     assert sync_client.protocol_version_server() >= 1
+    assert completed_listener.completed.wait(timeout=5)
     sync_client.stop()
     sync_client.close()
 
@@ -85,15 +96,19 @@ def test_sync_listener_removed(sync_server, test_store, login_listener, connecti
     sync_client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
     sync_client.set_login_listener(login_listener)
     sync_client.set_connection_listener(connection_listener)
+    completed_listener = CompletedListener()
+    sync_client.set_completed_listener(completed_listener)
     sync_client.set_error_listener(error_listener)
     sync_client.set_change_listener(ChangeCollector())
     # None removes the listeners
     sync_client.set_login_listener(None)
     sync_client.set_connection_listener(None)
+    sync_client.set_completed_listener(None)
     sync_client.set_error_listener(None)
     sync_client.set_change_listener(None)
     sync_client.start()
     assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
+    assert not completed_listener.completed.wait(timeout=0.5)
     sync_client.close()
 
     assert not login_listener.logged_in_called
