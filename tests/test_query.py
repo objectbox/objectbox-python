@@ -812,9 +812,13 @@ def test_int_one_of(test_store):
     assert box.query(TestEntity.int64.one_of([])).build().count() == 0
     assert box.query(TestEntity.int64.not_one_of([])).build().count() == 4
 
-    # Not supported by the C API for 8/16-bit integers
-    with pytest.raises(DbError):
-        box.query(TestEntity.int8.one_of([1]))
+    # Not supported by the C API for 8/16-bit integers and bools
+    with pytest.raises(TypeError):
+        TestEntity.int8.one_of([1])
+    with pytest.raises(TypeError):
+        TestEntity.int16.not_one_of([1])
+    with pytest.raises(TypeError):
+        TestEntity.bool.one_of([True])
 
 
 def test_set_parameter_one_of(test_store):
