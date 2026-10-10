@@ -69,8 +69,9 @@ ObjectBox Python ChangeLog
   The code is compiled per process at the first put and first read of an entity (~2.8 ms for both with 38 properties);
   the new option `cache_dir` caches the compiled code for other processes (~0.5 ms then), e.g. for short-lived ones.
 * Sync (preview): new module `objectbox.sync` with a Sync client (`Sync.client()`, `SyncClient`) to synchronize data
-  with an ObjectBox Sync server; `@SyncEntity` enables Sync for an entity. Requires the Sync variant of the C library,
-  the new package `objectbox-sync-clib`, which is installed via `pip install objectbox[sync]`.
+  with an ObjectBox Sync server; `@SyncEntity()` enables Sync for an entity (optionally with shared global IDs).
+  Requires the Sync variant of the C library, the new package `objectbox-sync-clib`, which is installed via
+  `pip install objectbox[sync]`.
 
 4.0.0 (2024-05-28)
 ------------------

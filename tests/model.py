@@ -83,7 +83,7 @@ class VectorEntity:
 
 
 # Synced via a Sync server in Sync tests; fixed UIDs to match objectbox-model-sync.json, which the server uses
-@SyncEntity
+@SyncEntity()
 @Entity(uid=8406432358373262241, model="sync-test")
 class SyncTestEntity:
     id = Id(uid=2896564358014426066)

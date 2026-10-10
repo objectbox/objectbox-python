@@ -91,13 +91,13 @@ pip install --upgrade objectbox[sync]
 
 Note: when upgrading, include the extra (as above); otherwise, the previous Sync variant of the library stays installed.
 
-Enable Sync for an entity with `@SyncEntity` (above `@Entity()`) and start a Sync client for the store:
+Enable Sync for an entity with `@SyncEntity()` (above `@Entity()`) and start a Sync client for the store:
 
 ```python
 from objectbox import Entity, Id, String, Store, SyncEntity
 from objectbox.sync import Sync, SyncCredentials
 
-@SyncEntity
+@SyncEntity()
 @Entity()
 class Task:
     id = Id

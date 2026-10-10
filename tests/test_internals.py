@@ -109,21 +109,34 @@ def test_entity_attribute_methods_nameclash_check():
 
 
 def test_sync_entity():
-    @SyncEntity
+    @SyncEntity()
     @Entity(model="sync-entity-test")
     class MySyncEntity:
+        id = Id()
+
+    @SyncEntity  # Without parentheses
+    @Entity(model="sync-entity-test")
+    class MySyncEntity2:
+        id = Id()
+
+    @SyncEntity(shared_global_ids=True)
+    @Entity(model="sync-entity-test")
+    class MySharedIdsEntity:
         id = Id()
 
     @Entity(model="sync-entity-test")
     class MyLocalEntity:
         id = Id()
 
-    assert MySyncEntity._flags & c.OBXEntityFlags.SYNC_ENABLED
+    assert MySyncEntity._flags == c.OBXEntityFlags.SYNC_ENABLED
+    assert MySyncEntity2._flags == c.OBXEntityFlags.SYNC_ENABLED
+    assert MySharedIdsEntity._flags == c.OBXEntityFlags.SYNC_ENABLED | c.OBXEntityFlags.SHARED_GLOBAL_IDS
     assert MyLocalEntity._flags == 0
 
     # The model JSON contains the entity flags
     model = Model()
     model.entity(MySyncEntity)
+    model.entity(MySharedIdsEntity)
     model.entity(MyLocalEntity)
     model_json_file = "test-sync-entity-model.json"
     if os.path.exists(model_json_file):
@@ -133,10 +146,11 @@ def test_sync_entity():
         entities_json = {entity["name"]: entity for entity in json.load(file)["entities"]}
     os.remove(model_json_file)
     assert entities_json["MySyncEntity"]["flags"] == c.OBXEntityFlags.SYNC_ENABLED
+    assert entities_json["MySharedIdsEntity"]["flags"] == 6  # SYNC_ENABLED | SHARED_GLOBAL_IDS
     assert "flags" not in entities_json["MyLocalEntity"]
 
     with pytest.raises(TypeError, match="above @Entity"):
         @Entity(model="sync-entity-test")
-        @SyncEntity
+        @SyncEntity()
         class WrongOrder:
             id = Id()

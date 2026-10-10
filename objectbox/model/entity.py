@@ -24,6 +24,7 @@ from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
 from objectbox.utils import date_value_to_int
 import threading
+from typing import Optional
 
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
@@ -411,20 +412,38 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
     return wrapper
 
 
-def SyncEntity(entity: _Entity) -> _Entity:
+def SyncEntity(entity: Optional[_Entity] = None, *, shared_global_ids: bool = False):
     """
     Decorator enabling Sync for an entity, i.e. its objects are synchronized with the Sync server.
     Apply it to an entity, i.e. put it above ``@Entity()``.
+    Like ``@Entity()``, it is used with parentheses; ``@SyncEntity`` without parentheses works too.
+
+    Note: Sync cannot be enabled for an existing (non-synced) entity, and synced entities can only have relations to
+    other synced entities.
+
+    :param shared_global_ids:
+        Set to True to use shared global IDs for this entity: object IDs are then the same on all Sync clients instead
+        of being mapped between local and global IDs (the default). Only use this if IDs are unique across all
+        clients (e.g. assigned IDs); otherwise, clients overwrite each other's objects. Cannot be changed later.
 
     Example::
 
-        @SyncEntity
+        @SyncEntity()
         @Entity()
         class MyEntity:
             id = Id
             name = String
     """
-    if not isinstance(entity, _Entity):
-        raise TypeError("@SyncEntity must be applied to an entity, i.e. put it above @Entity()")
-    entity._flags |= OBXEntityFlags.SYNC_ENABLED
-    return entity
+    flags = OBXEntityFlags.SYNC_ENABLED
+    if shared_global_ids:
+        flags |= OBXEntityFlags.SHARED_GLOBAL_IDS
+
+    def wrapper(entity_to_sync: _Entity) -> _Entity:
+        if not isinstance(entity_to_sync, _Entity):
+            raise TypeError("@SyncEntity() must be applied to an entity, i.e. put it above @Entity()")
+        entity_to_sync._flags |= flags
+        return entity_to_sync
+
+    if entity is None:  # Used with parentheses: @SyncEntity()
+        return wrapper
+    return wrapper(entity)
