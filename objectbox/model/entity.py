@@ -18,7 +18,9 @@ import flatbuffers.flexbuffers
 import numpy as np
 from datetime import datetime, timezone
 import logging
+from objectbox import experimental
 from objectbox.c import *
+from objectbox.model.fast_builder import FastBuilder
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
 from objectbox.utils import date_value_to_int
@@ -38,6 +40,7 @@ class _Entity(object):
         self._id_property = None
         self._fill_properties()
         self._tl = threading.local()
+        self._fast_builder = None  # experimental; created on first use after a sync
 
     @property
     def _id(self) -> int:
@@ -55,6 +58,7 @@ class _Entity(object):
         assert self._iduid.is_assigned()
         for prop in self._properties:
             prop.on_sync()
+        self._fast_builder = None  # IDs (FlatBuffers slots) may have changed
 
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
@@ -150,7 +154,30 @@ class _Entity(object):
     def _set_object_id(self, obj, id_: int):
         setattr(obj, self._id_property.name, id_)
 
-    def _marshal(self, object, id: int) -> bytearray:
+    def _marshal(self, object, id: int) -> Union[bytes, bytearray]:
+        if not experimental._fast_flatbuffers_builder:
+            return self._marshal_builder(object, id)
+        if self._fast_builder is None:  # concurrent first calls may create one each; equal, so either is fine
+            self._fast_builder = FastBuilder(self)
+        try:
+            data = self._fast_builder.marshal(object, id)
+        except Exception:
+            # Values the fast builder rejects (e.g. out of range): the reference raises its usual error
+            data = None
+        verify = experimental._fast_flatbuffers_builder_verify
+        if data is None or verify:
+            reference = bytes(self._marshal_builder(object, id))
+            if data is None:
+                if verify:
+                    raise AssertionError(f"Fast FlatBuffers builder failed for {self._name}, but the reference did not")
+                return reference
+            if data != reference:
+                raise AssertionError(f"Fast FlatBuffers builder: bytes differ from the reference for {self._name}:\n"
+                                     f"  fast:      {data.hex()}\n  reference: {reference.hex()}")
+        return data
+
+    def _marshal_builder(self, object, id: int) -> bytearray:
+        """Marshals with the generic flatbuffers.Builder; the reference for the experimental fast builder."""
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
         builder = self._tl.builder
