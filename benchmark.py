@@ -1,5 +1,7 @@
 import objectbox
+import sys
 import time
+from objectbox import experimental
 from objectbox.store import Store
 from tests.model import TestEntity
 from tests.common import create_test_store
@@ -111,6 +113,9 @@ class PerfExecutor:
 
 
 if __name__ == "__main__":
+    if "--fast-flatbuffers-builder" in sys.argv[1:]:
+        experimental.enable_fast_flatbuffers_builder()
+        print("Using the experimental fast FlatBuffers builder")
     Store.remove_db_files("testdata")
 
     obPerf = ObjectBoxPerf()
