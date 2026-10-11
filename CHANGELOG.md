@@ -32,6 +32,10 @@ ObjectBox Python ChangeLog
   only once per process (also when given by name, e.g. the default model), saving about 0.1 ms per open.
   The new option `skip_model_sync` additionally opens existing stores with the schema stored in their database
   instead of checking it against the model, which halves the time to open (see its documentation for when to use it).
+* Experimental: a fast FlatBuffers builder for putting objects, enabled via
+  `objectbox.experimental.enable_fast_flatbuffers_builder()` (off by default). It produces the same bytes as before,
+  with the layout precomputed per entity instead of using the generic `flatbuffers.Builder`; marshalling an object
+  with a string and two numbers gets ~12x faster, putting 10,000 objects of the test entity ~4x faster.
 
 4.0.0 (2024-05-28)
 ------------------
