@@ -457,3 +457,16 @@ def test_same_values():
     assert same_values(np.array([1.5], np.float32), np.array([1.5], np.float32))
     assert not same_values(np.array([1.5], np.float32), np.array([1.5], np.float64))
     assert same_values({"a": [1]}, {"a": [1]}) and not same_values({"a": 1}, {"b": 1})
+
+
+def test_codegen_compiles_on_first_use(test_store):
+    """Each generated function is compiled at its first use, once."""
+    builder = CodegenBuilder(TestEntity)
+    assert "marshal" not in builder.__dict__ and "unmarshal" not in builder.__dict__
+    data = builder.marshal(complex_object(), 1)
+    assert "marshal" in builder.__dict__ and "unmarshal" not in builder.__dict__
+    assert builder.marshal is builder.marshal
+    assert builder.unmarshal(data).str == "foo bar"
+    assert "unmarshal" in builder.__dict__
+    with pytest.raises(AttributeError):
+        builder.other

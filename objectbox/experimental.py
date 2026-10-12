@@ -50,7 +50,7 @@ def is_fast_flatbuffers_builder_enabled() -> bool:
 
 def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False):
     """Experimental: like enable_fast_flatbuffers_builder(), but additionally generates Python code per entity
-    (compiled once, at the entity's first put or read) that marshals its objects; this is faster than the fast builder.
+    (compiled once: at the entity's first put, and for reading at its first read) that marshals its objects; this is faster than the fast builder.
     It produces the same bytes as the generic flatbuffers.Builder.
     Reading objects (get, queries) also uses generated code, which returns the same objects as the default
     (flatbuffers.Table), but is much faster, especially for entities with many properties.

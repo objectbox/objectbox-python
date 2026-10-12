@@ -50,20 +50,34 @@ _counter = itertools.count(1)  # unique file names for linecache
 
 class CodegenBuilder:
     """Marshals and unmarshals objects of one entity with generated code; created after the entity's IDs are synced.
-    The generated functions are thread-safe: all state is local (layouts are created lazily, see FastBuilder)."""
+    The generated functions are thread-safe: all state is local (layouts are created lazily, see FastBuilder).
+    The sources are generated at creation; each function is compiled at its first use (attribute marshal or
+    unmarshal), as compiling takes most of the time (e.g. ~1 ms per function for 38 properties): a process that
+    only puts or only reads objects of an entity compiles only one."""
 
     def __init__(self, entity):
         fast_builder = FastBuilder(entity)
         self.source = _generate_source(fast_builder)
         self.filename = _register(self.source, entity, "marshal")
-        namespace = _namespace(fast_builder)
-        exec(compile(self.source, self.filename, "exec"), namespace)
-        self.marshal = namespace["marshal"]
+        self._marshal_namespace = _namespace(fast_builder)
 
-        self.unmarshal_source, namespace = _generate_unmarshal(entity)
+        self.unmarshal_source, self._unmarshal_namespace = _generate_unmarshal(entity)
         self.unmarshal_filename = _register(self.unmarshal_source, entity, "unmarshal")
-        exec(compile(self.unmarshal_source, self.unmarshal_filename, "exec"), namespace)
-        self.unmarshal = namespace["unmarshal"]
+
+    def __getattr__(self, name):
+        # Only called if the attribute is not set yet: compiles the function and sets it on the instance.
+        # Concurrent first calls may compile it twice; equal, so either is fine.
+        if name == "marshal":
+            source, filename, namespace = self.source, self.filename, self._marshal_namespace
+        elif name == "unmarshal":
+            source, filename, namespace = self.unmarshal_source, self.unmarshal_filename, self._unmarshal_namespace
+        else:
+            raise AttributeError("'%s' object has no attribute '%s'" % (type(self).__name__, name))
+        namespace = dict(namespace)  # exec adds the function (and __builtins__)
+        exec(compile(source, filename, "exec"), namespace)
+        function = namespace[name]
+        setattr(self, name, function)
+        return function
 
 
 def _register(source: str, entity, kind: str) -> str:

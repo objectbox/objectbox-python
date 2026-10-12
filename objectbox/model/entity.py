@@ -161,7 +161,7 @@ class _Entity(object):
         if mode is None:
             return self._marshal_builder(object, id)
         # Concurrent first calls may create one builder each; equal, so either is fine.
-        # Created outside the try below: a failing creation (e.g. in codegen) must raise, not fall back silently.
+        # Created (and codegen compiled) outside the try below: a failure there must raise, not fall back silently.
         if mode == experimental.CODEGEN:
             builder = self._codegen_builder
             if builder is None:
@@ -170,8 +170,9 @@ class _Entity(object):
             builder = self._fast_builder
             if builder is None:
                 builder = self._fast_builder = FastBuilder(self)
+        marshal = builder.marshal
         try:
-            data = builder.marshal(object, id)
+            data = marshal(object, id)
         except Exception:
             # Values the experimental builders reject (e.g. out of range): the reference raises its usual error
             data = None
@@ -261,8 +262,9 @@ class _Entity(object):
         codegen = self._codegen_builder
         if codegen is None:  # as in _marshal: outside the try, concurrent first calls are fine
             codegen = self._codegen_builder = CodegenBuilder(self)
+        unmarshal = codegen.unmarshal  # compiled on first use, outside the try (as in _marshal)
         try:
-            obj = codegen.unmarshal(data)
+            obj = unmarshal(data)
             failed = False
         except Exception:
             # Invalid data or values the reference cannot read either: it raises its usual error
