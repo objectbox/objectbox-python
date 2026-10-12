@@ -14,22 +14,51 @@
 
 """Experimental features: off by default; they may change or be removed in any release."""
 
-_fast_flatbuffers_builder = False
-_fast_flatbuffers_builder_verify = False
+# Marshalling objects (put): None (the generic flatbuffers.Builder), FAST_BUILDER or CODEGEN; at most one is active
+FAST_BUILDER = "fast builder"
+CODEGEN = "codegen"
+_flatbuffers_mode = None
+_flatbuffers_verify = False
+
+
+def _set_flatbuffers_mode(mode: str, enabled: bool, verify: bool):
+    global _flatbuffers_mode, _flatbuffers_verify
+    if enabled:
+        _flatbuffers_mode = mode
+        _flatbuffers_verify = verify
+    elif _flatbuffers_mode == mode:
+        _flatbuffers_mode = None
+        _flatbuffers_verify = False
 
 
 def enable_fast_flatbuffers_builder(enabled: bool = True, verify: bool = False):
     """Experimental: marshals objects (put) with a FlatBuffers builder that is precomputed per entity instead of the
     generic flatbuffers.Builder; this is much faster, especially for many objects. It produces the same bytes.
     Applies to all entities in this process, from the next put on.
+    Only one experimental builder is active: enabling this one replaces enable_flatbuffers_codegen();
+    disabling it (enabled=False) has no effect if the other one is active.
 
     :param verify: additionally marshals each object with the generic builder and raises an AssertionError if the
         bytes differ (slower than the generic builder alone; for testing).
     """
-    global _fast_flatbuffers_builder, _fast_flatbuffers_builder_verify
-    _fast_flatbuffers_builder = enabled
-    _fast_flatbuffers_builder_verify = enabled and verify
+    _set_flatbuffers_mode(FAST_BUILDER, enabled, verify)
 
 
 def is_fast_flatbuffers_builder_enabled() -> bool:
-    return _fast_flatbuffers_builder
+    return _flatbuffers_mode == FAST_BUILDER
+
+
+def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False):
+    """Experimental: like enable_fast_flatbuffers_builder(), but additionally generates Python code per entity
+    (compiled once, at the entity's first put) that marshals its objects; this is faster than the fast builder.
+    It produces the same bytes as the generic flatbuffers.Builder.
+    Only one experimental builder is active: enabling this one replaces enable_fast_flatbuffers_builder();
+    disabling it (enabled=False) has no effect if the other one is active.
+
+    :param verify: see enable_fast_flatbuffers_builder().
+    """
+    _set_flatbuffers_mode(CODEGEN, enabled, verify)
+
+
+def is_flatbuffers_codegen_enabled() -> bool:
+    return _flatbuffers_mode == CODEGEN

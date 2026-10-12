@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 import logging
 from objectbox import experimental
 from objectbox.c import *
+from objectbox.model.codegen import CodegenBuilder
 from objectbox.model.fast_builder import FastBuilder
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
@@ -41,6 +42,7 @@ class _Entity(object):
         self._fill_properties()
         self._tl = threading.local()
         self._fast_builder = None  # experimental; created on first use after a sync
+        self._codegen_builder = None  # experimental; created on first use after a sync
 
     @property
     def _id(self) -> int:
@@ -59,6 +61,7 @@ class _Entity(object):
         for prop in self._properties:
             prop.on_sync()
         self._fast_builder = None  # IDs (FlatBuffers slots) may have changed
+        self._codegen_builder = None
 
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
@@ -155,25 +158,35 @@ class _Entity(object):
         setattr(obj, self._id_property.name, id_)
 
     def _marshal(self, object, id: int) -> Union[bytes, bytearray]:
-        if not experimental._fast_flatbuffers_builder:
+        mode = experimental._flatbuffers_mode
+        if mode is None:
             return self._marshal_builder(object, id)
-        if self._fast_builder is None:  # concurrent first calls may create one each; equal, so either is fine
-            self._fast_builder = FastBuilder(self)
+        # Concurrent first calls may create one builder each; equal, so either is fine.
+        # Created outside the try below: a failing creation (e.g. in codegen) must raise, not fall back silently.
+        if mode == experimental.CODEGEN:
+            builder = self._codegen_builder
+            if builder is None:
+                builder = self._codegen_builder = CodegenBuilder(self)
+        else:
+            builder = self._fast_builder
+            if builder is None:
+                builder = self._fast_builder = FastBuilder(self)
         try:
-            data = self._fast_builder.marshal(object, id)
+            data = builder.marshal(object, id)
         except Exception:
-            # Values the fast builder rejects (e.g. out of range): the reference raises its usual error
+            # Values the experimental builders reject (e.g. out of range): the reference raises its usual error
             data = None
-        verify = experimental._fast_flatbuffers_builder_verify
+        verify = experimental._flatbuffers_verify
         if data is None or verify:
             reference = bytes(self._marshal_builder(object, id))
             if data is None:
                 if verify:
-                    raise AssertionError(f"Fast FlatBuffers builder failed for {self._name}, but the reference did not")
+                    raise AssertionError(f"Experimental FlatBuffers {mode} failed for {self._name}, "
+                                         f"but the reference did not")
                 return reference
             if data != reference:
-                raise AssertionError(f"Fast FlatBuffers builder: bytes differ from the reference for {self._name}:\n"
-                                     f"  fast:      {data.hex()}\n  reference: {reference.hex()}")
+                raise AssertionError(f"Experimental FlatBuffers {mode}: bytes differ from the reference for "
+                                     f"{self._name}:\n  {mode}: {data.hex()}\n  reference: {reference.hex()}")
         return data
 
     def _marshal_builder(self, object, id: int) -> bytearray:
