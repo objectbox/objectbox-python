@@ -1,6 +1,7 @@
 import sys
 from datetime import timezone, datetime, timedelta
 
+import numpy as np
 import pytest
 
 from objectbox.utils import *

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import objectbox_clib
 import ctypes.util
 import os
@@ -20,8 +22,10 @@ import sys
 import sysconfig
 from objectbox.version import Version
 from typing import *
-import numpy as np
 from enum import IntEnum
+
+if TYPE_CHECKING:
+    import numpy as np  # imported lazily (only where needed): importing numpy may start (busy) BLAS threads
 
 # This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
 # The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
@@ -408,9 +412,15 @@ def c_voidp_as_bytes(voidp, size):
     return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
 
 
+def is_ndarray(value) -> bool:
+    """Whether the value is a numpy array; does not import numpy (if it was not imported, there are no arrays)."""
+    np = sys.modules.get("numpy")
+    return np is not None and isinstance(value, np.ndarray)
+
+
 def c_array(py_list: Union[List[Any], np.ndarray], c_type):
     """ Converts the given python list or ndarray into a C array of c_type. """
-    if isinstance(py_list, np.ndarray):
+    if is_ndarray(py_list):
         if py_list.ndim != 1:
             raise Exception(f"ndarray is expected to be 1-dimensional. Input shape: {py_list.shape}")
         return py_list.ctypes.data_as(ctypes.POINTER(c_type))

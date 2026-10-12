@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import ctypes
-import numpy as np
 from typing import *
 
 from objectbox.c import *
@@ -7,6 +8,9 @@ from objectbox.model.properties import Property
 from objectbox.store import Store
 from objectbox.query import Query
 from objectbox.utils import check_float_vector
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class QueryBuilder:

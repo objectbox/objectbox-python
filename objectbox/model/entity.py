@@ -13,9 +13,6 @@
 # limitations under the License.
 import inspect
 
-import flatbuffers
-import flatbuffers.flexbuffers
-import numpy as np
 from datetime import datetime, timezone
 import logging
 from objectbox import experimental
@@ -96,7 +93,7 @@ class _Entity(object):
                     raise Exception(f"Duplicate ID property: \"{self._id_property.name}\" and \"{prop.name}\"")
                 self._id_property = prop
 
-            if prop._fb_type == flatbuffers.number_types.UOffsetTFlags:
+            if prop._fb_format == 'I':  # an offset
                 assert prop._ob_type in [
                     OBXPropertyType_String,
                     OBXPropertyType_BoolVector,
@@ -139,7 +136,8 @@ class _Entity(object):
     def _get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop.name)
-        if prop._py_type == np.ndarray:
+        if prop._is_ndarray:
+            import numpy as np  # imported already: _py_type is numpy.ndarray
             if (val == np.array(prop)).all():
                 return np.array([])
         elif val == prop:
@@ -191,6 +189,8 @@ class _Entity(object):
 
     def _marshal_builder(self, object, id: int) -> bytearray:
         """Marshals with the generic flatbuffers.Builder; the reference for the experimental fast builder."""
+        import flatbuffers  # imported on first use: flatbuffers imports numpy anyway
+        import numpy as np
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
         builder = self._tl.builder
@@ -221,6 +221,7 @@ class _Entity(object):
             elif prop._ob_type == OBXPropertyType_DoubleVector:
                 offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
             elif prop._ob_type == OBXPropertyType_Flex:
+                import flatbuffers.flexbuffers
                 flex_builder = flatbuffers.flexbuffers.Builder()
                 flex_builder.Add(val)
                 buffer = flex_builder.Finish()
@@ -280,6 +281,7 @@ class _Entity(object):
 
     def _unmarshal_table(self, data: bytes):
         """Unmarshals with flatbuffers.Table; the reference for the experimental codegen."""
+        import flatbuffers  # imported on first use: flatbuffers imports numpy (if available)
         pos = flatbuffers.encode.Get(flatbuffers.packer.uoffset, data, 0)
         table = flatbuffers.Table(data, pos)
 
@@ -333,6 +335,7 @@ class _Entity(object):
                 size = table.VectorLen(o)
                 # slice the vector as bytes
                 buf = table.Bytes[start:start + size]
+                import flatbuffers.flexbuffers
                 val = flatbuffers.flexbuffers.Loads(buf)
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)

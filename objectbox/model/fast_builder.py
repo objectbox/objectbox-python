@@ -30,23 +30,21 @@ vectors in reverse order; each item is followed by its alignment padding.
 
 import struct
 
-import flatbuffers.flexbuffers
-import numpy as np
-
 from objectbox.c import *
 from objectbox.utils import date_value_to_int
 
 _uint32 = struct.Struct('<I')
 
-# How vectors are marshalled by the reference (numpy dtype per property type; byte vectors are bytes)
+# How vectors are marshalled by the reference (numpy dtype per property type; byte vectors are bytes).
+# numpy and flatbuffers (which imports numpy) are imported only for entities with such properties (or flex).
 _numpy_dtypes = {
-    OBXPropertyType_BoolVector: np.bool_,
-    OBXPropertyType_ShortVector: np.int16,
-    OBXPropertyType_CharVector: np.uint16,
-    OBXPropertyType_IntVector: np.int32,
-    OBXPropertyType_LongVector: np.int64,
-    OBXPropertyType_FloatVector: np.float32,
-    OBXPropertyType_DoubleVector: np.float64,
+    OBXPropertyType_BoolVector: 'bool',
+    OBXPropertyType_ShortVector: 'int16',
+    OBXPropertyType_CharVector: 'uint16',
+    OBXPropertyType_IntVector: 'int32',
+    OBXPropertyType_LongVector: 'int64',
+    OBXPropertyType_FloatVector: 'float32',
+    OBXPropertyType_DoubleVector: 'float64',
 }
 
 # Kinds of offset (variable size) properties and of fields
@@ -87,6 +85,8 @@ class FastBuilder:
 
         # Offset properties in creation order: (kind, name, property (= unset), default value, numpy dtype)
         offset_props = []
+        self._np = None  # numpy, if there are numpy vectors
+        self._flex_builder = None  # flatbuffers.flexbuffers.Builder, if there are flex properties
         for prop in entity._offset_properties:
             ob_type = prop._ob_type
             dtype = None
@@ -96,9 +96,13 @@ class FastBuilder:
                 kind, default = _BYTES, prop._py_type()
             elif ob_type == OBXPropertyType_Flex:
                 kind, default = _FLEX, None
+                import flatbuffers.flexbuffers
+                self._flex_builder = flatbuffers.flexbuffers.Builder
             else:
-                kind, dtype = _NUMPY, _numpy_dtypes[ob_type]
-                default = np.array([]) if prop._py_type == np.ndarray else prop._py_type()
+                import numpy as np
+                self._np = np
+                kind, dtype = _NUMPY, np.dtype(_numpy_dtypes[ob_type])
+                default = np.array([]) if prop._is_ndarray else prop._py_type()
                 minalign = max(minalign, np.dtype(dtype).alignment)
             offset_props.append((kind, prop.name, prop, default, dtype))
         self._offset_props = offset_props
@@ -109,15 +113,15 @@ class FastBuilder:
         self._fields = []
         fields_in_memory_order = []
         for prop in entity._properties:
-            flags = prop._fb_type
-            width = flags.bytewidth
+            fb_format = prop._fb_format
+            width = struct.calcsize('<' + fb_format)  # standard size, as FlatBuffers
             minalign = max(minalign, width)
             ob_type = prop._ob_type
             if prop.name in offset_index:
                 self._fields.append((prop, None, 4))
                 fields_in_memory_order.append((_FIELD_OFFSET, None, None, offset_index[prop.name]))
                 continue
-            self._fields.append((prop, flags.packer_type.format[-1], width))
+            self._fields.append((prop, fb_format, width))
             if prop is entity._id_property:
                 fields_in_memory_order.append((_FIELD_ID, None, None, None))
             elif ob_type == OBXPropertyType_Date or ob_type == OBXPropertyType_DateNano:
@@ -183,6 +187,7 @@ class FastBuilder:
         Thread-safe: all state is local; unlike the reference, this needs no thread-local builder."""
         uint32_pack = _uint32.pack
         pads = _pads
+        np = self._np
 
         # Step 1: strings and vectors, in creation order. The parts are collected back to front (each part's
         # padding, data, length) and reversed at the end, giving memory order.
@@ -218,7 +223,7 @@ class FastBuilder:
                 off += pad_align + n + 4
             else:  # _BYTES, _FLEX
                 if kind == _FLEX:
-                    flex_builder = flatbuffers.flexbuffers.Builder()
+                    flex_builder = self._flex_builder()
                     flex_builder.Add(val)
                     data = bytes(flex_builder.Finish())
                 elif not isinstance(val, bytes):

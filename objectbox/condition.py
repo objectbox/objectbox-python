@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import sys
 from enum import Enum
 from typing import *
-import numpy as np
 
 if TYPE_CHECKING:
     from objectbox.c import obx_qb_cond
     from objectbox.query_builder import QueryBuilder
+    import numpy as np
 
 
 class QueryCondition:
@@ -237,7 +238,8 @@ class PropertyQueryCondition(QueryCondition):
             raise Exception("query_vector can't be empty")
 
         is_float_vector = False
-        is_float_vector |= isinstance(query_vector, np.ndarray) and query_vector.dtype == np.float32
+        np = sys.modules.get("numpy")  # not imported: query_vector is no numpy array
+        is_float_vector |= np is not None and isinstance(query_vector, np.ndarray) and query_vector.dtype == np.float32
         is_float_vector |= isinstance(query_vector, list) and type(query_vector[0]) == float
         if is_float_vector:
             return qb.nearest_neighbors_f32(self._property_id, query_vector, element_count)

@@ -14,8 +14,7 @@
 
 from enum import IntEnum
 from datetime import datetime
-import flatbuffers.number_types
-import numpy as np
+import sys
 from dataclasses import dataclass
 
 from objectbox.c import *
@@ -47,30 +46,42 @@ class PropertyType(IntEnum):
     # stringVector = OBXPropertyType_StringVector
 
 
-fb_type_map = {
-    PropertyType.bool: flatbuffers.number_types.BoolFlags,
-    PropertyType.byte: flatbuffers.number_types.Int8Flags,
-    PropertyType.short: flatbuffers.number_types.Int16Flags,
-    PropertyType.char: flatbuffers.number_types.Int8Flags,
-    PropertyType.int: flatbuffers.number_types.Int32Flags,
-    PropertyType.long: flatbuffers.number_types.Int64Flags,
-    PropertyType.float: flatbuffers.number_types.Float32Flags,
-    PropertyType.double: flatbuffers.number_types.Float64Flags,
-    PropertyType.string: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.date: flatbuffers.number_types.Int64Flags,
-    PropertyType.dateNano: flatbuffers.number_types.Int64Flags,
-    PropertyType.flex: flatbuffers.number_types.UOffsetTFlags,
-    # PropertyType.relation: flatbuffers.number_types.Int64Flags,
-    PropertyType.boolVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.byteVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.shortVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.charVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.intVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.longVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.floatVector: flatbuffers.number_types.UOffsetTFlags,
-    PropertyType.doubleVector: flatbuffers.number_types.UOffsetTFlags,
-    # PropertyType.stringVector: flatbuffers.number_types.UOffsetTFlags,
+# FlatBuffers struct format per type (as the packer of the flatbuffers.number_types flags, see Property._fb_type);
+# strings, vectors and flex are offsets ('I'). This avoids importing flatbuffers, which imports numpy, if available.
+_fb_formats = {
+    PropertyType.bool: '?',
+    PropertyType.byte: 'b',
+    PropertyType.short: 'h',
+    PropertyType.char: 'b',
+    PropertyType.int: 'i',
+    PropertyType.long: 'q',
+    PropertyType.float: 'f',
+    PropertyType.double: 'd',
+    PropertyType.string: 'I',
+    PropertyType.date: 'q',
+    PropertyType.dateNano: 'q',
+    PropertyType.flex: 'I',
+    # PropertyType.relation: 'q',
+    PropertyType.boolVector: 'I',
+    PropertyType.byteVector: 'I',
+    PropertyType.shortVector: 'I',
+    PropertyType.charVector: 'I',
+    PropertyType.intVector: 'I',
+    PropertyType.longVector: 'I',
+    PropertyType.floatVector: 'I',
+    PropertyType.doubleVector: 'I',
+    # PropertyType.stringVector: 'I',
 }
+
+# flatbuffers.number_types flags per struct format
+_fb_flags_names = {'?': 'BoolFlags', 'b': 'Int8Flags', 'h': 'Int16Flags', 'i': 'Int32Flags', 'q': 'Int64Flags',
+                   'f': 'Float32Flags', 'd': 'Float64Flags', 'I': 'UOffsetTFlags'}
+
+
+def _ndarray() -> type:
+    """numpy.ndarray; imports numpy, so only call it where numpy is needed (e.g. vector properties)."""
+    import numpy
+    return numpy.ndarray
 
 
 class IndexType(IntEnum):
@@ -241,14 +252,23 @@ class Property:
         self.index = kwargs.get('index', None)
 
         self._py_type = pytype
+        self._is_ndarray = pytype is getattr(sys.modules.get('numpy'), 'ndarray', None)  # numpy imported if ndarray
         self._ob_type = kwargs['type'] if 'type' in kwargs else self._determine_ob_type()
-        self._fb_type = fb_type_map[self._ob_type]
+        self._fb_format = _fb_formats[self._ob_type]  # struct format of the field (offsets: 'I')
 
         self._flags = 0
         self._set_flags()
 
         self._fb_slot = None
         self._fb_v_offset = None
+
+    def __getattr__(self, name):
+        # Only called if the attribute is not set: _fb_type is resolved on first use, then set on the instance.
+        if name == '_fb_type' and '_fb_format' in self.__dict__:
+            import flatbuffers.number_types  # imports numpy (if available), so only when needed
+            self._fb_type = getattr(flatbuffers.number_types, _fb_flags_names[self.__dict__['_fb_format']])
+            return self._fb_type
+        raise AttributeError("'%s' object has no attribute '%s'" % (type(self).__name__, name))
 
     @property
     def id(self):
@@ -283,7 +303,7 @@ class Property:
             return OBXPropertyType_Long
         elif ts == bytes:  # or ts == bytearray: might require further tests on read objects due to mutability
             return OBXPropertyType_ByteVector
-        elif ts == list or ts == np.ndarray:
+        elif ts == list or self._is_ndarray:
             return OBXPropertyType_DoubleVector
         elif ts == float:
             return OBXPropertyType_Double
@@ -532,7 +552,7 @@ class _VectorProperty(Property):
 class BoolVector(_VectorProperty):
     """Boolean Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(BoolVector, self).__init__(np.ndarray, type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
+        super(BoolVector, self).__init__(_ndarray(), type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
 class Int8Vector(_VectorProperty):
     """Integer 8-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
@@ -541,27 +561,27 @@ class Int8Vector(_VectorProperty):
 class Int16Vector(_VectorProperty):
     """Integer 16-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int16Vector, self).__init__(np.ndarray, type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
+        super(Int16Vector, self).__init__(_ndarray(), type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
 
 class CharVector(_VectorProperty):
     """Char 16-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(CharVector, self).__init__(np.ndarray, type=PropertyType.charVector, id=id, uid=uid, **kwargs)
+        super(CharVector, self).__init__(_ndarray(), type=PropertyType.charVector, id=id, uid=uid, **kwargs)
  
 class Int32Vector(_VectorProperty):
     """Integer 32-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int32Vector, self).__init__(np.ndarray, type=PropertyType.intVector, id=id, uid=uid, **kwargs)
+        super(Int32Vector, self).__init__(_ndarray(), type=PropertyType.intVector, id=id, uid=uid, **kwargs)
 
 class Int64Vector(_VectorProperty):
     """Integer 64-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int64Vector, self).__init__(np.ndarray, type=PropertyType.longVector, id=id, uid=uid, **kwargs)
+        super(Int64Vector, self).__init__(_ndarray(), type=PropertyType.longVector, id=id, uid=uid, **kwargs)
 
 class Float32Vector(_VectorProperty):
     """Floating-point 32-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Float32Vector, self).__init__(np.ndarray, type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
+        super(Float32Vector, self).__init__(_ndarray(), type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
     def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
         self._assert_ids_assigned()
         args = {'query_vector': query_vector, 'element_count': element_count}
@@ -570,7 +590,7 @@ class Float32Vector(_VectorProperty):
 class Float64Vector(_VectorProperty):
     """Floating-point 64-bit Vector Property"""
     def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Float64Vector, self).__init__(np.ndarray, type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
+        super(Float64Vector, self).__init__(_ndarray(), type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
 
 class _ListProperty(Property):
     def __init__(self, **kwargs):

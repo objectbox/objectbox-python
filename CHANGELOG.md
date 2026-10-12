@@ -32,6 +32,11 @@ ObjectBox Python ChangeLog
   only once per process (also when given by name, e.g. the default model), saving about 0.1 ms per open.
   The new option `skip_model_sync` additionally opens existing stores with the schema stored in their database
   instead of checking it against the model, which halves the time to open (see its documentation for when to use it).
+* Faster import: `import objectbox` no longer imports numpy (also not via flatbuffers, which imports numpy) and takes
+  about half the time. numpy is imported when needed, e.g. for vector properties or the first put or get.
+  Importing numpy may start BLAS threads (OpenBLAS: one per CPU core) that busy-wait for ~0.1 s, slowing down
+  short-lived processes. With the experimental FlatBuffers codegen (see below), entities without vector or flex
+  properties never import numpy or flatbuffers.
 * Experimental: a fast FlatBuffers builder for putting objects, enabled via
   `objectbox.experimental.enable_fast_flatbuffers_builder()` (off by default). It produces the same bytes as before,
   with the layout precomputed per entity instead of using the generic `flatbuffers.Builder`; marshalling an object

@@ -33,10 +33,8 @@ import itertools
 import keyword
 import linecache
 import struct
+import sys
 from datetime import datetime, timezone
-
-import flatbuffers.flexbuffers
-import numpy as np
 
 from objectbox.model.fast_builder import FastBuilder, _pads, _uint32, _STRING, _BYTES, _NUMPY, _FLEX, \
     _FIELD_SCALAR, _FIELD_OFFSET, _FIELD_ID, _FIELD_DATE, _FIELD_BOOL
@@ -81,8 +79,8 @@ def _namespace(fast_builder: FastBuilder) -> dict:
         "_pads": _pads,
         "_uint32_pack": _uint32.pack,
         "_date_value_to_int": date_value_to_int,
-        "_asarray": np.asarray,
-        "_FlexBuilder": flatbuffers.flexbuffers.Builder,
+        "_asarray": getattr(fast_builder._np, "asarray", None),  # numpy and flatbuffers only if needed
+        "_FlexBuilder": fast_builder._flex_builder,
         "_bytes": bytes,
         "_isinstance": isinstance,
         "_getattr": getattr,
@@ -134,7 +132,7 @@ def _generate_source(fast_builder: FastBuilder) -> str:
             add("    n = _len(d%d)" % i)
             add("    pad = -(off + n) & 3")
             add("    off += pad")
-            add("    pad_align = -(off + n) & %d" % (np.dtype(dtype).alignment - 1))
+            add("    pad_align = -(off + n) & %d" % (dtype.alignment - 1))
             add("    z%d = _pads[pad_align + pad]" % i)
             add("    l%d = _uint32_pack(a.size)" % i)
             add("    off += pad_align + n + 4")
@@ -227,8 +225,6 @@ def _generate_unmarshal(entity):
         "_u32": _unpack("<I"),
         "_s32": _unpack("<i"),
         "_u16": _unpack("<H"),
-        "_frombuffer": np.frombuffer,
-        "_flex_loads": flatbuffers.flexbuffers.Loads,
         "_fromtimestamp": datetime.fromtimestamp,
         "_utc": timezone.utc,
         "_setattr": setattr,
@@ -268,12 +264,16 @@ def _generate_unmarshal(entity):
             elif ob_type == OBXPropertyType_ByteVector:
                 add("        v = _default%d(data[p:p + n])" % k)
             elif ob_type == OBXPropertyType_Flex:
+                import flatbuffers.flexbuffers  # imports numpy (if available), so only if needed
+                namespace["_flex_loads"] = flatbuffers.flexbuffers.Loads
                 add("        v = _flex_loads(data[p:p + n])")
             else:
+                import numpy as np
+                namespace["_frombuffer"] = np.frombuffer
                 namespace["_dtype%d" % k] = np.dtype(_numpy_read_dtypes[ob_type]).newbyteorder("<")
                 add("        v = _frombuffer(data, dtype=_dtype%d, count=n, offset=p)" % k)
         else:
-            namespace["_get%d" % k] = _unpack(prop._fb_type.packer_type.format)
+            namespace["_get%d" % k] = _unpack("<" + prop._fb_format)
             read = "_get%d(data, pos + o)[0]" % k
             if ob_type == OBXPropertyType_Date and py_type == datetime:
                 read = "_fromtimestamp(%s / 1000.0, tz=_utc)" % read
@@ -294,7 +294,8 @@ def same_values(a, b) -> bool:
     """Whether two unmarshalled values are equal, incl. their types (numpy arrays: dtype and bytes; NaN equals NaN)."""
     if type(a) is not type(b):
         return False
-    if isinstance(a, np.ndarray):
+    np = sys.modules.get("numpy")
+    if np is not None and isinstance(a, np.ndarray):
         return a.dtype == b.dtype and a.shape == b.shape and a.tobytes() == b.tobytes()
     if isinstance(a, float):
         return a == b or (a != a and b != b)

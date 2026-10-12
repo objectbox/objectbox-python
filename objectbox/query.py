@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from objectbox.c import *
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class Query:
@@ -116,6 +121,7 @@ class Query:
         try:
             c_id_array: OBX_id_array = c_id_array_p.contents
             c_count = c_id_array.count
+            import numpy as np
             numpy_array = np.empty(c_count, dtype=np.uint64)
             if c_count > 0:
                 c_ids = ctypes.cast(c_id_array.ids, ctypes.POINTER(obx_id))
@@ -166,7 +172,7 @@ class Query:
     def set_parameter_vector_f32(self,
                                  prop: Union[int, str, 'Property'],
                                  value: Union[List[float], np.ndarray]) -> 'Query':
-        if isinstance(value, np.ndarray) and value.dtype != np.float32:
+        if is_ndarray(value) and value.dtype != "float32":
             raise Exception(f"value dtype is expected to be np.float32, got: {value.dtype}")
         prop_id = self._entity._get_property_id(prop)
         c_value = c_array(value, ctypes.c_float)
