@@ -40,6 +40,8 @@ ObjectBox Python ChangeLog
   (off by default; replaces the fast builder if that is enabled). Like the fast builder, but generates Python code per
   entity at its first put, which is again ~2x faster for small objects (~25x faster than the generic builder);
   putting 10,000 objects of the test entity ~5x faster than the generic builder.
+  Codegen also reads objects (get, queries) with generated code, returning the same objects: ~3.5x faster per object
+  for a small entity, ~8x faster for 21 properties.
 
 4.0.0 (2024-05-28)
 ------------------

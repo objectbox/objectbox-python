@@ -50,12 +50,15 @@ def is_fast_flatbuffers_builder_enabled() -> bool:
 
 def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False):
     """Experimental: like enable_fast_flatbuffers_builder(), but additionally generates Python code per entity
-    (compiled once, at the entity's first put) that marshals its objects; this is faster than the fast builder.
+    (compiled once, at the entity's first put or read) that marshals its objects; this is faster than the fast builder.
     It produces the same bytes as the generic flatbuffers.Builder.
+    Reading objects (get, queries) also uses generated code, which returns the same objects as the default
+    (flatbuffers.Table), but is much faster, especially for entities with many properties.
     Only one experimental builder is active: enabling this one replaces enable_fast_flatbuffers_builder();
     disabling it (enabled=False) has no effect if the other one is active.
 
-    :param verify: see enable_fast_flatbuffers_builder().
+    :param verify: see enable_fast_flatbuffers_builder(); for reading, each object is additionally read with
+        flatbuffers.Table and an AssertionError is raised if any property value differs.
     """
     _set_flatbuffers_mode(CODEGEN, enabled, verify)
 
