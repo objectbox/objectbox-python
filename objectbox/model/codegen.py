@@ -21,6 +21,8 @@ FastBuilder, so both produce the same bytes as the generic flatbuffers.Builder.
 
 The generated source contains no values: defaults, properties, numpy dtypes etc. are passed via the namespace of
 exec. It is registered in linecache, so tracebacks show the generated lines.
+The open question on null values (see FastBuilder) applies here as well; a layout computed per object would be
+selected in the generated code instead of the cached one.
 """
 
 import itertools

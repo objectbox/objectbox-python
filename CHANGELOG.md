@@ -36,6 +36,10 @@ ObjectBox Python ChangeLog
   `objectbox.experimental.enable_fast_flatbuffers_builder()` (off by default). It produces the same bytes as before,
   with the layout precomputed per entity instead of using the generic `flatbuffers.Builder`; marshalling an object
   with a string and two numbers gets ~12x faster, putting 10,000 objects of the test entity ~4x faster.
+* Experimental: FlatBuffers codegen for putting objects, enabled via `objectbox.experimental.enable_flatbuffers_codegen()`
+  (off by default; replaces the fast builder if that is enabled). Like the fast builder, but generates Python code per
+  entity at its first put, which is again ~2x faster for small objects (~25x faster than the generic builder);
+  putting 10,000 objects of the test entity ~5x faster than the generic builder.
 
 4.0.0 (2024-05-28)
 ------------------
