@@ -37,6 +37,7 @@ build:
     - pip3 install --user --force-reinstall dist/objectbox-*.whl --find-links dist  # Artifacts from the previous stage (downloaded by default); objectbox-clib for the platform via --find-links
     - ${PYTHON} -m pytest -rs  # -rs: list skipped tests with reason
     - ${PYTHON} -m pytest -rs --fast-flatbuffers-builder  # experimental; each object is verified against the reference
+    - ${PYTHON} -m pytest -rs --flatbuffers-codegen  # experimental; each object is verified against the reference
   variables:
     PYTHON: "python3"
 
@@ -54,6 +55,7 @@ build:
     - python -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # Artifacts from the previous stage (downloaded by default); objectbox-clib for the platform via --find-links
     - python -m pytest -rs
     - python -m pytest -rs --fast-flatbuffers-builder
+    - python -m pytest -rs --flatbuffers-codegen
 
 test:linux:x64:
   extends: .test
