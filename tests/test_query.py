@@ -325,6 +325,11 @@ def test_offset_limit(test_store):
     query.limit(0)
     assert len(query.find()) == 4
 
+    # Chaining: both return the query
+    assert query.offset(1) is query
+    assert query.limit(2) is query
+    assert [o.str for o in query.offset(1).limit(2).find()] == ["a", "b"]
+
 
 def test_any_all(test_store):
     box = test_store.box(TestEntity)
