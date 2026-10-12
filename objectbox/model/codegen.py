@@ -29,9 +29,12 @@ The open question on null values (see FastBuilder) applies here as well; a layou
 selected in the generated code instead of the cached one.
 """
 
+import hashlib
+import importlib.machinery
 import itertools
 import keyword
 import linecache
+import os
 import struct
 from array import array
 import sys
@@ -39,6 +42,7 @@ from datetime import datetime, timezone
 
 from objectbox.model.fast_builder import FastBuilder, _pads, _uint32, _STRING, _BYTES, _NUMPY, _FLEX, _INT8_LIST, \
     _FIELD_SCALAR, _FIELD_OFFSET, _FIELD_ID, _FIELD_DATE, _FIELD_BOOL
+from objectbox import experimental
 from objectbox.c import OBXPropertyType_String, OBXPropertyType_ByteVector, OBXPropertyType_Flex, \
     OBXPropertyType_BoolVector, OBXPropertyType_ShortVector, OBXPropertyType_CharVector, OBXPropertyType_IntVector, \
     OBXPropertyType_LongVector, OBXPropertyType_FloatVector, OBXPropertyType_DoubleVector, OBXPropertyType_Date, \
@@ -63,6 +67,7 @@ class CodegenBuilder:
 
         self.unmarshal_source, self._unmarshal_namespace = _generate_unmarshal(entity)
         self.unmarshal_filename = _register(self.unmarshal_source, entity, "unmarshal")
+        self._entity_name = entity._name
 
     def __getattr__(self, name):
         # Only called if the attribute is not set yet: compiles the function and sets it on the instance.
@@ -74,10 +79,45 @@ class CodegenBuilder:
         else:
             raise AttributeError("'%s' object has no attribute '%s'" % (type(self).__name__, name))
         namespace = dict(namespace)  # exec adds the function (and __builtins__)
-        exec(compile(source, filename, "exec"), namespace)
+        exec(_compile(source, filename, self._entity_name, name), namespace)
         function = namespace[name]
         setattr(self, name, function)
         return function
+
+
+def _compile(source: str, filename: str, entity_name: str, kind: str):
+    """Compiles the source, or loads its compiled code from the cache directory (experimental._codegen_cache_dir):
+    the source is written there as a .py file (named by its hash), which Python compiles and caches as usual
+    (__pycache__, validated against the source). Any problem with the cache: compiles without it."""
+    cache_dir = experimental._codegen_cache_dir
+    if cache_dir is not None:
+        try:
+            return _compile_cached(source, cache_dir, entity_name, kind)
+        except Exception:
+            pass
+    return compile(source, filename, "exec")
+
+
+def _compile_cached(source: str, cache_dir: str, entity_name: str, kind: str):
+    data = source.encode("utf-8")
+    name = "objectbox_codegen_%s_%s_%s" % (kind, entity_name, hashlib.sha256(data).hexdigest()[:24])
+    path = os.path.join(cache_dir, name + ".py")
+    try:
+        with open(path, "rb") as file:
+            matches = file.read() == data
+    except FileNotFoundError:
+        matches = False
+    if not matches:  # new (or e.g. damaged): write atomically, also if processes race
+        os.makedirs(cache_dir, exist_ok=True)
+        temp_path = "%s.%d.%s.tmp" % (path, os.getpid(), os.urandom(4).hex())
+        try:
+            with open(temp_path, "wb") as file:
+                file.write(data)
+            os.replace(temp_path, path)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+    return importlib.machinery.SourceFileLoader(name, path).get_code(name)
 
 
 def _register(source: str, entity, kind: str) -> str:

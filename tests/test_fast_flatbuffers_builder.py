@@ -20,9 +20,9 @@ from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex, VectorEn
 @pytest.fixture
 def fast_builder_state():
     """Restores the experimental switches (e.g. as set for the whole test suite) after a test that changes them."""
-    saved = (experimental._flatbuffers_mode, experimental._flatbuffers_verify)
+    saved = (experimental._flatbuffers_mode, experimental._flatbuffers_verify, experimental._codegen_cache_dir)
     yield
-    experimental._flatbuffers_mode, experimental._flatbuffers_verify = saved
+    experimental._flatbuffers_mode, experimental._flatbuffers_verify, experimental._codegen_cache_dir = saved
 
 
 # The experimental switches per mode, e.g. for tests running with each builder
@@ -470,3 +470,56 @@ def test_codegen_compiles_on_first_use(test_store):
     assert "unmarshal" in builder.__dict__
     with pytest.raises(AttributeError):
         builder.other
+
+
+def test_codegen_cache(test_store, fast_builder_state, tmp_path):
+    """With a cache directory, the generated sources are written there and compiled code is reused."""
+    cache_dir = tmp_path / "codegen-cache"
+    experimental.enable_flatbuffers_codegen(cache_dir=str(cache_dir))
+    obj = complex_object()
+    reference = bytes(TestEntity._marshal_builder(obj, 1))
+    builder = CodegenBuilder(TestEntity)
+    assert builder.marshal(obj, 1) == reference
+    assert_same_read(TestEntity, reference, builder)
+    sources = sorted(path.name for path in cache_dir.glob("*.py"))
+    assert len(sources) == 2 and sources[0].startswith("objectbox_codegen_marshal_TestEntity_")
+    assert len(list((cache_dir / "__pycache__").glob("*.pyc"))) == 2
+    source_path = next(cache_dir.glob("objectbox_codegen_marshal_*.py"))
+    assert source_path.read_text() == builder.source
+    assert builder.marshal.__code__.co_filename == str(source_path)  # tracebacks show the cached file
+
+    # Another builder (e.g. in another process) uses the cached code; the files are not rewritten
+    mtime = source_path.stat().st_mtime_ns
+    second = CodegenBuilder(TestEntity)
+    assert second.marshal(obj, 1) == reference
+    assert second.marshal.__code__.co_filename == str(source_path)
+    assert source_path.stat().st_mtime_ns == mtime
+
+    # A damaged source file is rewritten
+    source_path.write_text("damaged")
+    assert CodegenBuilder(TestEntity).marshal(obj, 1) == reference
+    assert source_path.read_text() == builder.source
+
+    # Off again (each call sets the directory): compiled without the cache
+    experimental.enable_flatbuffers_codegen()
+    assert not CodegenBuilder(TestEntity).marshal.__code__.co_filename.endswith(".py")
+
+
+def test_codegen_cache_errors(test_store, fast_builder_state, tmp_path, monkeypatch):
+    """Problems with the cache directory never fail: the code is compiled without the cache."""
+    obj = complex_object()
+    reference = bytes(TestEntity._marshal_builder(obj, 1))
+    not_a_dir = tmp_path / "file"
+    not_a_dir.write_text("")
+    experimental.enable_flatbuffers_codegen(cache_dir=str(not_a_dir))
+    assert CodegenBuilder(TestEntity).marshal(obj, 1) == reference
+
+    def fail(*args):
+        raise OSError("no space left")
+    monkeypatch.setattr("os.replace", fail)
+    cache_dir = tmp_path / "codegen-cache"
+    experimental.enable_flatbuffers_codegen(cache_dir=str(cache_dir))
+    builder = CodegenBuilder(TestEntity)
+    assert builder.marshal(obj, 1) == reference
+    assert not builder.marshal.__code__.co_filename.endswith(".py")
+    assert list(cache_dir.iterdir()) == []  # no temporary files left

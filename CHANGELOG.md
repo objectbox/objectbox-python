@@ -56,6 +56,8 @@ ObjectBox Python ChangeLog
   putting 10,000 objects of the test entity ~5x faster than the generic builder.
   Codegen also reads objects (get, queries) with generated code, returning the same objects: ~3.5x faster per object
   for a small entity, ~8x faster for 21 properties.
+  The code is compiled per process at the first put and first read of an entity (~2.8 ms for both with 38 properties);
+  the new option `cache_dir` caches the compiled code for other processes (~0.5 ms then), e.g. for short-lived ones.
 
 4.0.0 (2024-05-28)
 ------------------

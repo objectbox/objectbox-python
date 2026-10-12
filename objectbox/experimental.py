@@ -19,6 +19,7 @@ FAST_BUILDER = "fast builder"
 CODEGEN = "codegen"
 _flatbuffers_mode = None
 _flatbuffers_verify = False
+_codegen_cache_dir = None  # directory for compiled codegen (see enable_flatbuffers_codegen) or None
 
 
 def _set_flatbuffers_mode(mode: str, enabled: bool, verify: bool):
@@ -48,9 +49,10 @@ def is_fast_flatbuffers_builder_enabled() -> bool:
     return _flatbuffers_mode == FAST_BUILDER
 
 
-def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False):
+def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False, cache_dir: str = None):
     """Experimental: like enable_fast_flatbuffers_builder(), but additionally generates Python code per entity
-    (compiled once: at the entity's first put, and for reading at its first read) that marshals its objects; this is faster than the fast builder.
+    (compiled once per process: at the entity's first put, and for reading at its first read) that marshals its
+    objects; this is faster than the fast builder.
     It produces the same bytes as the generic flatbuffers.Builder.
     Reading objects (get, queries) also uses generated code, which returns the same objects as the default
     (flatbuffers.Table), but is much faster, especially for entities with many properties.
@@ -59,8 +61,16 @@ def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False):
 
     :param verify: see enable_fast_flatbuffers_builder(); for reading, each object is additionally read with
         flatbuffers.Table and an AssertionError is raised if any property value differs.
+    :param cache_dir: optional directory to cache the compiled code in, so other processes skip compiling it
+        (~1 ms per function for an entity with 38 properties), e.g. for many short-lived processes. The generated
+        sources are written there as .py files, Python caches their bytecode as usual (__pycache__). Off by default.
+        Applies to code compiled after this call; each call sets it (None: no cache).
+        Security: only use a directory that is writable by trusted users only, as code from it is executed.
     """
+    global _codegen_cache_dir
     _set_flatbuffers_mode(CODEGEN, enabled, verify)
+    if enabled:
+        _codegen_cache_dir = cache_dir
 
 
 def is_flatbuffers_codegen_enabled() -> bool:
