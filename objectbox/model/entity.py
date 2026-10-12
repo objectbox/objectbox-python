@@ -13,6 +13,7 @@
 # limitations under the License.
 import inspect
 
+from array import array
 from datetime import datetime, timezone
 import logging
 from objectbox import experimental
@@ -207,6 +208,8 @@ class _Entity(object):
                 # https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.bool
                 offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.bool_))
             elif prop._ob_type == OBXPropertyType_ByteVector:
+                if prop._py_type == list:  # Int8List: signed bytes
+                    val = array('b', val).tobytes()
                 offsets[prop.id] = builder.CreateByteVector(val)
             elif prop._ob_type == OBXPropertyType_ShortVector:
                 offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.int16))
@@ -294,7 +297,8 @@ class _Entity(object):
             val = None
             ob_type = prop._ob_type
             if not o:
-                val = prop._py_type()  # use default (empty) value if not present in the object
+                setattr(obj, prop.name, prop._py_type())  # use default (empty) value if not present in the object
+                continue
             elif ob_type == OBXPropertyType_String:
                 val = table.String(o + table.Pos).decode('utf-8')
             elif ob_type == OBXPropertyType_BoolVector:
@@ -304,7 +308,10 @@ class _Entity(object):
                 start = table.Vector(o)
                 size = table.VectorLen(o)
                 # slice the vector as a requested type
-                val = prop._py_type(table.Bytes[start:start + size])
+                if prop._py_type == list:  # Int8List: signed bytes
+                    val = array('b', table.Bytes[start:start + size])  # .tolist() below
+                else:
+                    val = prop._py_type(table.Bytes[start:start + size])
             elif ob_type == OBXPropertyType_ShortVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
             elif ob_type == OBXPropertyType_CharVector:

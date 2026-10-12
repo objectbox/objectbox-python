@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from objectbox import experimental, Entity, Id, Int16, Int32, Int64, Float64, Date, Model, Store, String, \
-    Float32Vector, Int64Vector, Bytes
+    Float32Vector, Int64Vector, Bytes, Int8List, Float32List
 from objectbox.model.codegen import CodegenBuilder, same_values
 from objectbox.model.fast_builder import FastBuilder
 from tests.common import create_test_store
@@ -61,7 +61,7 @@ def complex_object(**overrides) -> TestEntity:
                   float64=1.2345678901, float32=1.5, bools=np.array([True, False, True]), bytes=b"\x00\x01\xff",
                   shorts=np.array([1, -2, 3]), chars=np.array([65, 66, 0xFFFF]), ints=np.array([1, -2, 3, 4, 5]),
                   longs=np.array([2 ** 40, -(2 ** 40)]), floats=np.array([1.5, -2.5]), doubles=np.array([0.1, 0.2]),
-                  bools_list=[True, False], shorts_list=[-1, 2], chars_list=[0x41, 0x2603], ints_list=[1, 2, 3],
+                  bools_list=[True, False], bytes_list=[-128, 0, 127], shorts_list=[-1, 2], chars_list=[0x41, 0x2603], ints_list=[1, 2, 3],
                   longs_list=[2 ** 50], floats_list=[0.5], doubles_list=[1e300, -1e-300], date=1700000000123,
                   date_nano=1700000000123456789, flex={"a": [1, "b", None], "c": {"d": 2.5}})
     values.update(overrides)
@@ -370,12 +370,14 @@ def test_codegen_read_older_model(tmp_path, fast_builder_state):
         text = String
         level = Int32
         name = String
+        bytes_list = Int8List
+        floats_list = Float32List
 
     store = store_for_entity(Versioned, tmp_path)
     try:
         experimental.enable_flatbuffers_codegen(True, verify=True)
         read = store.box(Versioned).get(1)
-        assert (read.text, read.level, read.name) == ("v1", 0, "")
+        assert (read.text, read.level, read.name, read.bytes_list, read.floats_list) == ("v1", 0, "", [], [])
     finally:
         store.close()
 

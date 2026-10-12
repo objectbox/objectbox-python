@@ -29,6 +29,7 @@ vectors in reverse order; each item is followed by its alignment padding.
 """
 
 import struct
+from array import array as py_array  # not array: the name of a local (numpy array) below
 
 from objectbox.c import *
 from objectbox.utils import date_value_to_int
@@ -48,7 +49,7 @@ _numpy_dtypes = {
 }
 
 # Kinds of offset (variable size) properties and of fields
-_STRING, _BYTES, _NUMPY, _FLEX = range(4)
+_STRING, _BYTES, _NUMPY, _FLEX, _INT8_LIST = range(5)
 _FIELD_SCALAR, _FIELD_OFFSET, _FIELD_ID, _FIELD_DATE, _FIELD_BOOL = range(5)
 
 _pads = [b'\0' * n for n in range(16)]  # padding (zero bytes) by length
@@ -93,7 +94,7 @@ class FastBuilder:
             if ob_type == OBXPropertyType_String:
                 kind, default = _STRING, ''
             elif ob_type == OBXPropertyType_ByteVector:
-                kind, default = _BYTES, prop._py_type()
+                kind, default = _INT8_LIST if prop._py_type == list else _BYTES, prop._py_type()
             elif ob_type == OBXPropertyType_Flex:
                 kind, default = _FLEX, None
                 import flatbuffers.flexbuffers
@@ -221,8 +222,10 @@ class FastBuilder:
                 parts.append(data)
                 parts.append(uint32_pack(array.size))
                 off += pad_align + n + 4
-            else:  # _BYTES, _FLEX
-                if kind == _FLEX:
+            else:  # _BYTES, _INT8_LIST, _FLEX
+                if kind == _INT8_LIST:
+                    data = py_array('b', val).tobytes()
+                elif kind == _FLEX:
                     flex_builder = self._flex_builder()
                     flex_builder.Add(val)
                     data = bytes(flex_builder.Finish())

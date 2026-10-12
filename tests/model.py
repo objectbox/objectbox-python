@@ -23,6 +23,7 @@ class TestEntity:
     floats = Float32Vector()
     doubles = Float64Vector()
     bools_list = BoolList()
+    bytes_list = Int8List()
     shorts_list = Int16List()
     chars_list = CharList()
     ints_list = Int32List()

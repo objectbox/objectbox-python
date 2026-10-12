@@ -73,6 +73,7 @@ def assert_equal(actual: TestEntity, expected: TestEntity):
     assert_equal_prop_vector(actual.floats, expected.floats, np.array([]))
     assert_equal_prop_vector(actual.doubles, expected.doubles, np.array([]))
     assert_equal_prop_approx(actual.bools_list, expected.bools_list, [])
+    assert_equal_prop_approx(actual.bytes_list, expected.bytes_list, [])
     assert_equal_prop_approx(actual.ints_list, expected.ints_list, [])
     assert_equal_prop_approx(actual.shorts_list, expected.shorts_list, [])
     assert_equal_prop_approx(actual.chars_list, expected.chars_list, [])

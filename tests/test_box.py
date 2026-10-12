@@ -42,6 +42,7 @@ def test_box_basics(test_store):
     object.floats = np.array([0.1, 1.2, 2.3, 3.4, 4.5], dtype=np.float32)
     object.doubles = np.array([99.99, 88.88, 77.77, 66.66, 55.595425], dtype=np.float64)
     object.bools_list = [True, False, True, True, False]
+    object.bytes_list = [-128, -1, 0, 1, 127]
     object.ints_list = [91, 82, 73, 64, 55]
     object.shorts_list = [8, 2, 7, 3, 6]
     object.chars_list = [4, 5, 43, 75, 12]

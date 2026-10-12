@@ -33,10 +33,11 @@ import itertools
 import keyword
 import linecache
 import struct
+from array import array
 import sys
 from datetime import datetime, timezone
 
-from objectbox.model.fast_builder import FastBuilder, _pads, _uint32, _STRING, _BYTES, _NUMPY, _FLEX, \
+from objectbox.model.fast_builder import FastBuilder, _pads, _uint32, _STRING, _BYTES, _NUMPY, _FLEX, _INT8_LIST, \
     _FIELD_SCALAR, _FIELD_OFFSET, _FIELD_ID, _FIELD_DATE, _FIELD_BOOL
 from objectbox.c import OBXPropertyType_String, OBXPropertyType_ByteVector, OBXPropertyType_Flex, \
     OBXPropertyType_BoolVector, OBXPropertyType_ShortVector, OBXPropertyType_CharVector, OBXPropertyType_IntVector, \
@@ -82,6 +83,7 @@ def _namespace(fast_builder: FastBuilder) -> dict:
         "_asarray": getattr(fast_builder._np, "asarray", None),  # numpy and flatbuffers only if needed
         "_FlexBuilder": fast_builder._flex_builder,
         "_bytes": bytes,
+        "_array": array,
         "_isinstance": isinstance,
         "_getattr": getattr,
         "_str": str,
@@ -136,8 +138,11 @@ def _generate_source(fast_builder: FastBuilder) -> str:
             add("    z%d = _pads[pad_align + pad]" % i)
             add("    l%d = _uint32_pack(a.size)" % i)
             add("    off += pad_align + n + 4")
-        else:  # _BYTES, _FLEX
-            if kind == _FLEX:
+        else:  # _BYTES, _INT8_LIST, _FLEX
+            if kind == _INT8_LIST:
+                add("    if v is _p%d: v = _d%d" % (i, i))
+                add("    d%d = _array('b', v).tobytes()" % i)
+            elif kind == _FLEX:
                 add("    if v is _p%d: v = None" % i)
                 add("    flex = _FlexBuilder()")
                 add("    flex.Add(v)")
@@ -250,7 +255,7 @@ def _generate_unmarshal(entity):
         py_type = prop._py_type
         namespace["_n%d" % k] = prop.name
         namespace["_default%d" % k] = py_type
-        to_list = ".tolist()" if py_type == list else ""
+        to_list = ".tolist()" if py_type == list else ""  # list types: read as numpy arrays
         add("    o = e[%d]" % prop._fb_slot)
         add("    if o:")
         if ob_type in (OBXPropertyType_String, OBXPropertyType_ByteVector, OBXPropertyType_Flex) or \
@@ -262,7 +267,11 @@ def _generate_unmarshal(entity):
             if ob_type == OBXPropertyType_String:
                 add("        v = data[p:p + n].decode('utf-8')")
             elif ob_type == OBXPropertyType_ByteVector:
-                add("        v = _default%d(data[p:p + n])" % k)
+                if py_type == list:  # Int8List: signed bytes
+                    namespace["_array"] = array
+                    add("        v = _array('b', data[p:p + n]).tolist()")
+                else:
+                    add("        v = _default%d(data[p:p + n])" % k)
             elif ob_type == OBXPropertyType_Flex:
                 import flatbuffers.flexbuffers  # imports numpy (if available), so only if needed
                 namespace["_flex_loads"] = flatbuffers.flexbuffers.Loads
@@ -271,7 +280,7 @@ def _generate_unmarshal(entity):
                 import numpy as np
                 namespace["_frombuffer"] = np.frombuffer
                 namespace["_dtype%d" % k] = np.dtype(_numpy_read_dtypes[ob_type]).newbyteorder("<")
-                add("        v = _frombuffer(data, dtype=_dtype%d, count=n, offset=p)" % k)
+                add("        v = _frombuffer(data, dtype=_dtype%d, count=n, offset=p)%s" % (k, to_list))
         else:
             namespace["_get%d" % k] = _unpack("<" + prop._fb_format)
             read = "_get%d(data, pos + o)[0]" % k
@@ -285,7 +294,7 @@ def _generate_unmarshal(entity):
         add("    else:")
         add("        v = _default%d()  # default (empty) value if not present in the object" % k)
         assign = _set(prop.name, "_n%d" % k)
-        add(assign + "v" + to_list + (")" if assign.startswith("    _setattr") else ""))
+        add(assign + "v" + (")" if assign.startswith("    _setattr") else ""))
     add("    return obj")
     return "\n".join(lines) + "\n", namespace
 
