@@ -130,7 +130,8 @@ class Box:
 
     def get(self, id: int):
         """Get object by given Id or None if not found."""
-        with self._store.read_tx():
+        tx = obx_txn_read(self._store._c_store)  # not via read_tx(): less overhead for this hot path
+        try:
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
             code : obx_err = obx_box_get(self._c_box, id, ctypes.byref(
@@ -140,7 +141,9 @@ class Box:
             elif code != 0:
                 raise DbError.from_code(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
-            return self._entity._unmarshal(data)
+        finally:
+            obx_txn_close(tx)
+        return self._entity._unmarshal(data)
 
     def get_many(self, id_array: List[int]) -> list:
         """Gets objects matching the given ID list.

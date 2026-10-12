@@ -39,3 +39,34 @@ def test_transactions(test_store):
         assert "Cannot start a write transaction inside a read only transaction" in str(err)
     finally:
         test_store.close()
+
+
+def test_transactions_closed(test_store):
+    box = test_store.box(TestEntity)
+    id = box.put(TestEntity(str="first"))
+
+    # Read transactions are closed, also on exceptions: writing works afterwards (same thread)
+    with test_store.read_tx():
+        assert box.get(id).str == "first"
+    try:
+        with test_store.read_tx():
+            raise KeyError("read abort")
+    except KeyError:
+        pass
+    box.put(TestEntity(str="second"))
+
+    # Also exceptions not derived from Exception roll back a write transaction
+    try:
+        with test_store.write_tx():
+            box.put(TestEntity(str="third"))
+            raise KeyboardInterrupt()
+    except KeyboardInterrupt:
+        pass
+    assert box.count() == 2
+
+    # get() in a write transaction sees its changes
+    with test_store.write_tx():
+        id = box.put(TestEntity(str="fourth"))
+        assert box.get(id).str == "fourth"
+    assert box.count() == 3
+    assert box.get(12345) is None
