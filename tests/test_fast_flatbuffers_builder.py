@@ -1,15 +1,17 @@
 """Experimental fast FlatBuffers builder and codegen: the bytes must equal those of the generic flatbuffers.Builder
-(reference)."""
+(reference); objects read by the codegen must equal those read via flatbuffers.Table (reference)."""
 import linecache
 import math
 import random
 from datetime import datetime, timezone
 
+import flatbuffers
 import numpy as np
 import pytest
 
-from objectbox import experimental, Entity, Id, Int32, Int64, Model, Store, String, Float32Vector, Int64Vector, Bytes
-from objectbox.model.codegen import CodegenBuilder
+from objectbox import experimental, Entity, Id, Int16, Int32, Int64, Float64, Date, Model, Store, String, \
+    Float32Vector, Int64Vector, Bytes
+from objectbox.model.codegen import CodegenBuilder, same_values
 from objectbox.model.fast_builder import FastBuilder
 from tests.common import create_test_store
 from tests.model import TestEntity, TestEntityDatetime, TestEntityFlex, VectorEntity
@@ -31,13 +33,26 @@ ENABLE = {
 
 
 def assert_same_bytes(entity, obj, id=1):
-    """Checks both the fast builder and codegen against the reference."""
+    """Checks both the fast builder and codegen against the reference, and reading the bytes back with codegen."""
     reference = bytes(entity._marshal_builder(obj, id))
     fast = FastBuilder(entity).marshal(obj, id)
     assert fast.hex() == reference.hex()  # hex: readable diff on failure
-    generated = CodegenBuilder(entity).marshal(obj, id)
+    codegen = CodegenBuilder(entity)
+    generated = codegen.marshal(obj, id)
     assert generated.hex() == reference.hex()
+    assert_same_read(entity, reference, codegen)
     return reference
+
+
+def assert_same_read(entity, data, codegen=None):
+    """Checks that codegen reads the same object as the reference (flatbuffers.Table)."""
+    reference = entity._unmarshal_table(data)
+    read = (codegen or CodegenBuilder(entity)).unmarshal(data)
+    assert type(read) is type(reference)
+    for prop in entity._properties:
+        value, expected = getattr(read, prop.name), getattr(reference, prop.name)
+        assert same_values(value, expected), f"{prop.name}: {value!r} != {expected!r}"
+    return read
 
 
 def complex_object(**overrides) -> TestEntity:
@@ -282,3 +297,161 @@ def test_codegen_entities_without_offset_properties(tmp_path):
         assert_same_bytes(Scalars, Scalars())
     finally:
         store.close()
+
+
+def store_for_entity(entity_class, tmp_path):
+    model = Model()
+    model.entity(entity_class)
+    return Store(model=model, directory=str(tmp_path / "db"), model_json_file=str(tmp_path / "model.json"))
+
+
+def test_codegen_read_foreign_layouts(tmp_path):
+    """Codegen reads any valid FlatBuffer like the reference, not only the layout written by this binding:
+    fields in another order, missing fields (vtable entry 0) and shorter vtables (e.g. written by an older model)."""
+    @Entity(model="codegen-read")
+    class Reading:
+        id = Id
+        text = String
+        level = Int16
+        score = Float64
+        when = Date(int)
+        values = Float32Vector
+
+    store = store_for_entity(Reading, tmp_path)
+    try:
+        slot = {prop.name: prop._fb_slot for prop in Reading._properties}
+        assert slot == {"id": 0, "text": 1, "level": 2, "score": 3, "when": 4, "values": 5}
+
+        # Fields in reverse order and with a shared string; "score" missing
+        builder = flatbuffers.Builder(0)
+        text = builder.CreateString("hello")
+        values = builder.CreateNumpyVector(np.array([0.5, -1.5], dtype=np.float32))
+        builder.StartObject(6)
+        builder.PrependUOffsetTRelativeSlot(slot["values"], values, 0)
+        builder.PrependInt64Slot(slot["when"], 1700000000123, 0)
+        builder.PrependInt16Slot(slot["level"], -3, 0)
+        builder.PrependUOffsetTRelativeSlot(slot["text"], text, 0)
+        builder.PrependUint64Slot(slot["id"], 42, 0)
+        builder.Finish(builder.EndObject())
+        read = assert_same_read(Reading, bytes(builder.Output()))
+        assert (read.id, read.text, read.level, read.score, read.when) == (42, "hello", -3, 0.0, 1700000000123)
+        assert read.values.tolist() == [0.5, -1.5]
+
+        # Shorter vtable: only id and text (as written by a model without the other properties)
+        builder = flatbuffers.Builder(0)
+        text = builder.CreateString("old")
+        builder.StartObject(2)
+        builder.PrependUOffsetTRelativeSlot(slot["text"], text, 0)
+        builder.PrependUint64Slot(slot["id"], 7, 0)
+        builder.Finish(builder.EndObject())
+        data = bytes(builder.Output())
+        with pytest.raises(TypeError):  # the reference cannot create a default for the missing numpy vector
+            Reading._unmarshal_table(data)
+        with pytest.raises(TypeError):
+            CodegenBuilder(Reading).unmarshal(data)
+    finally:
+        store.close()
+
+
+def test_codegen_read_older_model(tmp_path, fast_builder_state):
+    """Objects written before properties were added are read with defaults for the new properties."""
+    @Entity(model="codegen-read-v1")
+    class Versioned:
+        id = Id
+        text = String
+
+    store = store_for_entity(Versioned, tmp_path)
+    store.box(Versioned).put(Versioned(text="v1"))
+    store.close()
+
+    @Entity(model="codegen-read-v2")
+    class Versioned:
+        id = Id
+        text = String
+        level = Int32
+        name = String
+
+    store = store_for_entity(Versioned, tmp_path)
+    try:
+        experimental.enable_flatbuffers_codegen(True, verify=True)
+        read = store.box(Versioned).get(1)
+        assert (read.text, read.level, read.name) == ("v1", 0, "")
+    finally:
+        store.close()
+
+
+def test_codegen_read_errors_as_reference(tmp_path, fast_builder_state):
+    """Data the reference cannot read: with codegen enabled, the reference's error is raised."""
+    @Entity(model="codegen-read-errors")
+    class Dated:
+        id = Id
+        when = Date  # datetime: no default for a missing value
+
+    store = store_for_entity(Dated, tmp_path)
+    try:
+        builder = flatbuffers.Builder(0)
+        builder.StartObject(2)
+        builder.PrependUint64Slot(0, 1, 0)
+        builder.Finish(builder.EndObject())
+        data = bytes(builder.Output())
+        with pytest.raises(TypeError) as reference:
+            Dated._unmarshal_table(data)
+        experimental.enable_flatbuffers_codegen()
+        with pytest.raises(reference.type):
+            Dated._unmarshal(data)
+        experimental.enable_flatbuffers_codegen(True, verify=True)
+        with pytest.raises(reference.type):
+            Dated._unmarshal(data)
+    finally:
+        store.close()
+
+
+def test_codegen_read_used(test_store, fast_builder_state):
+    """get, get_many, get_all and queries read with codegen when it is enabled (and only then)."""
+    box = test_store.box(TestEntity)
+    box.put([complex_object(str=f"o{i}", int32=i) for i in range(5)])
+    calls = []
+    experimental.enable_flatbuffers_codegen()
+    TestEntity._marshal(TestEntity(), 1)  # creates the generated functions
+    unmarshal = TestEntity._codegen_builder.unmarshal
+    TestEntity._codegen_builder.unmarshal = lambda data: calls.append(1) or unmarshal(data)
+    assert box.get(1).str == "o0"
+    assert [o.str for o in box.get_many([2, 3])] == ["o1", "o2"]
+    assert len(box.get_all()) == 5
+    assert [o.int32 for o in box.query(TestEntity.int32.greater_than(2)).build().find()] == [3, 4]
+    assert len(calls) == 10
+    experimental.enable_flatbuffers_codegen(False)
+    box.get(1)
+    assert len(calls) == 10
+
+
+def test_codegen_read_verify_detects_differences(test_store, fast_builder_state, monkeypatch):
+    experimental.enable_flatbuffers_codegen(True, verify=True)
+    box = test_store.box(TestEntity)
+    box.put(complex_object())
+    assert box.get(1).str == "foo bar"
+    unmarshal = TestEntity._codegen_builder.unmarshal
+
+    def wrong(data):
+        obj = unmarshal(data)
+        obj.doubles = obj.doubles.astype(np.float32)  # same values, other type
+        return obj
+
+    monkeypatch.setattr(TestEntity._codegen_builder, "unmarshal", wrong)
+    with pytest.raises(AssertionError, match="doubles differs"):
+        box.get(1)
+
+
+def test_codegen_read_source(test_store):
+    builder = CodegenBuilder(TestEntity)
+    assert builder.unmarshal_source.startswith("def unmarshal(data):")
+    assert linecache.getline(builder.unmarshal_filename, 1) == "def unmarshal(data):\n"
+    assert builder.unmarshal_filename != builder.filename
+
+
+def test_same_values():
+    assert same_values(math.nan, math.nan) and same_values([1, [math.nan]], [1, [math.nan]])
+    assert not same_values(1, 1.0) and not same_values(1, True) and not same_values([1], [2])
+    assert same_values(np.array([1.5], np.float32), np.array([1.5], np.float32))
+    assert not same_values(np.array([1.5], np.float32), np.array([1.5], np.float64))
+    assert same_values({"a": [1]}, {"a": [1]}) and not same_values({"a": 1}, {"b": 1})

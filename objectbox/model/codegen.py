@@ -14,10 +14,14 @@
 
 """Experimental FlatBuffers codegen for objects (see objectbox.experimental).
 
-Generates Python source for a marshal function per entity and compiles it once (like dataclasses or attrs generate
-__init__). The generated function does what FastBuilder.marshal does, but unrolled for the entity's properties: no
-loops over property descriptions and no dispatch on property kinds. The layouts (see fast_builder) are shared with a
-FastBuilder, so both produce the same bytes as the generic flatbuffers.Builder.
+Generates Python source for a marshal and an unmarshal function per entity and compiles them once (like dataclasses
+or attrs generate __init__).
+- marshal (put) does what FastBuilder.marshal does, but unrolled for the entity's properties: no loops over property
+  descriptions and no dispatch on property kinds. The layouts (see fast_builder) are shared with a FastBuilder, so both
+  produce the same bytes as the generic flatbuffers.Builder.
+- unmarshal (get, query) does what _Entity._unmarshal_table does (via flatbuffers.Table), with the vtable read at
+  once and one struct call per field. Like the reference, it reads any valid FlatBuffer of the entity (it follows the
+  vtable; fields may be missing or in any order), and it returns the same values (incl. the reference's quirks).
 
 The generated source contains no values: defaults, properties, numpy dtypes etc. are passed via the namespace of
 exec. It is registered in linecache, so tracebacks show the generated lines.
@@ -28,30 +32,46 @@ selected in the generated code instead of the cached one.
 import itertools
 import keyword
 import linecache
+import struct
+from datetime import datetime, timezone
 
 import flatbuffers.flexbuffers
 import numpy as np
 
 from objectbox.model.fast_builder import FastBuilder, _pads, _uint32, _STRING, _BYTES, _NUMPY, _FLEX, \
     _FIELD_SCALAR, _FIELD_OFFSET, _FIELD_ID, _FIELD_DATE, _FIELD_BOOL
+from objectbox.c import OBXPropertyType_String, OBXPropertyType_ByteVector, OBXPropertyType_Flex, \
+    OBXPropertyType_BoolVector, OBXPropertyType_ShortVector, OBXPropertyType_CharVector, OBXPropertyType_IntVector, \
+    OBXPropertyType_LongVector, OBXPropertyType_FloatVector, OBXPropertyType_DoubleVector, OBXPropertyType_Date, \
+    OBXPropertyType_DateNano
 from objectbox.utils import date_value_to_int
 
 _counter = itertools.count(1)  # unique file names for linecache
 
 
 class CodegenBuilder:
-    """Marshals objects of one entity with generated code; created after the entity's IDs are synced."""
+    """Marshals and unmarshals objects of one entity with generated code; created after the entity's IDs are synced.
+    The generated functions are thread-safe: all state is local (layouts are created lazily, see FastBuilder)."""
 
     def __init__(self, entity):
         fast_builder = FastBuilder(entity)
         self.source = _generate_source(fast_builder)
-        self.filename = "<objectbox codegen %s #%d>" % (entity._name, next(_counter))
+        self.filename = _register(self.source, entity, "marshal")
         namespace = _namespace(fast_builder)
         exec(compile(self.source, self.filename, "exec"), namespace)
-        lines = self.source.splitlines(True)
-        linecache.cache[self.filename] = (len(self.source), None, lines, self.filename)  # mtime None: kept
-        # The generated function; thread-safe: all state is local (layouts are created lazily, see FastBuilder)
         self.marshal = namespace["marshal"]
+
+        self.unmarshal_source, namespace = _generate_unmarshal(entity)
+        self.unmarshal_filename = _register(self.unmarshal_source, entity, "unmarshal")
+        exec(compile(self.unmarshal_source, self.unmarshal_filename, "exec"), namespace)
+        self.unmarshal = namespace["unmarshal"]
+
+
+def _register(source: str, entity, kind: str) -> str:
+    """Registers the source in linecache under a unique file name, so tracebacks show the generated lines."""
+    filename = "<objectbox codegen %s %s #%d>" % (kind, entity._name, next(_counter))
+    linecache.cache[filename] = (len(source), None, source.splitlines(True), filename)  # mtime None: kept
+    return filename
 
 
 def _namespace(fast_builder: FastBuilder) -> dict:
@@ -169,3 +189,117 @@ def _generate_source(fast_builder: FastBuilder) -> str:
         parts += ["l%d" % i, "d%d" % i, "z%d" % i]
     add("    return b''.join((%s,))" % ", ".join(parts))
     return "\n".join(lines) + "\n"
+
+
+# Reading: how _Entity._unmarshal_table reads each property type (via flatbuffers.Table)
+_STRUCTS = {}  # struct format: unpack_from
+
+
+def _unpack(fmt: str):
+    unpack = _STRUCTS.get(fmt)
+    if unpack is None:
+        unpack = _STRUCTS[fmt] = struct.Struct(fmt).unpack_from
+    return unpack
+
+
+_numpy_read_dtypes = {  # as Table.GetVectorAsNumpy with these flatbuffers.number_types (note: chars as int16)
+    OBXPropertyType_BoolVector: "bool",
+    OBXPropertyType_ShortVector: "int16",
+    OBXPropertyType_CharVector: "int16",
+    OBXPropertyType_IntVector: "int32",
+    OBXPropertyType_LongVector: "int64",
+    OBXPropertyType_FloatVector: "float32",
+    OBXPropertyType_DoubleVector: "float64",
+}
+
+
+def _set(name: str, name_var: str) -> str:
+    """Statement prefix assigning the attribute on obj; setattr for names that are no plain identifiers."""
+    if name.isidentifier() and not keyword.iskeyword(name):
+        return "    obj.%s = " % name
+    return "    _setattr(obj, %s, " % name_var
+
+
+def _generate_unmarshal(entity):
+    """Source and namespace of unmarshal(data); mirrors _Entity._unmarshal_table property by property."""
+    namespace = {
+        "_new": entity._user_type,
+        "_u32": _unpack("<I"),
+        "_s32": _unpack("<i"),
+        "_u16": _unpack("<H"),
+        "_frombuffer": np.frombuffer,
+        "_flex_loads": flatbuffers.flexbuffers.Loads,
+        "_fromtimestamp": datetime.fromtimestamp,
+        "_utc": timezone.utc,
+        "_setattr": setattr,
+    }
+    properties = entity._properties
+    num_slots = max([prop._fb_slot for prop in properties] + [-1]) + 1
+    namespace["_vtable"] = _unpack("<%dH" % num_slots)
+    full_vtable_size = 4 + 2 * num_slots
+    lines = [
+        "def unmarshal(data):",
+        "    pos = _u32(data, 0)[0]",
+        "    vt = pos - _s32(data, pos)[0]",
+        "    vt_size = _u16(data, vt)[0]",
+        "    if vt_size >= %d:" % full_vtable_size,
+        "        e = _vtable(data, vt + 4)",
+        "    else:  # fewer fields in the vtable (e.g. written by an older model); missing ones read as 0 (= absent)",
+        "        e = _vtable(data[:vt + vt_size] + b'\\0' * %d, vt + 4)" % (full_vtable_size - 4),
+        "    obj = _new()",
+    ]
+    add = lines.append
+    for k, prop in enumerate(properties):
+        ob_type = prop._ob_type
+        py_type = prop._py_type
+        namespace["_n%d" % k] = prop.name
+        namespace["_default%d" % k] = py_type
+        to_list = ".tolist()" if py_type == list else ""
+        add("    o = e[%d]" % prop._fb_slot)
+        add("    if o:")
+        if ob_type in (OBXPropertyType_String, OBXPropertyType_ByteVector, OBXPropertyType_Flex) or \
+                ob_type in _numpy_read_dtypes:
+            add("        p = pos + o")
+            add("        p += _u32(data, p)[0]")
+            add("        n = _u32(data, p)[0]")
+            add("        p += 4")
+            if ob_type == OBXPropertyType_String:
+                add("        v = data[p:p + n].decode('utf-8')")
+            elif ob_type == OBXPropertyType_ByteVector:
+                add("        v = _default%d(data[p:p + n])" % k)
+            elif ob_type == OBXPropertyType_Flex:
+                add("        v = _flex_loads(data[p:p + n])")
+            else:
+                namespace["_dtype%d" % k] = np.dtype(_numpy_read_dtypes[ob_type]).newbyteorder("<")
+                add("        v = _frombuffer(data, dtype=_dtype%d, count=n, offset=p)" % k)
+        else:
+            namespace["_get%d" % k] = _unpack(prop._fb_type.packer_type.format)
+            read = "_get%d(data, pos + o)[0]" % k
+            if ob_type == OBXPropertyType_Date and py_type == datetime:
+                read = "_fromtimestamp(%s / 1000.0, tz=_utc)" % read
+            elif ob_type == OBXPropertyType_Date and py_type == float:
+                read = "%s / 1000.0" % read
+            elif ob_type == OBXPropertyType_DateNano and py_type == datetime:
+                read = "_fromtimestamp(%s / 1000000000.0, tz=_utc)" % read
+            add("        v = " + read)
+        add("    else:")
+        add("        v = _default%d()  # default (empty) value if not present in the object" % k)
+        assign = _set(prop.name, "_n%d" % k)
+        add(assign + "v" + to_list + (")" if assign.startswith("    _setattr") else ""))
+    add("    return obj")
+    return "\n".join(lines) + "\n", namespace
+
+
+def same_values(a, b) -> bool:
+    """Whether two unmarshalled values are equal, incl. their types (numpy arrays: dtype and bytes; NaN equals NaN)."""
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, np.ndarray):
+        return a.dtype == b.dtype and a.shape == b.shape and a.tobytes() == b.tobytes()
+    if isinstance(a, float):
+        return a == b or (a != a and b != b)
+    if isinstance(a, (list, tuple)):
+        return len(a) == len(b) and all(same_values(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(same_values(a[key], b[key]) for key in a)
+    return a == b

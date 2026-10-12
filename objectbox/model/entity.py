@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 import logging
 from objectbox import experimental
 from objectbox.c import *
-from objectbox.model.codegen import CodegenBuilder
+from objectbox.model.codegen import CodegenBuilder, same_values
 from objectbox.model.fast_builder import FastBuilder
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
@@ -252,6 +252,34 @@ class _Entity(object):
         return builder.Output()
 
     def _unmarshal(self, data: bytes):
+        if experimental._flatbuffers_mode != experimental.CODEGEN:
+            return self._unmarshal_table(data)
+        codegen = self._codegen_builder
+        if codegen is None:  # as in _marshal: outside the try, concurrent first calls are fine
+            codegen = self._codegen_builder = CodegenBuilder(self)
+        try:
+            obj = codegen.unmarshal(data)
+            failed = False
+        except Exception:
+            # Invalid data or values the reference cannot read either: it raises its usual error
+            obj, failed = None, True
+        verify = experimental._flatbuffers_verify
+        if failed or verify:
+            reference = self._unmarshal_table(data)
+            if failed:
+                if verify:
+                    raise AssertionError(f"Experimental FlatBuffers codegen failed to unmarshal {self._name}, "
+                                         f"but the reference did not")
+                return reference
+            for prop in self._properties:
+                value, expected = getattr(obj, prop.name), getattr(reference, prop.name)
+                if not same_values(value, expected):
+                    raise AssertionError(f"Experimental FlatBuffers codegen: unmarshalled {self._name}.{prop.name} "
+                                         f"differs from the reference:\n  codegen:   {value!r}\n  reference: {expected!r}")
+        return obj
+
+    def _unmarshal_table(self, data: bytes):
+        """Unmarshals with flatbuffers.Table; the reference for the experimental codegen."""
         pos = flatbuffers.encode.Get(flatbuffers.packer.uoffset, data, 0)
         table = flatbuffers.Table(data, pos)
 
