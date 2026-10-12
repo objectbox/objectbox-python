@@ -116,6 +116,9 @@ if __name__ == "__main__":
     if "--fast-flatbuffers-builder" in sys.argv[1:]:
         experimental.enable_fast_flatbuffers_builder()
         print("Using the experimental fast FlatBuffers builder")
+    elif "--flatbuffers-codegen" in sys.argv[1:]:
+        experimental.enable_flatbuffers_codegen()
+        print("Using the experimental FlatBuffers codegen")
     Store.remove_db_files("testdata")
 
     obPerf = ObjectBoxPerf()
