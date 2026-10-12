@@ -67,7 +67,19 @@ class _Layout:
 
 
 class FastBuilder:
-    """Marshals objects of one entity; created after the entity's IDs are synced (they define the slots)."""
+    """Marshals objects of one entity; created after the entity's IDs are synced (they define the slots).
+
+    Open question: null values. Like the reference, this writes every field, so the layout is fixed per residue.
+    If null values are supported (in the reference first), a null field is left out (vtable entry 0) and the layout
+    depends on which fields are null, too. Caching a layout per null combination does not scale in general: with
+    32 nullable properties there are 2^32 combinations (times 8 residues).
+    Likely approach: cache the layouts for objects without nulls only (as now) and compute the layout per object
+    if a value is null (_create_layout, extended to skip null fields). Measured with the current _create_layout
+    (Python 3.12), this is still about 3x faster than the reference, e.g. 3.2 µs instead of 11.4 µs for an entity
+    with 3 properties, as the reference's time goes mostly to writing value by value (~170 Python calls per object),
+    not to computing the layout. If needed, a small, size-limited cache for frequent null combinations could follow;
+    a fallback to the reference instead would make objects with nulls ~12x slower.
+    """
 
     def __init__(self, entity):
         self._num_slots = entity._last_property_iduid.id
