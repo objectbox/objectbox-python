@@ -363,3 +363,23 @@ def test_get_many(test_store):
     assert objects[1] is None
     assert objects[2].str == "Object 2"
     assert objects[3] is None
+
+
+def test_put_new_object_ids(test_store):
+    """New objects get their ID while putting; on failure, the object keeps ID 0."""
+    box = test_store.box(TestEntity)
+    first, second = TestEntity(str="first"), TestEntity(str="second")
+    assert box.put(first) == first.id == 1
+    with test_store.write_tx():
+        assert box.put(second) == second.id == 2
+    assert box.get(2).id == 2 and box.get(2).str == "second"  # the ID is also in the stored data
+    first.str = "first updated"
+    assert box.put(first) == 1  # update
+    assert box.count() == 2 and box.get(1).str == "first updated"
+
+    failing = TestEntity(str="fails")
+    with pytest.raises(DbError):
+        with test_store.read_tx():
+            box.put(failing)  # no write in a read transaction
+    assert box._entity._get_object_id(failing) == 0  # not set
+    assert box.count() == 2

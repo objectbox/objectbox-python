@@ -60,17 +60,19 @@ class Box:
             return self._put_one(objects[0])
 
     def _put_one(self, obj) -> int:
-        id = object_id = self._entity._get_object_id(obj)
+        id = self._entity._get_object_id(obj)
 
-        if not id:
-            id = obx_box_id_for_put(self._c_box, 0)
+        if id:
+            data = self._entity._marshal(obj, id)
+            obx_box_put(self._c_box, id, bytes(data), len(data))
+            return id
 
-        data = self._entity._marshal(obj, id)
-        obx_box_put(self._c_box, id, bytes(data), len(data))
-
-        if id != object_id:
-            self._entity._set_object_id(obj, id)
-
+        # New object: the ID is assigned while putting (saves a C call to reserve it); this writes the ID into the
+        # data, so it must be a writable copy.
+        data = self._entity._marshal(obj, 0)
+        size = len(data)
+        id = obx_box_put_object(self._c_box, ctypes.create_string_buffer(bytes(data), size), size)
+        self._entity._set_object_id(obj, id)
         return id
 
     def _put_many(self, objects) -> None:

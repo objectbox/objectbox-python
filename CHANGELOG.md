@@ -35,6 +35,7 @@ ObjectBox Python ChangeLog
 * Faster reads (get, queries): copying an object's data from the database takes ~0.4 µs instead of ~1 µs.
   Transactions (`read_tx()`, `write_tx()`, also used internally) have ~0.7 µs less overhead.
   Together, e.g. `box.get()` of a small object takes ~4.3 µs instead of ~6.9 µs (with the FlatBuffers codegen).
+* Faster put of a single new object: its ID is assigned while putting, saving a call to reserve it (~0.3 µs)
 * Fix `Int8List` properties: putting and reading objects failed. Values are lists of signed 8-bit integers (-128 to 127).
 * Fix reading list properties (e.g. `Int32List`) that are not present in a stored object, e.g. added to the entity
   after the object was put: this failed instead of returning an empty list.
