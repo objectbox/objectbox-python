@@ -319,7 +319,7 @@ def _generate_unmarshal(entity):
             add("        n = _u32(data, p)[0]")
             add("        p += 4")
             if ob_type == OBXPropertyType_String:
-                add("        v = data[p:p + n].decode('utf-8')")
+                add("        v = data[p:p + n].decode()")  # UTF-8 (the default; faster without the argument)
             elif ob_type == OBXPropertyType_ByteVector:
                 if py_type == list:  # Int8List: signed bytes
                     namespace["_array"] = array
@@ -339,11 +339,11 @@ def _generate_unmarshal(entity):
             namespace["_get%d" % k] = _unpack("<" + prop._fb_format)
             read = "_get%d(data, pos + o)[0]" % k
             if ob_type == OBXPropertyType_Date and py_type == datetime:
-                read = "_fromtimestamp(%s / 1000.0, tz=_utc)" % read
+                read = "_fromtimestamp(%s / 1000.0, _utc)" % read  # tz positionally: faster
             elif ob_type == OBXPropertyType_Date and py_type == float:
                 read = "%s / 1000.0" % read
             elif ob_type == OBXPropertyType_DateNano and py_type == datetime:
-                read = "_fromtimestamp(%s / 1000000000.0, tz=_utc)" % read
+                read = "_fromtimestamp(%s / 1000000000.0, _utc)" % read
             add("        v = " + read)
         add("    else:")
         add("        v = _default%d()  # default (empty) value if not present in the object" % k)
