@@ -68,17 +68,17 @@ class _Layout:
 class FastBuilder:
     """Marshals objects of one entity; created after the entity's IDs are synced (they define the slots).
 
-    Open question: null values. Like the reference, this writes every field, so the layout is fixed per residue.
-    If null values are supported (in the reference first), a null field is left out (vtable entry 0) and the layout
-    depends on which fields are null, too. Caching a layout per null combination does not scale in general: with
-    32 nullable properties there are 2^32 combinations (times 8 residues).
-    Likely approach: cache the layouts for objects without nulls only (as now) and compute the layout per object
-    if a value is null (_create_layout, extended to skip null fields). Measured with the current _create_layout
-    (Python 3.12), this is still about 3x faster than the reference, e.g. 3.2 µs instead of 11.4 µs for an entity
-    with 3 properties, as the reference's time goes mostly to writing value by value (~170 Python calls per object),
-    not to computing the layout. If needed, a small, size-limited cache for frequent null combinations could follow;
-    a fallback to the reference instead would make objects with nulls ~12x slower.
+    Null values: a property set to None (not just unset; Flex stores None as a value) is left out of the object
+    (vtable entry 0), as by the reference. Then the layout also depends on which fields are null; caching a layout
+    per null combination does not scale in general (2^32 combinations for 32 properties, times 8 residues).
+    So the 8 cached layouts are for objects without nulls; an object with a null value is marshalled again by
+    marshal_with_nulls(), with the layout for its nulls from a size-limited cache (frequent combinations), else
+    computed per object. Computing a layout per object is still ~3x faster than the reference (e.g. 3.2 µs instead
+    of 11.4 µs for an entity with 3 properties, Python 3.12), as the reference's time goes mostly to writing value
+    by value (~170 Python calls per object), not to computing the layout.
     """
+
+    _MAX_NULL_LAYOUTS = 256  # layouts cached for objects with nulls, per entity (keyed by residue and nulls)
 
     def __init__(self, entity):
         self._num_slots = entity._last_property_iduid.id
@@ -86,6 +86,7 @@ class FastBuilder:
 
         # Offset properties in creation order: (kind, name, property (= unset), default value, numpy dtype)
         offset_props = []
+        self._alignments = {}  # property name: alignment of a vector's data (numpy); for minalign with nulls
         self._np = None  # numpy, if there are numpy vectors
         self._flex_builder = None  # flatbuffers.flexbuffers.Builder, if there are flex properties
         for prop in entity._offset_properties:
@@ -105,6 +106,7 @@ class FastBuilder:
                 kind, dtype = _NUMPY, np.dtype(_numpy_dtypes[ob_type])
                 default = np.array([]) if prop._is_ndarray else prop._py_type()
                 minalign = max(minalign, np.dtype(dtype).alignment)
+                self._alignments[prop.name] = np.dtype(dtype).alignment
             offset_props.append((kind, prop.name, prop, default, dtype))
         self._offset_props = offset_props
 
@@ -136,6 +138,10 @@ class FastBuilder:
         self._fields_in_memory_order = fields_in_memory_order
         self._minalign = minalign
         self._layouts = [None] * 8
+        self._null_layouts = {}  # (residue, nulls): _Layout
+        # Properties that can be null, in _properties order (not the ID; Flex stores None as a value)
+        self._nullable_names = [prop.name for prop, _, _ in self._fields
+                                if prop is not entity._id_property and prop._ob_type != OBXPropertyType_Flex]
 
     def _layout(self, residue: int) -> _Layout:
         # Thread-safe without a lock: concurrent first calls create equal layouts, one of them is kept
@@ -144,12 +150,30 @@ class FastBuilder:
             layout = self._layouts[residue] = self._create_layout(residue)
         return layout
 
-    def _create_layout(self, residue: int) -> _Layout:
-        """Simulates the reference Builder from step 2 on (see module doc), starting at off = residue."""
+    def _null_layout(self, residue: int, nulls: frozenset) -> _Layout:
+        key = (residue, nulls)
+        layout = self._null_layouts.get(key)
+        if layout is None:
+            layout = self._create_layout(residue, nulls)
+            if len(self._null_layouts) < self._MAX_NULL_LAYOUTS:
+                self._null_layouts[key] = layout
+        return layout
+
+    def _create_layout(self, residue: int, nulls: frozenset = frozenset()) -> _Layout:
+        """Simulates the reference Builder from step 2 on (see module doc), starting at off = residue.
+        nulls: names of the properties left out (None)."""
         off = residue
         writes = []  # back to front: (struct format, offset field adjust or None)
         slots = [0] * self._num_slots
+        minalign = self._minalign
+        if nulls:  # as the reference's Builder.minalign: the largest alignment of what is written
+            minalign = 4
+            for prop, fmt, width in self._fields:
+                if prop.name not in nulls:
+                    minalign = max(minalign, width, self._alignments.get(prop.name, 1))
         for prop, fmt, width in self._fields:
+            if prop.name in nulls:
+                continue  # no field, vtable slot 0
             pad = -off & (width - 1)
             off += pad
             writes.append(('x' * pad, None))
@@ -168,7 +192,7 @@ class FastBuilder:
         vtable_size = (num_slots + 2) * 2
         vtable = [vtable_size, object_offset - residue] + [object_offset - s if s else 0 for s in slots[:num_slots]]
         off += vtable_size
-        pad_finish = -(off + 4) & (self._minalign - 1)
+        pad_finish = -(off + 4) & (minalign - 1)
         off += pad_finish
         root = off + 4 - object_offset
 
@@ -183,9 +207,16 @@ class FastBuilder:
                 offset_adjust.append(adjust)
         return _Layout(prefix, struct.Struct(fmt), offset_adjust)
 
-    def marshal(self, obj, id: int) -> bytes:
+    def marshal_with_nulls(self, obj, id: int) -> bytes:
+        """marshal() for an object with null values (properties set to None); see the class doc."""
+        nulls = frozenset(name for name in self._nullable_names if getattr(obj, name) is None)
+        return self.marshal(obj, id, nulls)
+
+    def marshal(self, obj, id: int, nulls: frozenset = None) -> bytes:
         """Returns the FlatBuffer of the given object, with the given ID (same bytes as _Entity._marshal_builder).
-        Thread-safe: all state is local; unlike the reference, this needs no thread-local builder."""
+        Thread-safe: all state is local; unlike the reference, this needs no thread-local builder.
+        nulls: None, or (from marshal_with_nulls) the names of the properties that are None; with None, the first
+        null value found restarts via marshal_with_nulls()."""
         uint32_pack = _uint32.pack
         pads = _pads
         np = self._np
@@ -199,6 +230,11 @@ class FastBuilder:
             val = getattr(obj, name)
             if val is prop:
                 val = default
+            elif val is None and kind != _FLEX:
+                if nulls is None:
+                    return self.marshal_with_nulls(obj, id)
+                var_offs.append(None)  # null: no data
+                continue
             if kind == _STRING:
                 data = val.encode('utf-8')
                 n = len(data)
@@ -242,26 +278,43 @@ class FastBuilder:
             var_offs.append(off)
 
         # Steps 2-4: the fields in memory order (reverse _properties order)
-        layout = self._layout(off & 7)
+        layout = self._layout(off & 7) if nulls is None else self._null_layout(off & 7, nulls)
         offset_adjust = layout.offset_adjust
         offset_field = 0
         values = []
         for kind, name, prop, data in self._fields_in_memory_order:
             if kind == _FIELD_SCALAR:
                 val = getattr(obj, name)
-                values.append(data if val is prop else val)
+                if val is prop:
+                    val = data
+                elif val is None:
+                    if nulls is None:
+                        return self.marshal_with_nulls(obj, id)
+                    continue
+                values.append(val)
             elif kind == _FIELD_OFFSET:
-                values.append(off + offset_adjust[offset_field] - var_offs[data])
+                var_off = var_offs[data]
+                if var_off is None:
+                    continue  # null
+                values.append(off + offset_adjust[offset_field] - var_off)
                 offset_field += 1
             elif kind == _FIELD_ID:
                 values.append(id)
             elif kind == _FIELD_DATE:
                 val = getattr(obj, name)
+                if val is None:
+                    if nulls is None:
+                        return self.marshal_with_nulls(obj, id)
+                    continue
                 values.append(date_value_to_int(0.0 if val is prop else val, data))
             else:  # _FIELD_BOOL
                 val = getattr(obj, name)
                 if val is prop:
                     val = False
+                elif val is None:
+                    if nulls is None:
+                        return self.marshal_with_nulls(obj, id)
+                    continue
                 elif not (False <= val <= True):
                     raise TypeError("bad number %s for type bool" % str(val))  # as flatbuffers' enforce_number
                 values.append(val)

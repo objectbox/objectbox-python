@@ -9,7 +9,7 @@ import flatbuffers
 import numpy as np
 import pytest
 
-from objectbox import experimental, Entity, Id, Int16, Int32, Int64, Float64, Date, Model, Store, String, \
+from objectbox import experimental, Entity, Id, Int8, Int16, Int32, Int64, Float64, Date, Model, Store, String, \
     Float32Vector, Int64Vector, Bytes, Int8List, Float32List, Flex
 from objectbox.model.codegen import CodegenBuilder, same_values
 from objectbox.model.fast_builder import FastBuilder
@@ -172,8 +172,23 @@ def test_property_id_gaps(tmp_path):
 
 
 def test_none_values(test_store):
-    # No null support: None fails in all builders
-    for obj in [TestEntity(str=None), TestEntity(int32=None), TestEntity(longs=[None])]:
+    # A property set to None is left out of the object (null), by all builders; unset properties are written as defaults
+    for name in ["str", "bool", "int64", "int32", "int16", "int8", "float64", "float32", "bools", "bytes", "shorts",
+                 "chars", "ints", "longs", "floats", "doubles", "bools_list", "bytes_list", "shorts_list",
+                 "chars_list", "ints_list", "longs_list", "floats_list", "doubles_list", "date", "date_nano"]:
+        for obj in [TestEntity(**{name: None}), complex_object(**{name: None})]:
+            data = assert_same_bytes(TestEntity, obj)
+            assert data != assert_same_bytes(TestEntity, TestEntity(**{name: getattr(TestEntity(), name)})), name
+    # Flex stores None as a value (as before), so it is not left out
+    assert_same_bytes(TestEntity, complex_object(flex=None))
+    # Several and all
+    assert_same_bytes(TestEntity, complex_object(str=None, int8=None, doubles=None, date=None, bytes_list=None))
+    all_none = {prop.name: None for prop in TestEntity._properties if prop.name not in ("id", "flex")}
+    assert_same_bytes(TestEntity, TestEntity(**all_none))
+    assert_same_bytes(TestEntityDatetime, TestEntityDatetime(date=None, date_nano=None))
+    assert_same_bytes(VectorEntity, VectorEntity(name=None, vector_euclidean=[1.0]))
+    # None inside a vector is still invalid
+    for obj in [TestEntity(longs=[None]), TestEntity(longs_list=[1, None])]:
         with pytest.raises(Exception):
             TestEntity._marshal_builder(obj, 1)
         with pytest.raises(Exception):
@@ -182,11 +197,69 @@ def test_none_values(test_store):
             CodegenBuilder(TestEntity).marshal(obj, 1)
 
 
+def test_none_values_alignment(tmp_path):
+    """With nulls, the layout differs (fields left out); minalign too, if the only 8-byte field is null."""
+    @Entity(model="none-alignment")
+    class Mixed:
+        id = Id
+        text = String
+        big = Int64
+        small = Int16
+        flag = Int8
+        vector = Float32Vector
+
+    store = Store(model="none-alignment", directory=str(tmp_path / "db"), model_json_file=str(tmp_path / "m.json"))
+    try:
+        rng = random.Random(7)
+        names = ["text", "big", "small", "flag", "vector"]
+        for i in range(300):
+            values = dict(text="t" * rng.randrange(0, 12), big=rng.randrange(-2 ** 40, 2 ** 40), small=-3, flag=1,
+                          vector=[0.5] * rng.randrange(0, 5))
+            for name in rng.sample(names, rng.randrange(0, len(names) + 1)):
+                values[name] = None
+            assert_same_bytes(Mixed, Mixed(**values), id=i + 1)
+    finally:
+        store.close()
+
+
+def test_none_values_layout_cache(test_store):
+    builder = FastBuilder(TestEntity)
+    first = builder.marshal(TestEntity(str="a", int32=None), 1)
+    assert len(builder._null_layouts) == 1
+    assert builder.marshal(TestEntity(str="b", int32=None), 1) == first.replace(b"a\0", b"b\0")
+    assert len(builder._null_layouts) == 1  # same residue and nulls: cached
+    builder.marshal(TestEntity(str="a", int64=None), 1)
+    assert len(builder._null_layouts) == 2
+    builder.marshal(TestEntity(str="a"), 1)
+    assert len(builder._null_layouts) == 2  # without nulls: the regular layouts
+    # Beyond the limit, layouts are computed per object (not cached); the bytes are the same
+    builder._null_layouts.clear()
+    builder._MAX_NULL_LAYOUTS = 2
+    for name in ["int8", "int16", "int32", "int64", "float32", "float64"]:
+        obj = TestEntity(str="x", **{name: None})
+        assert builder.marshal(obj, 1) == bytes(TestEntity._marshal_builder(obj, 1))
+        assert builder.marshal(obj, 1) == bytes(TestEntity._marshal_builder(obj, 1))  # cached or not
+    assert len(builder._null_layouts) == 2
+
+
+@pytest.mark.parametrize("mode", [None] + list(ENABLE))
+def test_none_values_put_get(test_store, fast_builder_state, mode):
+    # Nulls are read back as defaults (as properties missing from an object), in all modes
+    experimental._flatbuffers_mode = None
+    if mode:
+        ENABLE[mode](True, verify=True)
+    box = test_store.box(TestEntity)
+    id = box.put(complex_object(str=None, int32=None, bool=None, floats=None, bytes_list=None, date=None))
+    read = box.get(id)
+    assert (read.str, read.int32, read.bool, read.bytes_list) == ("", 0, False, [])
+    assert read.date == datetime.fromtimestamp(0, timezone.utc)
+    assert read.floats.dtype == np.float32 and read.floats.size == 0
+    assert read.int64 == -1234567890123  # other values unaffected
 @pytest.mark.parametrize("mode", ENABLE)
 def test_invalid_values_raise_reference_errors(test_store, fast_builder_state, mode):
     # With an experimental builder enabled, invalid values raise the same errors as without it
     for obj in [TestEntity(int8=128), TestEntity(int32=2 ** 31), TestEntity(bool=2), TestEntity(int64=1.5),
-                TestEntity(str=None), TestEntity(bytes="not bytes")]:
+                TestEntity(bytes="not bytes")]:
         experimental._flatbuffers_mode = None
         with pytest.raises(Exception) as reference:
             TestEntity._marshal(obj, 1)
@@ -275,7 +348,7 @@ def test_codegen_source(test_store):
     assert "foo" not in builder.source and "1.5" not in builder.source
     assert linecache.getline(builder.filename, 1) == "def marshal(obj, id):\n"
     with pytest.raises(AttributeError) as error:
-        builder.marshal(TestEntity(str=None), 1)
+        builder.marshal(TestEntity(str=42), 1)
     assert any(entry.path == builder.filename and "encode" in str(entry.statement) for entry in error.traceback)
     assert CodegenBuilder(TestEntity).filename != builder.filename  # unique per builder
 

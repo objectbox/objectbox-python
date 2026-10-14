@@ -36,6 +36,10 @@ ObjectBox Python ChangeLog
   Transactions (`read_tx()`, `write_tx()`, also used internally) have ~0.7 µs less overhead.
   Together, e.g. `box.get()` of a small object takes ~4.3 µs instead of ~6.9 µs (with the FlatBuffers codegen).
 * Faster put of a single new object: its ID is assigned while putting, saving a call to reserve it (~0.3 µs)
+* Putting objects with `None` values: a property set to `None` is stored as null (left out of the stored object), where
+  putting failed before. Reading is unchanged: a null value reads back as the property's default (e.g. `""`, `0`), as
+  any property missing from a stored object. Properties that are not set at all are still stored with their default.
+  Exceptions: `None` inside a vector or list still fails; `Flex` properties store `None` as a value (as before).
 * Fix `Int8List` properties: putting and reading objects failed. Values are lists of signed 8-bit integers (-128 to 127).
 * Fix reading list properties (e.g. `Int32List`) that are not present in a stored object, e.g. added to the entity
   after the object was put: this failed instead of returning an empty list.

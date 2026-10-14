@@ -200,8 +200,12 @@ class _Entity(object):
 
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}
+        nulls = set()  # IDs of properties set to None: left out of the object (null; Flex stores None as a value)
         for prop in self._offset_properties:
             val = self._get_value(object, prop)
+            if val is None and prop._ob_type != OBXPropertyType_Flex:
+                nulls.add(prop.id)
+                continue
             if prop._ob_type == OBXPropertyType_String:
                 offsets[prop.id] = builder.CreateString(val.encode('utf-8'))
             elif prop._ob_type == OBXPropertyType_BoolVector:
@@ -243,8 +247,12 @@ class _Entity(object):
                 val = offsets[prop_id]
                 if val:
                     builder.PrependUOffsetTRelative(val)
+            elif prop_id in nulls:
+                continue
             else:
                 val = id if prop == self._id_property else self._get_value(object, prop)
+                if val is None:
+                    continue  # null: no field, no vtable slot
                 if prop._ob_type == OBXPropertyType_Date:
                     val = date_value_to_int(val, 1000)  # convert to milliseconds
                 elif prop._ob_type == OBXPropertyType_DateNano:

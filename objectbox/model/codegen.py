@@ -25,8 +25,9 @@ or attrs generate __init__).
 
 The generated source contains no values: defaults, properties, numpy dtypes etc. are passed via the namespace of
 exec. It is registered in linecache, so tracebacks show the generated lines.
-The open question on null values (see FastBuilder) applies here as well; a layout computed per object would be
-selected in the generated code instead of the cached one.
+Null values: the generated marshal checks each value for None; an object with a null value is marshalled by
+FastBuilder.marshal_with_nulls (generic, layout per null combination; see FastBuilder), objects without nulls are
+unaffected but for these checks. Reading is unchanged: a missing field reads as the default, as in the reference.
 """
 
 import hashlib
@@ -131,6 +132,7 @@ def _namespace(fast_builder: FastBuilder) -> dict:
     namespace = {
         "_layouts": fast_builder._layouts,
         "_layout": fast_builder._layout,
+        "_marshal_with_nulls": fast_builder.marshal_with_nulls,  # objects with null values: generic, slower
         "_pads": _pads,
         "_uint32_pack": _uint32.pack,
         "_date_value_to_int": date_value_to_int,
@@ -173,6 +175,7 @@ def _generate_source(fast_builder: FastBuilder) -> str:
         add("    v = " + _get(name, "_n%d" % i))
         if kind == _STRING:
             add("    if v is _p%d: v = ''" % i)
+            add("    elif v is None: return _marshal_with_nulls(obj, id)")
             add("    d%d = v.encode('utf-8')" % i)
             add("    n = _len(d%d)" % i)
             add("    pad = -(off + n + 1) & 3")
@@ -181,6 +184,7 @@ def _generate_source(fast_builder: FastBuilder) -> str:
             add("    off += pad + 1 + n + 4")
         elif kind == _NUMPY:
             add("    if v is _p%d: v = _d%d" % (i, i))
+            add("    elif v is None: return _marshal_with_nulls(obj, id)")
             add("    a = _asarray(v, dtype=_t%d)" % i)
             add("    if a.ndim > 1: raise TypeError('multidimensional-ndarray passed to CreateNumpyVector')")
             add("    if a.dtype.str[0] != '<': a = a.byteswap(inplace=False)")
@@ -195,6 +199,7 @@ def _generate_source(fast_builder: FastBuilder) -> str:
         else:  # _BYTES, _INT8_LIST, _FLEX
             if kind == _INT8_LIST:
                 add("    if v is _p%d: v = _d%d" % (i, i))
+                add("    elif v is None: return _marshal_with_nulls(obj, id)")
                 add("    d%d = _array('b', v).tobytes()" % i)
             elif kind == _FLEX:
                 add("    if v is _p%d: v = None" % i)
@@ -203,6 +208,7 @@ def _generate_source(fast_builder: FastBuilder) -> str:
                 add("    d%d = _bytes(flex.Finish())" % i)
             else:
                 add("    if v is _p%d: v = _d%d" % (i, i))
+                add("    elif v is None: return _marshal_with_nulls(obj, id)")
                 add("    if not _isinstance(v, _bytes): raise TypeError('non-byte vector passed to CreateByteVector')")
                 add("    d%d = v" % i)
             add("    n = _len(d%d)" % i)
@@ -231,12 +237,15 @@ def _generate_source(fast_builder: FastBuilder) -> str:
             add("    s%d = %s" % (j, _get(name, "_fn%d" % j)))
             if kind == _FIELD_SCALAR:
                 add("    if s%d is _fp%d: s%d = _fd%d" % (j, j, j, j))
+                add("    elif s%d is None: return _marshal_with_nulls(obj, id)" % j)
                 values.append("s%d" % j)
             elif kind == _FIELD_DATE:
+                add("    if s%d is None: return _marshal_with_nulls(obj, id)" % j)
                 values.append("_date_value_to_int(0.0 if s%d is _fp%d else s%d, _fd%d)" % (j, j, j, j))
             else:  # _FIELD_BOOL
                 assert kind == _FIELD_BOOL
                 add("    if s%d is _fp%d: s%d = False" % (j, j, j))
+                add("    elif s%d is None: return _marshal_with_nulls(obj, id)" % j)
                 add("    elif not (False <= s%d <= True): raise TypeError('bad number %%s for type bool' %% _str(s%d))"
                     % (j, j))
                 values.append("s%d" % j)
