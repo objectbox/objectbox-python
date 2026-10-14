@@ -321,6 +321,17 @@ class Property:
             if isinstance(self.index, Index):  # Generic index
                 self._flags |= self.index.type
 
+    def is_null(self) -> PropertyQueryCondition:
+        """ *Is null* condition to be passed to :func:`Box.query`: matches objects without a value for this property,
+        i.e. it was put with None (unset properties are stored with their default value, not null) """
+        self._assert_ids_assigned()
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.IS_NULL, {})
+
+    def is_not_null(self) -> PropertyQueryCondition:
+        """ *Is not null* condition to be passed to :func:`Box.query`: matches objects with a value for this property """
+        self._assert_ids_assigned()
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_NULL, {})
+
     def _assert_ids_assigned(self):
         # Using assert(s) so they can be optionally disabled for performance
         assert self.iduid.is_assigned(), f"Property \"{self.name}\" ID not assigned"

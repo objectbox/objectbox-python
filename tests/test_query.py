@@ -331,6 +331,33 @@ def test_offset_limit(test_store):
     assert [o.str for o in query.offset(1).limit(2).find()] == ["a", "b"]
 
 
+def test_null(test_store):
+    box = test_store.box(TestEntity)
+    id_none = box.put(TestEntity(str=None, int64=None, float64=None, date=None))  # null: put with None
+    id_unset = box.put(TestEntity())  # unset: stored with default values, not null
+    id_set = box.put(TestEntity(str="a", int64=1, float64=1.5, date=1700000000000))
+
+    def ids(condition):
+        return sorted(box.query(condition).build().find_ids())
+
+    for prop in [TestEntity.str, TestEntity.int64, TestEntity.float64, TestEntity.date]:
+        assert ids(prop.is_null()) == [id_none], prop.name
+        assert ids(prop.is_not_null()) == [id_unset, id_set], prop.name
+    # Null values read back as defaults, but do not match conditions on the default value
+    assert box.get(id_none).str == ""
+    assert ids(TestEntity.str.equals("")) == [id_unset]
+    assert ids(TestEntity.int64.equals(0)) == [id_unset]
+    # Combined, and via QueryBuilder
+    assert ids(TestEntity.str.is_null() | TestEntity.str.equals("a")) == [id_none, id_set]
+    assert ids(TestEntity.str.is_not_null() & TestEntity.int64.equals(0)) == [id_unset]
+    qb = box.query()
+    qb.is_null(TestEntity.int64)
+    assert qb.build().find_ids() == [id_none]
+    qb = box.query()
+    qb.not_null("int64")
+    assert sorted(qb.build().find_ids()) == [id_unset, id_set]
+
+
 def test_any_all(test_store):
     box = test_store.box(TestEntity)
 

@@ -40,6 +40,8 @@ ObjectBox Python ChangeLog
   putting failed before. Reading is unchanged: a null value reads back as the property's default (e.g. `""`, `0`), as
   any property missing from a stored object. Properties that are not set at all are still stored with their default.
   Exceptions: `None` inside a vector or list still fails; `Flex` properties store `None` as a value (as before).
+* Query: new conditions `is_null()` and `is_not_null()` (e.g. `Task.text.is_null()`), also as `QueryBuilder.is_null()`
+  and `not_null()`. Null values (put with `None`) do not match conditions on the default value, e.g. `equals("")`.
 * Fix `Int8List` properties: putting and reading objects failed. Values are lists of signed 8-bit integers (-128 to 127).
 * Fix reading list properties (e.g. `Int32List`) that are not present in a stored object, e.g. added to the entity
   after the object was put: this failed instead of returning an empty list.
