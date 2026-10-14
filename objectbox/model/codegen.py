@@ -270,6 +270,23 @@ _numpy_read_dtypes = {  # as Table.GetVectorAsNumpy with these flatbuffers.numbe
 }
 
 
+def absent_value_factory(prop):
+    """Callable without arguments returning the value read for a property missing from an object (written as null,
+    or by an older model): its default, as an unset property is written. For most types, the type itself (e.g. str()
+    gives ''); datetime, numpy arrays and Flex cannot be created that way."""
+    ob_type = prop._ob_type
+    if ob_type == OBXPropertyType_Flex:
+        return lambda: None
+    if prop._py_type == datetime:
+        epoch = datetime.fromtimestamp(0, timezone.utc)
+        return lambda: epoch  # immutable
+    if prop._is_ndarray:
+        import numpy as np  # imported already: numpy arrays are only read with numpy
+        dtype = np.dtype(_numpy_read_dtypes[ob_type]).newbyteorder("<")
+        return lambda: np.array([], dtype=dtype)
+    return prop._py_type
+
+
 def _set(name: str, name_var: str) -> str:
     """Statement prefix assigning the attribute on obj; setattr for names that are no plain identifiers."""
     if name.isidentifier() and not keyword.iskeyword(name):
@@ -309,6 +326,7 @@ def _generate_unmarshal(entity):
         py_type = prop._py_type
         namespace["_n%d" % k] = prop.name
         namespace["_default%d" % k] = py_type
+        namespace["_absent%d" % k] = absent_value_factory(prop)
         to_list = ".tolist()" if py_type == list else ""  # list types: read as numpy arrays
         add("    o = e[%d]" % prop._fb_slot)
         add("    if o:")
@@ -346,7 +364,7 @@ def _generate_unmarshal(entity):
                 read = "_fromtimestamp(%s / 1000000000.0, _utc)" % read
             add("        v = " + read)
         add("    else:")
-        add("        v = _default%d()  # default (empty) value if not present in the object" % k)
+        add("        v = _absent%d()  # default (empty) value if not present in the object" % k)
         assign = _set(prop.name, "_n%d" % k)
         add(assign + "v" + (")" if assign.startswith("    _setattr") else ""))
     add("    return obj")

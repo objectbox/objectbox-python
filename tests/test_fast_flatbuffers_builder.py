@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from objectbox import experimental, Entity, Id, Int16, Int32, Int64, Float64, Date, Model, Store, String, \
-    Float32Vector, Int64Vector, Bytes, Int8List, Float32List
+    Float32Vector, Int64Vector, Bytes, Int8List, Float32List, Flex
 from objectbox.model.codegen import CodegenBuilder, same_values
 from objectbox.model.fast_builder import FastBuilder
 from tests.common import create_test_store
@@ -345,10 +345,8 @@ def test_codegen_read_foreign_layouts(tmp_path):
         builder.PrependUint64Slot(slot["id"], 7, 0)
         builder.Finish(builder.EndObject())
         data = bytes(builder.Output())
-        with pytest.raises(TypeError):  # the reference cannot create a default for the missing numpy vector
-            Reading._unmarshal_table(data)
-        with pytest.raises(TypeError):
-            CodegenBuilder(Reading).unmarshal(data)
+        read = assert_same_read(Reading, data)  # the missing numpy vector: empty
+        assert read.id == 7 and read.values.dtype == np.float32 and read.values.size == 0
     finally:
         store.close()
 
@@ -372,12 +370,22 @@ def test_codegen_read_older_model(tmp_path, fast_builder_state):
         name = String
         bytes_list = Int8List
         floats_list = Float32List
+        created = Date(py_type=datetime)
+        vector = Float32Vector
+        flex = Flex
 
     store = store_for_entity(Versioned, tmp_path)
     try:
         experimental.enable_flatbuffers_codegen(True, verify=True)
         read = store.box(Versioned).get(1)
         assert (read.text, read.level, read.name, read.bytes_list, read.floats_list) == ("v1", 0, "", [], [])
+        # Types whose default cannot be created by calling the type (failed to read before)
+        assert read.created == datetime.fromtimestamp(0, timezone.utc)
+        assert read.vector.dtype == np.float32 and read.vector.size == 0
+        assert read.flex is None
+        experimental._flatbuffers_mode = None  # the reference reads the same
+        read = store.box(Versioned).get(1)
+        assert read.created == datetime.fromtimestamp(0, timezone.utc) and read.vector.size == 0
     finally:
         store.close()
 
@@ -387,16 +395,18 @@ def test_codegen_read_errors_as_reference(tmp_path, fast_builder_state):
     @Entity(model="codegen-read-errors")
     class Dated:
         id = Id
-        when = Date  # datetime: no default for a missing value
+        text = String
 
     store = store_for_entity(Dated, tmp_path)
     try:
         builder = flatbuffers.Builder(0)
+        text = builder.CreateString(b"\xff\xfe")  # invalid UTF-8
         builder.StartObject(2)
+        builder.PrependUOffsetTRelativeSlot(1, text, 0)
         builder.PrependUint64Slot(0, 1, 0)
         builder.Finish(builder.EndObject())
         data = bytes(builder.Output())
-        with pytest.raises(TypeError) as reference:
+        with pytest.raises(UnicodeDecodeError) as reference:
             Dated._unmarshal_table(data)
         experimental.enable_flatbuffers_codegen()
         with pytest.raises(reference.type):

@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 import logging
 from objectbox import experimental
 from objectbox.c import *
-from objectbox.model.codegen import CodegenBuilder, same_values
+from objectbox.model.codegen import CodegenBuilder, same_values, absent_value_factory
 from objectbox.model.fast_builder import FastBuilder
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
@@ -299,7 +299,7 @@ class _Entity(object):
             val = None
             ob_type = prop._ob_type
             if not o:
-                setattr(obj, prop.name, prop._py_type())  # use default (empty) value if not present in the object
+                setattr(obj, prop.name, absent_value_factory(prop)())  # default (empty) value if not present
                 continue
             elif ob_type == OBXPropertyType_String:
                 val = table.String(o + table.Pos).decode('utf-8')

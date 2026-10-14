@@ -39,6 +39,10 @@ ObjectBox Python ChangeLog
 * Fix `Int8List` properties: putting and reading objects failed. Values are lists of signed 8-bit integers (-128 to 127).
 * Fix reading list properties (e.g. `Int32List`) that are not present in a stored object, e.g. added to the entity
   after the object was put: this failed instead of returning an empty list.
+* Fix reading `Date`/`DateNano` properties with `datetime` values, vector properties with numpy arrays (e.g. `Float32Vector`)
+  and `Flex` properties that are not present in a stored object (e.g. added to the entity after the object was put):
+  this failed with a `TypeError`. They read as the default now, like unset properties: the epoch (UTC), an empty array
+  and `None`.
 * Query: fix `offset()` and `limit()` to return the query (as documented), e.g. for `query.offset(10).limit(5).find()`;
   they returned a C result code (int), so chaining failed
 * Faster import: `import objectbox` no longer imports numpy (also not via flatbuffers, which imports numpy) and takes
