@@ -13,12 +13,13 @@
 # limitations under the License.
 import inspect
 
-import flatbuffers
-import flatbuffers.flexbuffers
-import numpy as np
+from array import array
 from datetime import datetime, timezone
 import logging
+from objectbox import experimental
 from objectbox.c import *
+from objectbox.model.codegen import CodegenBuilder, same_values, absent_value_factory
+from objectbox.model.fast_builder import FastBuilder
 from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
 from objectbox.utils import date_value_to_int
@@ -38,6 +39,8 @@ class _Entity(object):
         self._id_property = None
         self._fill_properties()
         self._tl = threading.local()
+        self._fast_builder = None  # experimental; created on first use after a sync
+        self._codegen_builder = None  # experimental; created on first use after a sync
 
     @property
     def _id(self) -> int:
@@ -55,6 +58,8 @@ class _Entity(object):
         assert self._iduid.is_assigned()
         for prop in self._properties:
             prop.on_sync()
+        self._fast_builder = None  # IDs (FlatBuffers slots) may have changed
+        self._codegen_builder = None
 
     def __call__(self, **properties):
         """ The constructor of the user Entity class. """
@@ -89,7 +94,7 @@ class _Entity(object):
                     raise Exception(f"Duplicate ID property: \"{self._id_property.name}\" and \"{prop.name}\"")
                 self._id_property = prop
 
-            if prop._fb_type == flatbuffers.number_types.UOffsetTFlags:
+            if prop._fb_format == 'I':  # an offset
                 assert prop._ob_type in [
                     OBXPropertyType_String,
                     OBXPropertyType_BoolVector,
@@ -132,7 +137,8 @@ class _Entity(object):
     def _get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)
         val = getattr(object, prop.name)
-        if prop._py_type == np.ndarray:
+        if prop._is_ndarray:
+            import numpy as np  # imported already: _py_type is numpy.ndarray
             if (val == np.array(prop)).all():
                 return np.array([])
         elif val == prop:
@@ -150,7 +156,43 @@ class _Entity(object):
     def _set_object_id(self, obj, id_: int):
         setattr(obj, self._id_property.name, id_)
 
-    def _marshal(self, object, id: int) -> bytearray:
+    def _marshal(self, object, id: int) -> Union[bytes, bytearray]:
+        mode = experimental._flatbuffers_mode
+        if mode is None:
+            return self._marshal_builder(object, id)
+        # Concurrent first calls may create one builder each; equal, so either is fine.
+        # Created (and codegen compiled) outside the try below: a failure there must raise, not fall back silently.
+        if mode == experimental.CODEGEN:
+            builder = self._codegen_builder
+            if builder is None:
+                builder = self._codegen_builder = CodegenBuilder(self)
+        else:
+            builder = self._fast_builder
+            if builder is None:
+                builder = self._fast_builder = FastBuilder(self)
+        marshal = builder.marshal
+        try:
+            data = marshal(object, id)
+        except Exception:
+            # Values the experimental builders reject (e.g. out of range): the reference raises its usual error
+            data = None
+        verify = experimental._flatbuffers_verify
+        if data is None or verify:
+            reference = bytes(self._marshal_builder(object, id))
+            if data is None:
+                if verify:
+                    raise AssertionError(f"Experimental FlatBuffers {mode} failed for {self._name}, "
+                                         f"but the reference did not")
+                return reference
+            if data != reference:
+                raise AssertionError(f"Experimental FlatBuffers {mode}: bytes differ from the reference for "
+                                     f"{self._name}:\n  {mode}: {data.hex()}\n  reference: {reference.hex()}")
+        return data
+
+    def _marshal_builder(self, object, id: int) -> bytearray:
+        """Marshals with the generic flatbuffers.Builder; the reference for the experimental fast builder."""
+        import flatbuffers  # imported on first use: flatbuffers imports numpy anyway
+        import numpy as np
         if not hasattr(self._tl, "builder"):
             self._tl.builder = flatbuffers.Builder(256)
         builder = self._tl.builder
@@ -158,8 +200,12 @@ class _Entity(object):
 
         # prepare some properties that need to be built in FB before starting the main object
         offsets = {}
+        nulls = set()  # IDs of properties set to None: left out of the object (null; Flex stores None as a value)
         for prop in self._offset_properties:
             val = self._get_value(object, prop)
+            if val is None and prop._ob_type != OBXPropertyType_Flex:
+                nulls.add(prop.id)
+                continue
             if prop._ob_type == OBXPropertyType_String:
                 offsets[prop.id] = builder.CreateString(val.encode('utf-8'))
             elif prop._ob_type == OBXPropertyType_BoolVector:
@@ -167,6 +213,8 @@ class _Entity(object):
                 # https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.bool
                 offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.bool_))
             elif prop._ob_type == OBXPropertyType_ByteVector:
+                if prop._py_type == list:  # Int8List: signed bytes
+                    val = array('b', val).tobytes()
                 offsets[prop.id] = builder.CreateByteVector(val)
             elif prop._ob_type == OBXPropertyType_ShortVector:
                 offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.int16))
@@ -181,6 +229,7 @@ class _Entity(object):
             elif prop._ob_type == OBXPropertyType_DoubleVector:
                 offsets[prop.id] = builder.CreateNumpyVector(np.array(val, dtype=np.float64))
             elif prop._ob_type == OBXPropertyType_Flex:
+                import flatbuffers.flexbuffers
                 flex_builder = flatbuffers.flexbuffers.Builder()
                 flex_builder.Add(val)
                 buffer = flex_builder.Finish()
@@ -198,8 +247,12 @@ class _Entity(object):
                 val = offsets[prop_id]
                 if val:
                     builder.PrependUOffsetTRelative(val)
+            elif prop_id in nulls:
+                continue
             else:
                 val = id if prop == self._id_property else self._get_value(object, prop)
+                if val is None:
+                    continue  # null: no field, no vtable slot
                 if prop._ob_type == OBXPropertyType_Date:
                     val = date_value_to_int(val, 1000)  # convert to milliseconds
                 elif prop._ob_type == OBXPropertyType_DateNano:
@@ -212,6 +265,36 @@ class _Entity(object):
         return builder.Output()
 
     def _unmarshal(self, data: bytes):
+        if experimental._flatbuffers_mode != experimental.CODEGEN:
+            return self._unmarshal_table(data)
+        codegen = self._codegen_builder
+        if codegen is None:  # as in _marshal: outside the try, concurrent first calls are fine
+            codegen = self._codegen_builder = CodegenBuilder(self)
+        unmarshal = codegen.unmarshal  # compiled on first use, outside the try (as in _marshal)
+        try:
+            obj = unmarshal(data)
+            failed = False
+        except Exception:
+            # Invalid data or values the reference cannot read either: it raises its usual error
+            obj, failed = None, True
+        verify = experimental._flatbuffers_verify
+        if failed or verify:
+            reference = self._unmarshal_table(data)
+            if failed:
+                if verify:
+                    raise AssertionError(f"Experimental FlatBuffers codegen failed to unmarshal {self._name}, "
+                                         f"but the reference did not")
+                return reference
+            for prop in self._properties:
+                value, expected = getattr(obj, prop.name), getattr(reference, prop.name)
+                if not same_values(value, expected):
+                    raise AssertionError(f"Experimental FlatBuffers codegen: unmarshalled {self._name}.{prop.name} "
+                                         f"differs from the reference:\n  codegen:   {value!r}\n  reference: {expected!r}")
+        return obj
+
+    def _unmarshal_table(self, data: bytes):
+        """Unmarshals with flatbuffers.Table; the reference for the experimental codegen."""
+        import flatbuffers  # imported on first use: flatbuffers imports numpy (if available)
         pos = flatbuffers.encode.Get(flatbuffers.packer.uoffset, data, 0)
         table = flatbuffers.Table(data, pos)
 
@@ -224,7 +307,8 @@ class _Entity(object):
             val = None
             ob_type = prop._ob_type
             if not o:
-                val = prop._py_type()  # use default (empty) value if not present in the object
+                setattr(obj, prop.name, absent_value_factory(prop)())  # default (empty) value if not present
+                continue
             elif ob_type == OBXPropertyType_String:
                 val = table.String(o + table.Pos).decode('utf-8')
             elif ob_type == OBXPropertyType_BoolVector:
@@ -234,7 +318,10 @@ class _Entity(object):
                 start = table.Vector(o)
                 size = table.VectorLen(o)
                 # slice the vector as a requested type
-                val = prop._py_type(table.Bytes[start:start + size])
+                if prop._py_type == list:  # Int8List: signed bytes
+                    val = array('b', table.Bytes[start:start + size])  # .tolist() below
+                else:
+                    val = prop._py_type(table.Bytes[start:start + size])
             elif ob_type == OBXPropertyType_ShortVector:
                 val = table.GetVectorAsNumpy(flatbuffers.number_types.Int16Flags, o)
             elif ob_type == OBXPropertyType_CharVector:
@@ -265,6 +352,7 @@ class _Entity(object):
                 size = table.VectorLen(o)
                 # slice the vector as bytes
                 buf = table.Bytes[start:start + size]
+                import flatbuffers.flexbuffers
                 val = flatbuffers.flexbuffers.Loads(buf)
             else:
                 val = table.Get(prop._fb_type, o + table.Pos)

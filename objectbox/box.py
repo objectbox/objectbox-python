@@ -60,17 +60,19 @@ class Box:
             return self._put_one(objects[0])
 
     def _put_one(self, obj) -> int:
-        id = object_id = self._entity._get_object_id(obj)
+        id = self._entity._get_object_id(obj)
 
-        if not id:
-            id = obx_box_id_for_put(self._c_box, 0)
+        if id:
+            data = self._entity._marshal(obj, id)
+            obx_box_put(self._c_box, id, bytes(data), len(data))
+            return id
 
-        data = self._entity._marshal(obj, id)
-        obx_box_put(self._c_box, id, bytes(data), len(data))
-
-        if id != object_id:
-            self._entity._set_object_id(obj, id)
-
+        # New object: the ID is assigned while putting (saves a C call to reserve it); this writes the ID into the
+        # data, so it must be a writable copy.
+        data = self._entity._marshal(obj, 0)
+        size = len(data)
+        id = obx_box_put_object(self._c_box, ctypes.create_string_buffer(bytes(data), size), size)
+        self._entity._set_object_id(obj, id)
         return id
 
     def _put_many(self, objects) -> None:
@@ -130,7 +132,8 @@ class Box:
 
     def get(self, id: int):
         """Get object by given Id or None if not found."""
-        with self._store.read_tx():
+        tx = obx_txn_read(self._store._c_store)  # not via read_tx(): less overhead for this hot path
+        try:
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
             code : obx_err = obx_box_get(self._c_box, id, ctypes.byref(
@@ -140,7 +143,9 @@ class Box:
             elif code != 0:
                 raise DbError.from_code(code)
             data = c_voidp_as_bytes(c_data, c_size.value)
-            return self._entity._unmarshal(data)
+        finally:
+            obx_txn_close(tx)
+        return self._entity._unmarshal(data)
 
     def get_many(self, id_array: List[int]) -> list:
         """Gets objects matching the given ID list.

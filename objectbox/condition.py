@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import sys
 from enum import Enum
 from typing import *
-import numpy as np
 
 if TYPE_CHECKING:
     from objectbox.c import obx_qb_cond
     from objectbox.query_builder import QueryBuilder
+    import numpy as np
 
 
 class QueryCondition:
@@ -19,6 +20,12 @@ class QueryCondition:
         """*or* logic condition or using ``|`` operator"""
         return LogicQueryCondition(self, other, LogicQueryConditionOp.OR)
     __or__ = or_
+
+    def _apply_is_null(self, qb: QueryBuilder) -> obx_qb_cond:
+        return qb.is_null(self._property_id)
+
+    def _apply_not_null(self, qb: QueryBuilder) -> obx_qb_cond:
+        return qb.not_null(self._property_id)
 
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         """ Applies the QueryCondition to the supplied QueryBuilder.
@@ -51,6 +58,12 @@ class LogicQueryCondition(QueryCondition):
     def _apply_or(self, qb: QueryBuilder) -> obx_qb_cond:
         return qb.any(self._apply_conditions(qb))
 
+    def _apply_is_null(self, qb: QueryBuilder) -> obx_qb_cond:
+        return qb.is_null(self._property_id)
+
+    def _apply_not_null(self, qb: QueryBuilder) -> obx_qb_cond:
+        return qb.not_null(self._property_id)
+
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         if self._op == LogicQueryConditionOp.AND:
             return self._apply_and(qb)
@@ -73,6 +86,8 @@ class PropertyQueryConditionOp(Enum):
     BETWEEN = 10
     NEAREST_NEIGHBOR = 11
     CONTAINS_KEY_VALUE = 12
+    IS_NULL = 13
+    NOT_NULL = 14
 
 
 class PropertyQueryCondition(QueryCondition):
@@ -94,7 +109,9 @@ class PropertyQueryCondition(QueryCondition):
         PropertyQueryConditionOp.LTE: "_apply_lte",
         PropertyQueryConditionOp.BETWEEN: "_apply_between",
         PropertyQueryConditionOp.NEAREST_NEIGHBOR: "_apply_nearest_neighbor",
-        PropertyQueryConditionOp.CONTAINS_KEY_VALUE: "_contains_key_value"
+        PropertyQueryConditionOp.CONTAINS_KEY_VALUE: "_contains_key_value",
+        PropertyQueryConditionOp.IS_NULL: "_apply_is_null",
+        PropertyQueryConditionOp.NOT_NULL: "_apply_not_null",
         # ... new property query conditions here ... :)
     }
 
@@ -237,7 +254,8 @@ class PropertyQueryCondition(QueryCondition):
             raise Exception("query_vector can't be empty")
 
         is_float_vector = False
-        is_float_vector |= isinstance(query_vector, np.ndarray) and query_vector.dtype == np.float32
+        np = sys.modules.get("numpy")  # not imported: query_vector is no numpy array
+        is_float_vector |= np is not None and isinstance(query_vector, np.ndarray) and query_vector.dtype == np.float32
         is_float_vector |= isinstance(query_vector, list) and type(query_vector[0]) == float
         if is_float_vector:
             return qb.nearest_neighbors_f32(self._property_id, query_vector, element_count)
@@ -249,6 +267,12 @@ class PropertyQueryCondition(QueryCondition):
         value = self._args['value']
         case_sensitive = self._args['case_sensitive']
         return qb.contains_key_value(self._property_id, key, value, case_sensitive)
+
+    def _apply_is_null(self, qb: QueryBuilder) -> obx_qb_cond:
+        return qb.is_null(self._property_id)
+
+    def _apply_not_null(self, qb: QueryBuilder) -> obx_qb_cond:
+        return qb.not_null(self._property_id)
 
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         c_cond = self._op_func(qb)

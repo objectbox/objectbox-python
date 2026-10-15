@@ -1,12 +1,15 @@
-import numpy as np
+from __future__ import annotations
 
 from objectbox.c import *
 from objectbox.model.properties import VectorDistanceType
 from datetime import datetime, timezone
 
+if TYPE_CHECKING:
+    import numpy as np
+
 def check_float_vector(vector: Union[np.ndarray, List[float]], vector_name: str):
     """ Checks that the given vector is a float vector (either np.ndarray or Python's list). """
-    if isinstance(vector, np.ndarray) and vector.dtype != np.float32:
+    if is_ndarray(vector) and vector.dtype != "float32":
         raise Exception(f"{vector_name} dtype is expected to be np.float32, got: {vector.dtype}")
     elif isinstance(vector, list) and len(vector) > 0 and (type(vector[0]) is not float):
         raise Exception(f"{vector_name} is expected to be a float list, got vector[0]: {type(vector[0])}")

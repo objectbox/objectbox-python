@@ -12,7 +12,7 @@ endif
 export PATH := $(abspath ${VENVBIN}):${PATH}
 
 
-.PHONY: init test build benchmark publish venv-init
+.PHONY: init test test-fast-flatbuffers-builder test-flatbuffers-codegen build benchmark publish venv-init
 
 # Default target executed when no arguments are given to make.
 default_target: build test
@@ -54,9 +54,17 @@ test: ${VENV}			## Test all targets
 	set -e ; \
 	${PYTHON} -m pytest --capture=no --verbose -rs
 
-benchmark: ${VENV}		## Run CRUD benchmarks
+test-fast-flatbuffers-builder: ${VENV}	## Test with the experimental fast FlatBuffers builder (each object verified)
 	set -e ; \
-	${PYTHON} -m benchmark
+	${PYTHON} -m pytest --capture=no --verbose -rs --fast-flatbuffers-builder
+
+test-flatbuffers-codegen: ${VENV}	## Test with the experimental FlatBuffers codegen (each object verified)
+	set -e ; \
+	${PYTHON} -m pytest --capture=no --verbose -rs --flatbuffers-codegen
+
+benchmark: ${VENV}		## Run CRUD benchmarks (experimental: BENCHMARK_ARGS=--fast-flatbuffers-builder or --flatbuffers-codegen)
+	set -e ; \
+	${PYTHON} -m benchmark ${BENCHMARK_ARGS}
 
 clean:					## Clean build artifacts
 	rm -rf build/

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import objectbox_clib
 import ctypes.util
 import os
@@ -20,8 +22,10 @@ import sys
 import sysconfig
 from objectbox.version import Version
 from typing import *
-import numpy as np
 from enum import IntEnum
+
+if TYPE_CHECKING:
+    import numpy as np  # imported lazily (only where needed): importing numpy may start (busy) BLAS threads
 
 # This file contains C-API bindings based on lib/objectbox.h, linking to the 'objectbox' shared library.
 # The bindings are implementing using ctypes, see https://docs.python.org/dev/library/ctypes.html for introduction.
@@ -398,19 +402,20 @@ def c_str(string: str) -> ctypes.c_char_p:
     return string.encode('utf-8')
 
 
-def c_voidp_as_bytes(voidp, size):
-    # TODO verify which of the following two approaches is better. Performance-wise, it seems the same.
+def c_voidp_as_bytes(voidp, size) -> bytes:
+    """Copies size bytes at the given pointer (c_void_p or int) into a bytes object."""
+    return ctypes.string_at(voidp, size)  # one copy; ~3x faster than via ctypes.cast and a memoryview
 
-    # slice the data from the pointer
-    # return ctypes.cast(voidp, ctypes.POINTER(ctypes.c_char))[:size]
 
-    # create a memory view
-    return memoryview(ctypes.cast(voidp, ctypes.POINTER(ctypes.c_ubyte * size))[0]).tobytes()
+def is_ndarray(value) -> bool:
+    """Whether the value is a numpy array; does not import numpy (if it was not imported, there are no arrays)."""
+    np = sys.modules.get("numpy")
+    return np is not None and isinstance(value, np.ndarray)
 
 
 def c_array(py_list: Union[List[Any], np.ndarray], c_type):
     """ Converts the given python list or ndarray into a C array of c_type. """
-    if isinstance(py_list, np.ndarray):
+    if is_ndarray(py_list):
         if py_list.ndim != 1:
             raise Exception(f"ndarray is expected to be 1-dimensional. Input shape: {py_list.shape}")
         return py_list.ctypes.data_as(ctypes.POINTER(c_type))
@@ -677,6 +682,10 @@ obx_box_ids_for_put = c_fn_rc('obx_box_ids_for_put', [
 
 # obx_err (OBX_box* box, obx_id id, const void* data, size_t size);
 obx_box_put = c_fn_rc('obx_box_put', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
+
+# OBX_C_API obx_id obx_box_put_object(OBX_box* box, void* data, size_t size);
+# data must be writable: for a new object (ID 0 in data), the assigned ID is written into it
+obx_box_put_object = c_fn('obx_box_put_object', obx_id, [OBX_box_p, ctypes.c_void_p, ctypes.c_size_t])
 
 # OBX_C_API obx_err obx_box_insert(OBX_box* box, obx_id id, const void* data, size_t size);
 obx_box_insert = c_fn_rc('obx_box_insert', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])

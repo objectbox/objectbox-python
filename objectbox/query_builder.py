@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import ctypes
-import numpy as np
 from typing import *
 
 from objectbox.c import *
@@ -7,6 +8,9 @@ from objectbox.model.properties import Property
 from objectbox.store import Store
 from objectbox.query import Query
 from objectbox.utils import check_float_vector
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class QueryBuilder:
@@ -171,6 +175,14 @@ class QueryBuilder:
         c_query_vector = c_array(query_vector, ctypes.c_float)
         cond = obx_qb_nearest_neighbors_f32(self._c_builder, prop_id, c_query_vector, element_count)
         return cond
+
+    def is_null(self, prop: Union[int, str, Property]) -> obx_qb_cond:
+        """ Matches objects without a value for the given property (null, i.e. put with None). """
+        return obx_qb_null(self._c_builder, self._entity._get_property_id(prop))
+
+    def not_null(self, prop: Union[int, str, Property]) -> obx_qb_cond:
+        """ Matches objects with a value for the given property (not null). """
+        return obx_qb_not_null(self._c_builder, self._entity._get_property_id(prop))
 
     def contains_key_value(self, prop: Union[int, str, Property], key: str, value: str,
                            case_sensitive: bool = True) -> obx_qb_cond:

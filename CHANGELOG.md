@@ -32,6 +32,42 @@ ObjectBox Python ChangeLog
   only once per process (also when given by name, e.g. the default model), saving about 0.1 ms per open.
   The new option `skip_model_sync` additionally opens existing stores with the schema stored in their database
   instead of checking it against the model, which halves the time to open (see its documentation for when to use it).
+* Faster reads (get, queries): copying an object's data from the database takes ~0.4 µs instead of ~1 µs.
+  Transactions (`read_tx()`, `write_tx()`, also used internally) have ~0.7 µs less overhead.
+  Together, e.g. `box.get()` of a small object takes ~4.3 µs instead of ~6.9 µs (with the FlatBuffers codegen).
+* Faster put of a single new object: its ID is assigned while putting, saving a call to reserve it (~0.3 µs)
+* Putting objects with `None` values: a property set to `None` is stored as null (left out of the stored object), where
+  putting failed before. Reading is unchanged: a null value reads back as the property's default (e.g. `""`, `0`), as
+  any property missing from a stored object. Properties that are not set at all are still stored with their default.
+  Exceptions: `None` inside a vector or list still fails; `Flex` properties store `None` as a value (as before).
+* Query: new conditions `is_null()` and `is_not_null()` (e.g. `Task.text.is_null()`), also as `QueryBuilder.is_null()`
+  and `not_null()`. Null values (put with `None`) do not match conditions on the default value, e.g. `equals("")`.
+* Fix `Int8List` properties: putting and reading objects failed. Values are lists of signed 8-bit integers (-128 to 127).
+* Fix reading list properties (e.g. `Int32List`) that are not present in a stored object, e.g. added to the entity
+  after the object was put: this failed instead of returning an empty list.
+* Fix reading `Date`/`DateNano` properties with `datetime` values, vector properties with numpy arrays (e.g. `Float32Vector`)
+  and `Flex` properties that are not present in a stored object (e.g. added to the entity after the object was put):
+  this failed with a `TypeError`. They read as the default now, like unset properties: the epoch (UTC), an empty array
+  and `None`.
+* Query: fix `offset()` and `limit()` to return the query (as documented), e.g. for `query.offset(10).limit(5).find()`;
+  they returned a C result code (int), so chaining failed
+* Faster import: `import objectbox` no longer imports numpy (also not via flatbuffers, which imports numpy) and takes
+  about half the time. numpy is imported when needed, e.g. for vector properties or the first put or get.
+  Importing numpy may start BLAS threads (OpenBLAS: one per CPU core) that busy-wait for ~0.1 s, slowing down
+  short-lived processes. With the experimental FlatBuffers codegen (see below), entities without vector or flex
+  properties never import numpy or flatbuffers.
+* Experimental: a fast FlatBuffers builder for putting objects, enabled via
+  `objectbox.experimental.enable_fast_flatbuffers_builder()` (off by default). It produces the same bytes as before,
+  with the layout precomputed per entity instead of using the generic `flatbuffers.Builder`; marshalling an object
+  with a string and two numbers gets ~12x faster, putting 10,000 objects of the test entity ~4x faster.
+* Experimental: FlatBuffers codegen for putting objects, enabled via `objectbox.experimental.enable_flatbuffers_codegen()`
+  (off by default; replaces the fast builder if that is enabled). Like the fast builder, but generates Python code per
+  entity at its first put, which is again ~2x faster for small objects (~25x faster than the generic builder);
+  putting 10,000 objects of the test entity ~5x faster than the generic builder.
+  Codegen also reads objects (get, queries) with generated code, returning the same objects: ~3.5x faster per object
+  for a small entity, ~8x faster for 21 properties.
+  The code is compiled per process at the first put and first read of an entity (~2.8 ms for both with 38 properties);
+  the new option `cache_dir` caches the compiled code for other processes (~0.5 ms then), e.g. for short-lived ones.
 
 4.0.0 (2024-05-28)
 ------------------

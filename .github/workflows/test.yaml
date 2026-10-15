@@ -37,3 +37,5 @@ jobs:
 
       - run: make depend
       - run: make test
+      - run: make test-fast-flatbuffers-builder  # experimental; each object is verified against the reference
+      - run: make test-flatbuffers-codegen  # experimental; each object is verified against the reference
