@@ -63,7 +63,8 @@ def enable_flatbuffers_codegen(enabled: bool = True, verify: bool = False, cache
         flatbuffers.Table and an AssertionError is raised if any property value differs.
     :param cache_dir: optional directory to cache the compiled code in, so other processes skip compiling it
         (~1 ms per function for an entity with 38 properties), e.g. for many short-lived processes. The generated
-        sources are written there as .py files, Python caches their bytecode as usual (__pycache__). Off by default.
+        sources are written there as .py files; Python caches their bytecode as for any module (in __pycache__,
+        or under sys.pycache_prefix if set). Off by default.
         Applies to code compiled after this call; each call sets it (None: no cache).
         Security: only use a directory that is writable by trusted users only, as code from it is executed.
     """

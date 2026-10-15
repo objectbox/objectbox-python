@@ -1,8 +1,11 @@
 """Experimental fast FlatBuffers builder and codegen: the bytes must equal those of the generic flatbuffers.Builder
 (reference); objects read by the codegen must equal those read via flatbuffers.Table (reference)."""
+import importlib.util
 import linecache
 import math
+import os
 import random
+import sys
 from datetime import datetime, timezone
 
 import flatbuffers
@@ -566,7 +569,10 @@ def test_codegen_cache(test_store, fast_builder_state, tmp_path):
     assert_same_read(TestEntity, reference, builder)
     sources = sorted(path.name for path in cache_dir.glob("*.py"))
     assert len(sources) == 2 and sources[0].startswith("objectbox_codegen_marshal_TestEntity_")
-    assert len(list((cache_dir / "__pycache__").glob("*.pyc"))) == 2
+    # Bytecode as for any module: in __pycache__, or under sys.pycache_prefix (e.g. Apple's system Python on macOS),
+    # or not at all with PYTHONDONTWRITEBYTECODE
+    pycs = [importlib.util.cache_from_source(str(cache_dir / source)) for source in sources]
+    assert [os.path.exists(pyc) for pyc in pycs] == [not sys.dont_write_bytecode] * 2
     source_path = next(cache_dir.glob("objectbox_codegen_marshal_*.py"))
     assert source_path.read_text() == builder.source
     assert builder.marshal.__code__.co_filename == str(source_path)  # tracebacks show the cached file

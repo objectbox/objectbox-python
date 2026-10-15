@@ -89,7 +89,8 @@ class CodegenBuilder:
 def _compile(source: str, filename: str, entity_name: str, kind: str):
     """Compiles the source, or loads its compiled code from the cache directory (experimental._codegen_cache_dir):
     the source is written there as a .py file (named by its hash), which Python compiles and caches as usual
-    (__pycache__, validated against the source). Any problem with the cache: compiles without it."""
+    (__pycache__ or sys.pycache_prefix, validated against the source).
+    Any problem with the cache: compiles without it."""
     cache_dir = experimental._codegen_cache_dir
     if cache_dir is not None:
         try:
