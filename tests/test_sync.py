@@ -92,19 +92,17 @@ def test_sync_listener(sync_server, test_store, login_listener, connection_liste
 
 
 @pytest.mark.sync
-def test_sync_listener_removed(sync_server, test_store, login_listener, connection_listener, error_listener):
+def test_sync_listener_removed(sync_server, test_store, login_listener, connection_listener):
     sync_client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
     sync_client.set_login_listener(login_listener)
     sync_client.set_connection_listener(connection_listener)
     completed_listener = CompletedListener()
     sync_client.set_completed_listener(completed_listener)
-    sync_client.set_error_listener(error_listener)
     sync_client.set_change_listener(ChangeCollector())
     # None removes the listeners
     sync_client.set_login_listener(None)
     sync_client.set_connection_listener(None)
     sync_client.set_completed_listener(None)
-    sync_client.set_error_listener(None)
     sync_client.set_change_listener(None)
     sync_client.start()
     assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
@@ -309,19 +307,6 @@ def test_login_failure_code(test_store, login_listener):
     assert login_listener.login_failure_code is SyncCode.CREDENTIALS_REJECTED
     c_login_failure_listener(None, 12345)  # Unknown code
     assert login_listener.login_failure_code == 12345
-    client.close()
-
-
-@pytest.mark.sync
-def test_sync_error(test_store, error_listener):
-    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
-    client.set_error_listener(error_listener)
-    # Call the C callback directly (would require a server rejecting a TX)
-    c_error_listener = client._SyncClient__c_callbacks[0]
-    c_error_listener(None, SyncError.REJECT_TX_NO_PERMISSION)
-    assert error_listener.sync_error is SyncError.REJECT_TX_NO_PERMISSION
-    c_error_listener(None, 12345)  # Unknown error
-    assert error_listener.sync_error == 12345
     client.close()
 
 

@@ -230,28 +230,12 @@ class SyncCode(IntEnum):
     """Transaction violated a unique constraint."""
 
 
-class SyncError(IntEnum):
-    """Sync-level errors, passed to SyncErrorListener.on_error()."""
-
-    REJECT_TX_NO_PERMISSION = c.OBXSyncError.REJECT_TX_NO_PERMISSION
-    """The client received a rejection of transaction writes due to missing permissions.
-    Until reconnecting with new credentials the client will run in receive-only mode."""
-
-
 def _to_sync_code(code: int) -> typing.Union[SyncCode, int]:
     """Converts to SyncCode; unknown codes (e.g. added by a newer library) are passed as int."""
     try:
         return SyncCode(code)
     except ValueError:
         return code
-
-
-def _to_sync_error(error: int) -> typing.Union[SyncError, int]:
-    """Converts to SyncError; unknown errors (e.g. added by a newer library) are passed as int."""
-    try:
-        return SyncError(error)
-    except ValueError:
-        return error
 
 
 class SyncChange:
@@ -324,22 +308,6 @@ class SyncCompletedListener:
     def on_updates_completed(self):
         """Called each time a sync has completed, i.e. the client caught up with the current server state
         (the client is "up-to-date")."""
-        pass
-
-
-class SyncErrorListener:
-    """Listener for sync error events.
-
-    Implement this class and pass to SyncClient.set_error_listener() to receive
-    notifications about sync errors.
-    """
-
-    def on_error(self, sync_error: SyncError):
-        """Called when a sync error occurs.
-
-        Args:
-            sync_error: The error that occurred (an int if the error is unknown).
-        """
         pass
 
 
@@ -673,19 +641,6 @@ class SyncClient:
             c.OBX_sync_listener_complete_t,
             None if completed_listener is None else (lambda arg: completed_listener.on_updates_completed()))
         c.obx_sync_listener_complete(self.__c_sync_client_ptr, c_complete_listener, None)
-
-    def set_error_listener(self, error_listener: typing.Optional[SyncErrorListener]):
-        """Sets a listener to observe sync error events, replacing a previously set one.
-
-        Args:
-            error_listener: The listener to receive error events; None to remove the listener.
-        """
-        self.__check_sync_ptr_not_null()
-        c_error_listener = self.__c_callback(
-            c.OBX_sync_listener_error_t,
-            None if error_listener is None else (
-                lambda arg, sync_error: error_listener.on_error(_to_sync_error(sync_error))))
-        c.obx_sync_listener_error(self.__c_sync_client_ptr, c_error_listener, None)
 
     def set_change_listener(self, change_listener: typing.Optional[SyncChangeListener]):
         """Sets a listener to observe incoming data changes from the server, replacing a previously set one.

@@ -4,8 +4,7 @@ import pytest
 from objectbox import experimental
 from objectbox.logger import logger
 from common import *
-from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncErrorListener, SyncClient, SyncCredentials, \
-    Sync
+from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncClient, SyncCredentials, Sync
 
 
 def pytest_addoption(parser):
@@ -80,14 +79,6 @@ class TestConnectionListener(SyncConnectionListener):
         self.disconnected_called = True
 
 
-class TestErrorListener(SyncErrorListener):
-    def __init__(self):
-        self.sync_error = None
-
-    def on_error(self, sync_error):
-        self.sync_error = sync_error
-
-
 @pytest.fixture
 def connection_listener():
     listener = TestConnectionListener()
@@ -105,19 +96,11 @@ def login_listener():
 
 
 @pytest.fixture
-def error_listener():
-    listener = TestErrorListener()
-    yield listener
-    listener.sync_error = None
-
-
-@pytest.fixture
-def sync_client(test_store, login_listener, connection_listener, error_listener):
+def sync_client(test_store, login_listener, connection_listener):
     client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
     client.set_credentials(SyncCredentials.none())
     client.set_login_listener(login_listener)
     client.set_connection_listener(connection_listener)
-    client.set_error_listener(error_listener)
     yield client
     client.close()
 
