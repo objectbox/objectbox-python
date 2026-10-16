@@ -1347,6 +1347,13 @@ obx_sync_stop = c_fn_rc('obx_sync_stop', [OBX_sync_p])
 # obx_err obx_sync_trigger_reconnect(OBX_sync* sync);
 obx_sync_trigger_reconnect = c_fn_rc_success('obx_sync_trigger_reconnect', [OBX_sync_p])
 
+# int64_t obx_sync_clock_timestamp(uint64_t sync_clock_value);
+obx_sync_clock_timestamp = c_fn_nocheck('obx_sync_clock_timestamp', ctypes.c_int64, [ctypes.c_uint64])
+
+# int64_t obx_sync_clock_timestamp_corrected(uint64_t sync_clock_value);
+obx_sync_clock_timestamp_corrected = c_fn_nocheck('obx_sync_clock_timestamp_corrected', ctypes.c_int64,
+                                                  [ctypes.c_uint64])
+
 # uint32_t obx_sync_protocol_version();
 obx_sync_protocol_version = c_fn('obx_sync_protocol_version', ctypes.c_uint32, [])
 

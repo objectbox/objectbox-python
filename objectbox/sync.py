@@ -816,6 +816,24 @@ class Sync:
         return c.obx_has_feature(c.Feature.Sync)
 
     @staticmethod
+    def sync_clock_timestamp(sync_clock_value: int) -> int:
+        """Gets the "raw" timestamp (milliseconds since epoch) from the given sync clock value.
+
+        Note that sync clock values are assigned by ObjectBox and are not to be interpreted on their own. Use this
+        function to extract a meaningful timestamp from a sync clock value (e.g. of a SyncClock property).
+        """
+        return c.obx_sync_clock_timestamp(sync_clock_value)
+
+    @staticmethod
+    def sync_clock_timestamp_corrected(sync_clock_value: int) -> int:
+        """Gets the corrected timestamp (milliseconds since epoch) from the given sync clock value.
+
+        Like sync_clock_timestamp(), but applies any time correction if present in the sync clock value. However, for
+        most cases, it returns the same value as sync_clock_timestamp().
+        """
+        return c.obx_sync_clock_timestamp_corrected(sync_clock_value)
+
+    @staticmethod
     def client(
             store: Store,
             server_url: typing.Union[str, typing.List[str]],

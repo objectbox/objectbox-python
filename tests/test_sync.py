@@ -2,6 +2,7 @@ import gc
 import os
 import shutil
 import threading
+import time
 import uuid
 import weakref
 from typing import Callable, Optional
@@ -494,6 +495,9 @@ def test_sync_clock_and_precedence():
         box.put(obj)
         clock1 = box.get(obj.id).clock
         assert clock1 > 0  # Set by ObjectBox Sync on put
+        now_millis = int(time.time() * 1000)
+        assert abs(Sync.sync_clock_timestamp(clock1) - now_millis) < 60_000
+        assert abs(Sync.sync_clock_timestamp_corrected(clock1) - now_millis) < 60_000
         obj.precedence = 5
         box.put(obj)
         read = box.get(obj.id)
