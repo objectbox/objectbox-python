@@ -287,6 +287,7 @@ def test_multiple_credentials(sync_client):
     sync_client.set_credentials([
         SyncCredentials.google_auth("token_google"),
         SyncCredentials.user_and_password("user1", "password"),
+        SyncCredentials.obx_admin_user("admin", "password"),
         SyncCredentials.shared_secret("secret1"),
         SyncCredentials.shared_secret(b"\x00\x2e\x4f\xc1"),
         SyncCredentials.jwt_id_token("token1"),
@@ -294,6 +295,13 @@ def test_multiple_credentials(sync_client):
         SyncCredentials.jwt_refresh_token("token3"),
         SyncCredentials.jwt_custom_token("token4")
     ])
+
+
+@pytest.mark.sync
+def test_credentials_obx_admin_user(sync_client):
+    credentials = SyncCredentials.obx_admin_user("admin", "password")
+    assert credentials.type == c.SyncCredentialsType.OBX_ADMIN_USER
+    sync_client.set_credentials(credentials)
 
 
 def test_credentials_str_or_bytes():

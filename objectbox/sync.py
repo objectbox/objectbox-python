@@ -72,6 +72,19 @@ class SyncCredentials:
         return SyncCredentialsUserPassword(c.SyncCredentialsType.USER_PASSWORD, username, password)
 
     @staticmethod
+    def obx_admin_user(username: str, password: str) -> 'SyncCredentials':
+        """ObjectBox Admin user (username and password) authentication.
+
+        Args:
+            username: The username.
+            password: The password.
+
+        Returns:
+            A SyncCredentials instance for ObjectBox Admin user authentication.
+        """
+        return SyncCredentialsUserPassword(c.SyncCredentialsType.OBX_ADMIN_USER, username, password)
+
+    @staticmethod
     def jwt_id_token(jwt_id_token: str) -> 'SyncCredentials':
         """JSON Web Token (JWT): an ID token that typically provides identity
         information about the authenticated user.
