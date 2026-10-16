@@ -1298,6 +1298,9 @@ obx_sync_opt = c_fn("obx_sync_opt", OBX_sync_options_p, [OBX_store_p])
 # obx_err obx_sync_opt_add_url(OBX_sync_options* opt, const char* url);
 obx_sync_opt_add_url = c_fn_rc("obx_sync_opt_add_url", [OBX_sync_options_p, ctypes.c_char_p])
 
+# obx_err obx_sync_opt_add_cert_path(OBX_sync_options* opt, const char* cert_path);
+obx_sync_opt_add_cert_path = c_fn_rc("obx_sync_opt_add_cert_path", [OBX_sync_options_p, ctypes.c_char_p])
+
 # obx_err obx_sync_opt_flags(OBX_sync_options* opt, uint32_t flags);
 obx_sync_opt_flags = c_fn_rc("obx_sync_opt_flags", [OBX_sync_options_p, ctypes.c_uint32])
 

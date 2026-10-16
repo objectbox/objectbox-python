@@ -406,6 +406,16 @@ def test_client_flags(test_store):
 
 
 @pytest.mark.sync
+def test_client_certificate_paths(test_store):
+    # Like Dart: paths are only checked when connecting
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(),
+                certificate_paths=["/path/to/does-not-exist-1.crt", "/path/to/does-not-exist-2.crt"]).close()
+    Sync.client(test_store, "wss://127.0.0.1:1", SyncCredentials.none(),
+                certificate_paths=["/path/to/does-not-exist.crt"]).close()
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(), certificate_paths=[]).close()
+
+
+@pytest.mark.sync
 def test_client_unsupported_url(test_store):
     # Fails when adding the URL to the options (are freed) and when creating the client (frees the options)
     with pytest.raises(IllegalArgumentError, match="All URLs must have the same scheme"):

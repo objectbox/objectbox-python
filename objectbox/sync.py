@@ -395,7 +395,7 @@ class SyncClient:
 
     def __init__(self, store: Store, server_urls: typing.List[str],
                  filter_variables: typing.Optional[typing.Dict[str, str]] = None, *,
-                 flags: int = 0):
+                 flags: int = 0, certificate_paths: typing.Optional[typing.List[str]] = None):
         """Creates a Sync client associated with the given store and options.
 
         This does not initiate any connection attempts yet: call start() to do so.
@@ -405,6 +405,7 @@ class SyncClient:
             server_urls: List of server URLs to connect to.
             filter_variables: Optional dictionary of filter variable names to values.
             flags: SyncFlags to adjust the client behavior (combine with ``|``).
+            certificate_paths: Paths of SSL certificates (in the local file system) for encrypted connections.
 
         Raises:
             ValueError: If a sync client is already active (not closed) for the given store.
@@ -438,6 +439,8 @@ class SyncClient:
         try:
             for url in server_urls:
                 c.obx_sync_opt_add_url(c_options, url.encode('utf-8'))
+            for certificate_path in certificate_paths or []:
+                c.obx_sync_opt_add_cert_path(c_options, certificate_path.encode('utf-8'))
             if flags:
                 c.obx_sync_opt_flags(c_options, flags)
         except BaseException:
@@ -881,7 +884,8 @@ class Sync:
             credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]],
             filter_variables: typing.Optional[typing.Dict[str, str]] = None,
             *,
-            flags: int = 0
+            flags: int = 0,
+            certificate_paths: typing.Optional[typing.List[str]] = None
     ) -> SyncClient:
         """Creates a Sync client associated with the given store and configures it
         with the given options.
@@ -899,6 +903,10 @@ class Sync:
         To adjust the client behavior, pass SyncFlags to flags, e.g. SyncFlags.REMOVE_WITH_OBJECT_DATA (recommended
         with Sync filters).
 
+        For encrypted connections ("wss://") with e.g. self-signed certificates in a local development environment or
+        custom certificate authorities (CAs), pass paths of certificate files to certificate_paths. By default, the
+        certificate authorities trusted by the system are used.
+
         Args:
             store: The ObjectBox store to sync.
             server_url: The URL of the Sync server to connect to, e.g. "ws://127.0.0.1:9999" ("wss://" for an encrypted
@@ -908,12 +916,13 @@ class Sync:
                 SyncClient.set_credentials()).
             filter_variables: Optional dictionary of filter variable names to values.
             flags: SyncFlags to adjust the client behavior (combine with ``|``).
+            certificate_paths: Paths of SSL certificates (in the local file system) for encrypted connections.
 
         Returns:
             A configured SyncClient instance.
         """
         server_urls = [server_url] if isinstance(server_url, str) else list(server_url)
-        client = SyncClient(store, server_urls, filter_variables, flags=flags)
+        client = SyncClient(store, server_urls, filter_variables, flags=flags, certificate_paths=certificate_paths)
         try:
             client.set_credentials(credentials)
         except BaseException:
