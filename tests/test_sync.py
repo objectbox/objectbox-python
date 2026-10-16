@@ -8,8 +8,9 @@ from typing import Callable, Optional
 
 import pytest
 
-from objectbox import Store
-from objectbox.exceptions import GeneralError, IllegalArgumentError
+from objectbox import Entity, Id, Model, Store, String, SyncClock, SyncEntity, SyncPrecedence
+from objectbox.c import OBXPropertyFlags_SYNC_CLOCK, OBXPropertyFlags_SYNC_PRECEDENCE
+from objectbox.exceptions import GeneralError, IllegalArgumentError, SchemaError
 from objectbox.sync import *
 from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE, create_test_store
 from tests.model import SyncTestEntity
@@ -459,3 +460,65 @@ def test_client_access_after_close_throws_error(sync_client):
     ]))
     assert_raises_value_error(message=match_error,
                               fn=lambda: sync_client.set_request_updates_mode(SyncRequestUpdatesMode.AUTO))
+
+
+def open_clock_test_store(entity, directory: str) -> Store:
+    model = Model()
+    model.entity(entity)
+    Store.remove_db_files(directory)
+    os.makedirs(directory, exist_ok=True)
+    model_json_file = os.path.join(directory, "objectbox-model.json")
+    if os.path.exists(model_json_file):
+        os.remove(model_json_file)
+    return Store(model=model, directory=directory, model_json_file=model_json_file)
+
+
+@pytest.mark.sync
+def test_sync_clock_and_precedence():
+    @SyncEntity()
+    @Entity(model="sync-clock-test")
+    class ClockEntity:
+        id = Id
+        text = String
+        clock = SyncClock
+        precedence = SyncPrecedence
+
+    assert ClockEntity.clock._flags == OBXPropertyFlags_SYNC_CLOCK
+    assert ClockEntity.precedence._flags == OBXPropertyFlags_SYNC_PRECEDENCE
+
+    store = open_clock_test_store(ClockEntity, "testdata-sync-clock")
+    try:
+        Sync.client(store, NO_SYNC_SERVER_URL, SyncCredentials.none()).start()  # Sync entities need an active client
+        box = store.box(ClockEntity)
+        obj = ClockEntity(text="a")
+        box.put(obj)
+        clock1 = box.get(obj.id).clock
+        assert clock1 > 0  # Set by ObjectBox Sync on put
+        obj.precedence = 5
+        box.put(obj)
+        read = box.get(obj.id)
+        assert read.clock > clock1
+        assert read.precedence == 5
+    finally:
+        store.close()
+
+
+@pytest.mark.sync
+def test_sync_clock_validated():
+    @Entity(model="sync-clock-test-local")
+    class LocalClockEntity:
+        id = Id
+        clock = SyncClock
+
+    with pytest.raises(SchemaError, match="Sync clock is only supported for sync-enabled entities"):
+        open_clock_test_store(LocalClockEntity, "testdata-sync-clock").close()
+
+    @SyncEntity()
+    @Entity(model="sync-clock-test-two")
+    class TwoClocksEntity:
+        id = Id
+        clock = SyncClock
+        clock2 = SyncClock
+
+    with pytest.raises(SchemaError, match="more than one sync clock property"):
+        open_clock_test_store(TwoClocksEntity, "testdata-sync-clock").close()

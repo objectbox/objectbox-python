@@ -486,6 +486,34 @@ class Int64(_IntProperty):
     """Integer 64-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int64, self).__init__(int, type=PropertyType.long, id=id, uid=uid, **kwargs)
+
+
+class SyncClock(Int64):
+    """Sync clock property (64-bit integer) of a Sync entity (see ``@SyncEntity()``): a "hybrid logical clock" to
+    resolve Sync conflicts. These clock values allow "last write wins" conflict resolution.
+
+    There can be only one sync clock per Sync entity type; which is also recommended for basic conflict resolution.
+    For new objects, keep the value 0 (the default) to reserve "a slot" in the object data. ObjectBox Sync updates
+    this property automatically on put operations.
+    As a hybrid clock, it combines a wall clock with a logical counter to compensate for some clock skew effects.
+    To get a timestamp from a value, see ``Sync.sync_clock_timestamp()``.
+    """
+    def __init__(self, id : int = 0, uid : int = 0):
+        super(SyncClock, self).__init__(id=id, uid=uid)
+        self._flags |= OBXPropertyFlags_SYNC_CLOCK
+
+
+class SyncPrecedence(Int64):
+    """Sync precedence property (64-bit integer) of a Sync entity (see ``@SyncEntity()``) to customize Sync conflict
+    resolution: developer-assigned precedence values are then used to resolve conflicts via "higher precedence wins".
+    Defining and assigning precedence values are completely in the hands of the developer.
+
+    There can be only one sync precedence per Sync entity type.
+    Typically, it is combined with a ``SyncClock``, with the latter being the tie-breaker for equal precedence values.
+    """
+    def __init__(self, id : int = 0, uid : int = 0):
+        super(SyncPrecedence, self).__init__(id=id, uid=uid)
+        self._flags |= OBXPropertyFlags_SYNC_PRECEDENCE
         
 # Floating-Point Numeric Properties
 class Float32(_NumericProperty):
