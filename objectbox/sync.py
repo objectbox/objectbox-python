@@ -397,6 +397,22 @@ class SyncCompletedListener:
         pass
 
 
+class SyncTimeListener:
+    """Listener for server time updates.
+
+    Implement this class and pass to SyncClient.set_time_listener(). Note: called from the sync client's background
+    thread (see SyncLoginListener).
+    """
+
+    def on_server_time_update(self, server_time_nanos: int):
+        """Called when server time information is received on the client.
+
+        Args:
+            server_time_nanos: The server time as a Unix timestamp in nanoseconds (since epoch).
+        """
+        pass
+
+
 class SyncChangeListener:
     """Listener for incoming data changes from the server.
 
@@ -765,6 +781,44 @@ class SyncClient:
             c.OBX_sync_listener_complete_t,
             None if completed_listener is None else (lambda arg: completed_listener.on_updates_completed()))
         c.obx_sync_listener_complete(self.__c_sync_client_ptr, c_complete_listener, None)
+
+    def set_time_listener(self, time_listener: typing.Optional[SyncTimeListener]):
+        """Sets a listener to observe server time updates, replacing a previously set one.
+
+        Args:
+            time_listener: The listener to receive server time updates; None to remove the listener.
+        """
+        self.__check_sync_ptr_not_null()
+        c_time_listener = self.__c_callback(
+            c.OBX_sync_listener_server_time_t,
+            None if time_listener is None else (
+                lambda arg, timestamp_ns: time_listener.on_server_time_update(timestamp_ns)))
+        c.obx_sync_listener_server_time(self.__c_sync_client_ptr, c_time_listener, None)
+
+    def server_time_nanos(self) -> int:
+        """Estimates the current server time based on the last known server time.
+
+        Returns:
+            The Unix timestamp in nanoseconds (since epoch); 0 if there has not been a server contact yet and thus the
+            server's time is unknown.
+        """
+        self.__check_sync_ptr_not_null()
+        timestamp_ns = ctypes.c_int64(0)
+        c.obx_sync_time_server(self.__c_sync_client_ptr, ctypes.byref(timestamp_ns))
+        return timestamp_ns.value
+
+    def server_time_diff_nanos(self) -> int:
+        """Returns the estimated difference between the server time and the local time, i.e. server_time_nanos()
+        minus the current time (nanoseconds since epoch).
+
+        Returns:
+            The time difference in nanoseconds, e.g. positive if the server time is ahead of the local time; 0 if
+            there has not been a server contact yet and thus the server's time is unknown.
+        """
+        self.__check_sync_ptr_not_null()
+        diff_ns = ctypes.c_int64(0)
+        c.obx_sync_time_server_diff(self.__c_sync_client_ptr, ctypes.byref(diff_ns))
+        return diff_ns.value
 
     def set_change_listener(self, change_listener: typing.Optional[SyncChangeListener]):
         """Sets a listener to observe incoming data changes from the server, replacing a previously set one.

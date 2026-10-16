@@ -1335,6 +1335,12 @@ obx_sync_credentials_add_user_password = c_fn_rc('obx_sync_credentials_add_user_
 # OBXSyncState obx_sync_state(OBX_sync* sync);
 obx_sync_state = c_fn('obx_sync_state', OBXSyncState, [OBX_sync_p])
 
+# obx_err obx_sync_time_server(OBX_sync* sync, int64_t* out_timestamp_ns);
+obx_sync_time_server = c_fn_rc('obx_sync_time_server', [OBX_sync_p, ctypes.POINTER(ctypes.c_int64)])
+
+# obx_err obx_sync_time_server_diff(OBX_sync* sync, int64_t* out_diff_ns);
+obx_sync_time_server_diff = c_fn_rc('obx_sync_time_server_diff', [OBX_sync_p, ctypes.POINTER(ctypes.c_int64)])
+
 # obx_err obx_sync_stats_u64(OBX_sync* sync, OBXSyncStats counter_type, uint64_t* out_count);
 obx_sync_stats_u64 = c_fn_rc('obx_sync_stats_u64', [OBX_sync_p, ctypes.c_int, ctypes.POINTER(ctypes.c_uint64)])
 
@@ -1409,6 +1415,10 @@ obx_sync_listener_error = c_fn('obx_sync_listener_error', None,
 # void obx_sync_listener_change(OBX_sync* sync, OBX_sync_listener_change* listener, void* listener_arg);
 obx_sync_listener_change = c_fn('obx_sync_listener_change', None,
                                 [OBX_sync_p, OBX_sync_listener_change_t, ctypes.c_void_p])
+
+# void obx_sync_listener_server_time(OBX_sync* sync, OBX_sync_listener_server_time* listener, void* listener_arg);
+obx_sync_listener_server_time = c_fn('obx_sync_listener_server_time', None,
+                                     [OBX_sync_p, OBX_sync_listener_server_time_t, ctypes.c_void_p])
 
 # Filter Variables
 

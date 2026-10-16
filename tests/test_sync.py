@@ -423,6 +423,39 @@ def test_client_certificate_paths(test_store):
 
 
 @pytest.mark.sync
+def test_server_time_unknown_without_server(sync_client):
+    assert sync_client.server_time_nanos() == 0
+    assert sync_client.server_time_diff_nanos() == 0
+
+
+class TimeCollector(SyncTimeListener):
+    def __init__(self):
+        self.server_times_nanos = []
+        self.received = threading.Event()
+
+    def on_server_time_update(self, server_time_nanos: int):
+        self.server_times_nanos.append(server_time_nanos)
+        self.received.set()
+
+
+@pytest.mark.sync
+def test_server_time(sync_server, test_store):
+    client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
+    time_collector = TimeCollector()
+    client.set_time_listener(time_collector)
+    client.start()
+    assert client.wait_for_logged_in_state(timeout_millis=5000)
+    assert time_collector.received.wait(timeout=5)
+    now_nanos = time.time_ns()
+    max_diff_nanos = 60 * 10 ** 9  # The server may run elsewhere; a minute is plenty for clock differences
+    assert abs(time_collector.server_times_nanos[0] - now_nanos) < max_diff_nanos
+    assert abs(client.server_time_nanos() - now_nanos) < max_diff_nanos
+    assert abs(client.server_time_diff_nanos()) < max_diff_nanos
+    client.set_time_listener(None)
+    client.close()
+
+
+@pytest.mark.sync
 def test_stats_without_server(sync_client):
     for counter in SyncStats:
         assert sync_client.stats(counter) == 0
