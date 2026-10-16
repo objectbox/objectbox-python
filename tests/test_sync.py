@@ -87,6 +87,13 @@ def test_sync_listener(sync_server, test_store, login_listener, connection_liste
     assert sync_client.wait_for_logged_in_state(timeout_millis=5000)
     assert sync_client.protocol_version_server() >= 1
     assert completed_listener.completed.wait(timeout=5)
+    assert sync_client.stats(SyncStats.CONNECTS) >= 1
+    assert sync_client.stats(SyncStats.LOGINS) >= 1
+    assert sync_client.stats(SyncStats.MESSAGES_SENT) >= 1
+    assert sync_client.stats(SyncStats.MESSAGES_RECEIVED) >= 1
+    assert sync_client.stats(SyncStats.MESSAGE_BYTES_SENT) > 0
+    assert sync_client.stats(SyncStats.MESSAGE_BYTES_RECEIVED) > 0
+    assert sync_client.stats(SyncStats.MESSAGE_SEND_FAILURES) == 0
     sync_client.stop()
     sync_client.close()
 
@@ -413,6 +420,14 @@ def test_client_certificate_paths(test_store):
     Sync.client(test_store, "wss://127.0.0.1:1", SyncCredentials.none(),
                 certificate_paths=["/path/to/does-not-exist.crt"]).close()
     Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(), certificate_paths=[]).close()
+
+
+@pytest.mark.sync
+def test_stats_without_server(sync_client):
+    for counter in SyncStats:
+        assert sync_client.stats(counter) == 0
+    with pytest.raises(ValueError):
+        sync_client.stats(42)  # Not a SyncStats value
 
 
 @pytest.mark.sync

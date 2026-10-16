@@ -255,6 +255,33 @@ class SyncFlags(IntFlag):
     """Skips invalid (put object) operations in the TX log instead of failing."""
 
 
+class SyncStats(IntEnum):
+    """Sync client statistics counters, useful for testing and diagnostics; see SyncClient.stats()."""
+
+    CONNECTS = 1
+    """Total number of connects."""
+
+    LOGINS = 2
+    """Total number of successful logins."""
+
+    MESSAGES_RECEIVED = 3
+    """Total number of messages received."""
+
+    MESSAGES_SENT = 4
+    """Total number of messages sent."""
+
+    MESSAGE_SEND_FAILURES = 5
+    """Total number of errors during message sending."""
+
+    MESSAGE_BYTES_RECEIVED = 6
+    """Total number of bytes received via messages. Note: this is measured on the application level and thus may not
+    match e.g. the network level."""
+
+    MESSAGE_BYTES_SENT = 7
+    """Total number of bytes sent via messages. Note: this is measured on the application level and thus may not
+    match e.g. the network level."""
+
+
 class SyncCode(IntEnum):
     """Sync response/error codes."""
 
@@ -522,6 +549,17 @@ class SyncClient:
             else:
                 creds._pass_secret(lambda buffer, size: c.obx_sync_credentials_add(self.__c_sync_client_ptr,
                                                                                     creds.type, buffer, size, is_last))
+
+    def stats(self, counter: SyncStats) -> int:
+        """Gets the value of a Sync client statistics counter.
+
+        Args:
+            counter: The counter to get, see SyncStats.
+        """
+        self.__check_sync_ptr_not_null()
+        count = ctypes.c_uint64(0)
+        c.obx_sync_stats_u64(self.__c_sync_client_ptr, SyncStats(counter), ctypes.byref(count))
+        return count.value
 
     def set_max_messages_in_flight(self, value: int):
         """Configures the maximum number of outgoing transaction messages that can be sent without an ACK from the

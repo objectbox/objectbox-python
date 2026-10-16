@@ -1335,6 +1335,9 @@ obx_sync_credentials_add_user_password = c_fn_rc('obx_sync_credentials_add_user_
 # OBXSyncState obx_sync_state(OBX_sync* sync);
 obx_sync_state = c_fn('obx_sync_state', OBXSyncState, [OBX_sync_p])
 
+# obx_err obx_sync_stats_u64(OBX_sync* sync, OBXSyncStats counter_type, uint64_t* out_count);
+obx_sync_stats_u64 = c_fn_rc('obx_sync_stats_u64', [OBX_sync_p, ctypes.c_int, ctypes.POINTER(ctypes.c_uint64)])
+
 # obx_err obx_sync_max_messages_in_flight(OBX_sync* sync, int value);
 obx_sync_max_messages_in_flight = c_fn_rc('obx_sync_max_messages_in_flight', [OBX_sync_p, ctypes.c_int])
 
