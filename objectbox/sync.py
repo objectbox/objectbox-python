@@ -523,6 +523,19 @@ class SyncClient:
                 creds._pass_secret(lambda buffer, size: c.obx_sync_credentials_add(self.__c_sync_client_ptr,
                                                                                     creds.type, buffer, size, is_last))
 
+    def set_max_messages_in_flight(self, value: int):
+        """Configures the maximum number of outgoing transaction messages that can be sent without an ACK from the
+        server.
+
+        Args:
+            value: The maximum number of messages; must be in the range 1-20.
+
+        Raises:
+            IllegalArgumentError: If the value is not in the range 1-20.
+        """
+        self.__check_sync_ptr_not_null()
+        c.obx_sync_max_messages_in_flight(self.__c_sync_client_ptr, value)
+
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
         """Configures how sync updates are received from the server.
 

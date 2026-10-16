@@ -416,6 +416,15 @@ def test_client_certificate_paths(test_store):
 
 
 @pytest.mark.sync
+def test_max_messages_in_flight(sync_client):
+    sync_client.set_max_messages_in_flight(1)
+    sync_client.set_max_messages_in_flight(20)
+    for value in (0, 21):
+        with pytest.raises(IllegalArgumentError, match="Value must be between 1 and 20"):
+            sync_client.set_max_messages_in_flight(value)
+
+
+@pytest.mark.sync
 def test_client_unsupported_url(test_store):
     # Fails when adding the URL to the options (are freed) and when creating the client (frees the options)
     with pytest.raises(IllegalArgumentError, match="All URLs must have the same scheme"):
