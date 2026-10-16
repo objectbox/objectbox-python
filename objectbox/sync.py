@@ -8,11 +8,12 @@ from objectbox import Store
 from objectbox.c import OBX_sync_change_array
 
 
-def _to_bytes(value: typing.Union[str, bytes]) -> bytes:
+def _to_bytearray(value: typing.Union[str, bytes]) -> bytearray:
+    """Returns a new bytearray (UTF-8 for a str), which can be wiped after use (unlike str and bytes)."""
     if isinstance(value, str):
-        return value.encode('utf-8')
+        return bytearray(value, 'utf-8')
     if isinstance(value, (bytes, bytearray)):
-        return bytes(value)
+        return bytearray(value)
     raise TypeError(f"Expected str or bytes, got {type(value).__name__}")
 
 
@@ -42,7 +43,7 @@ class SyncCredentials:
         Returns:
             A SyncCredentials instance for shared secret authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.SHARED_SECRET_SIPPED, _to_bytes(secret))
+        return SyncCredentialsSecret(c.SyncCredentialsType.SHARED_SECRET_SIPPED, _to_bytearray(secret))
 
     @staticmethod
     def google_auth(token: typing.Union[str, bytes]) -> 'SyncCredentials':
@@ -54,7 +55,7 @@ class SyncCredentials:
         Returns:
             A SyncCredentials instance for Google authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.GOOGLE_AUTH, _to_bytes(token))
+        return SyncCredentialsSecret(c.SyncCredentialsType.GOOGLE_AUTH, _to_bytearray(token))
 
     @staticmethod
     def user_and_password(username: str, password: str) -> 'SyncCredentials':
@@ -80,7 +81,7 @@ class SyncCredentials:
         Returns:
             A SyncCredentials instance for JWT ID token authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_ID, jwt_id_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_ID, _to_bytearray(jwt_id_token))
 
     @staticmethod
     def jwt_access_token(jwt_access_token: str) -> 'SyncCredentials':
@@ -92,7 +93,7 @@ class SyncCredentials:
         Returns:
             A SyncCredentials instance for JWT access token authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_ACCESS, jwt_access_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_ACCESS, _to_bytearray(jwt_access_token))
 
     @staticmethod
     def jwt_refresh_token(jwt_refresh_token: str) -> 'SyncCredentials':
@@ -105,7 +106,7 @@ class SyncCredentials:
         Returns:
             A SyncCredentials instance for JWT refresh token authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_REFRESH, jwt_refresh_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_REFRESH, _to_bytearray(jwt_refresh_token))
 
     @staticmethod
     def jwt_custom_token(jwt_custom_token: str) -> 'SyncCredentials':
@@ -118,7 +119,7 @@ class SyncCredentials:
         Returns:
             A SyncCredentials instance for custom JWT token authentication.
         """
-        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_CUSTOM, jwt_custom_token.encode('utf-8'))
+        return SyncCredentialsSecret(c.SyncCredentialsType.JWT_CUSTOM, _to_bytearray(jwt_custom_token))
 
 
 class SyncCredentialsNone(SyncCredentials):
@@ -129,17 +130,41 @@ class SyncCredentialsNone(SyncCredentials):
 
 
 class SyncCredentialsSecret(SyncCredentials):
-    """Internal use only. Sync credential that is a single secret string."""
+    """Internal use only. Sync credential that is a single secret string.
 
-    def __init__(self, credential_type: c.SyncCredentialsType, secret: bytes):
+    Like in Java, the secret is wiped (overwritten with zeros) once it was passed to the C library, so these
+    credentials can only be used once.
+    """
+
+    def __init__(self, credential_type: c.SyncCredentialsType, secret: bytearray):
         """Creates a secret-based credential.
 
         Args:
             credential_type: The type of credential.
-            secret: UTF-8 encoded secret bytes.
+            secret: UTF-8 encoded secret bytes; must not be empty. Wiped after use, so pass a copy.
         """
+        if len(secret) == 0:
+            raise ValueError("Token must not be empty")
         super().__init__(credential_type)
         self.secret = secret
+        self.cleared = False
+
+    def _check_not_cleared(self):
+        if self.cleared:
+            raise ValueError("Credentials already have been used (and cleared); create new credentials")
+
+    def _pass_secret(self, c_function: typing.Callable[[ctypes.Array, int], None]):
+        """Calls c_function(buffer, size) with the secret and wipes the secret afterwards (also if it raises)."""
+        self._check_not_cleared()
+        try:
+            buffer = (ctypes.c_char * len(self.secret)).from_buffer(self.secret)
+            try:
+                c_function(buffer, len(self.secret))
+            finally:
+                del buffer  # Release the bytearray's buffer
+        finally:
+            self.secret[:] = bytes(len(self.secret))
+            self.cleared = True
 
 
 class SyncCredentialsUserPassword(SyncCredentials):
@@ -410,12 +435,16 @@ class SyncClient:
         Any credentials set before are replaced. Usually, credentials are passed to Sync.client(), but this can be used
         to update them later, e.g. when a token expires.
 
+        Like in Java, secrets (tokens) are wiped from the given credentials once passed on, so credentials can only be
+        used once; create new ones e.g. to set them again.
+
         Args:
             credentials: The credentials to use for authentication; a list to pass multiple credentials (the server
                 accepts the client if any of them is valid), which must not include SyncCredentials.none().
 
         Raises:
-            ValueError: If the list is empty or contains SyncCredentials.none() (along with other credentials).
+            ValueError: If the list is empty or contains SyncCredentials.none() (along with other credentials), or if
+                credentials were already used.
             TypeError: If credentials were not created by the SyncCredentials factory methods.
         """
         self.__check_sync_ptr_not_null()
@@ -428,6 +457,8 @@ class SyncClient:
                 raise TypeError(f"Unsupported credentials: {creds!r}; use the SyncCredentials factory methods")
             if isinstance(creds, SyncCredentialsNone) and len(credentials_list) > 1:
                 raise ValueError("SyncCredentials.none() is not supported with multiple credentials")
+            if isinstance(creds, SyncCredentialsSecret):
+                creds._check_not_cleared()
 
         if len(credentials_list) == 1:
             creds = credentials_list[0]
@@ -437,7 +468,8 @@ class SyncClient:
                 c.obx_sync_credentials_user_password(self.__c_sync_client_ptr, creds.type,
                                                      creds.username.encode('utf-8'), creds.password.encode('utf-8'))
             else:
-                c.obx_sync_credentials(self.__c_sync_client_ptr, creds.type, creds.secret, len(creds.secret))
+                creds._pass_secret(lambda buffer, size: c.obx_sync_credentials(self.__c_sync_client_ptr, creds.type,
+                                                                                buffer, size))
             return
 
         for i, creds in enumerate(credentials_list):
@@ -447,8 +479,8 @@ class SyncClient:
                                                          creds.username.encode('utf-8'),
                                                          creds.password.encode('utf-8'), is_last)
             else:
-                c.obx_sync_credentials_add(self.__c_sync_client_ptr, creds.type, creds.secret, len(creds.secret),
-                                           is_last)
+                creds._pass_secret(lambda buffer, size: c.obx_sync_credentials_add(self.__c_sync_client_ptr,
+                                                                                    creds.type, buffer, size, is_last))
 
     def set_request_updates_mode(self, mode: SyncRequestUpdatesMode):
         """Configures how sync updates are received from the server.

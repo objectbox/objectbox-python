@@ -290,6 +290,39 @@ def test_credentials_str_or_bytes():
         SyncCredentials.shared_secret(42)
 
 
+def test_credentials_empty_token():
+    # Like in Java
+    for create in (SyncCredentials.shared_secret, SyncCredentials.google_auth, SyncCredentials.jwt_id_token,
+                   SyncCredentials.jwt_access_token, SyncCredentials.jwt_refresh_token,
+                   SyncCredentials.jwt_custom_token):
+        with pytest.raises(ValueError, match="Token must not be empty"):
+            create("")
+    with pytest.raises(ValueError, match="Token must not be empty"):
+        SyncCredentials.shared_secret(b"")
+
+
+@pytest.mark.sync
+def test_credentials_wiped_after_use(sync_client):
+    secret = bytearray(b"secret")
+    single = SyncCredentials.shared_secret(secret)
+    multiple = [SyncCredentials.jwt_id_token("token"), SyncCredentials.user_and_password("user", "password"),
+                SyncCredentials.shared_secret("secret")]
+    sync_client.set_credentials(single)
+    sync_client.set_credentials(multiple)
+    for creds in [single, multiple[0], multiple[2]]:
+        assert creds.cleared
+        assert creds.secret == bytes(len(creds.secret))  # Zeros
+    assert secret == b"secret"  # The caller's bytearray is copied, not wiped
+
+    # Used credentials can not be used again (checked before any are passed on)
+    unused = SyncCredentials.jwt_id_token("token")
+    with pytest.raises(ValueError, match="Credentials already have been used"):
+        sync_client.set_credentials(single)
+    with pytest.raises(ValueError, match="Credentials already have been used"):
+        sync_client.set_credentials([unused, multiple[0]])
+    assert not unused.cleared
+
+
 @pytest.mark.sync
 def test_client_closed_when_store_closed(test_store, sync_client):
     assert not sync_client.is_closed()
