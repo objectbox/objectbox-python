@@ -180,15 +180,62 @@ def test_filter_variables(test_store):
     }
     client = SyncClient(test_store, [NO_SYNC_SERVER_URL], filter_vars)
 
-    client.put_filter_variable("name3", "val3")
-    client.remove_filter_variable("name1")
-    client.put_filter_variable("name4", "val4")
+    client.put_filter_variable("name2", "val2")
+    client.remove_filter_variable("name2")
+    client.put_filter_variable("name2", "")  # Empty values are allowed
     client.remove_all_filter_variables()
+    client.put_filter_variable("name1", "val1 updated")
     client.apply_filter_variables()  # Not logged in: used with the next login
 
     with pytest.raises(IllegalArgumentError, match="Filter variables must have a name"):
         client.put_filter_variable("", "val5")
 
+    client.close()
+
+
+@pytest.mark.sync
+def test_client_closed_if_filter_variables_fail(test_store):
+    with pytest.raises(IllegalArgumentError, match="Filter variables must have a name") as exc_info:
+        Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(), filter_variables={"": "value"})
+    # The failed client is closed, i.e. not active for the store, even while its exception (traceback) is referenced
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
+    del exc_info
+
+
+class LoginCounter(SyncLoginListener):
+    def __init__(self):
+        self.count = 0
+        self.condition = threading.Condition()
+
+    def on_logged_in(self):
+        with self.condition:
+            self.count += 1
+            self.condition.notify_all()
+
+    def on_login_failed(self, sync_login_code: int):
+        pass
+
+    def wait_for_count(self, count: int, timeout: float) -> bool:
+        with self.condition:
+            return self.condition.wait_for(lambda: self.count >= count, timeout=timeout)
+
+
+@pytest.mark.sync
+def test_filter_variables_apply_after_login(sync_server, test_store):
+    client = Sync.client(test_store, sync_server.url, SyncCredentials.none(), filter_variables={"team": "blue"})
+    login_counter = LoginCounter()
+    client.set_login_listener(login_counter)
+    client.start()
+    assert login_counter.wait_for_count(1, timeout=5)
+
+    # After login, changes are pending until applied
+    client.put_filter_variable("team", "green")
+    assert not login_counter.wait_for_count(2, timeout=0.5)
+
+    # Applying sends the variables to the server: the client reconnects and logs in again
+    client.apply_filter_variables()
+    assert login_counter.wait_for_count(2, timeout=5)
+    assert client.wait_for_logged_in_state(timeout_millis=5000)
     client.close()
 
 

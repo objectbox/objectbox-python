@@ -420,8 +420,12 @@ class SyncClient:
         self.__store._add_close_listener(self.__on_store_close)
         _clients_by_store[store] = weakref.ref(self)
 
-        for name, value in (filter_variables or {}).items():
-            self.put_filter_variable(name, value)
+        try:
+            for name, value in (filter_variables or {}).items():
+                self.put_filter_variable(name, value)
+        except BaseException:
+            self.close()  # Not reachable by the caller, so close it now (it would block a new client for the store)
+            raise
 
     def __del__(self):
         # Close the SyncClient when this instance is destructed
@@ -748,7 +752,8 @@ class SyncClient:
 
         Sync client filter variables can be used in server-side Sync filters to
         filter out objects that do not match the filters. Variables put before login (e.g. before start()) are used
-        for the login; changes after login are pending until apply_filter_variables() is called.
+        for the login; changes after login are pending until apply_filter_variables() is called. This allows to put or
+        remove multiple variables before applying all changes.
 
         See also remove_filter_variable(), remove_all_filter_variables() and apply_filter_variables().
 
@@ -762,6 +767,9 @@ class SyncClient:
     def remove_filter_variable(self, name: str):
         """Removes a previously added Sync filter variable value.
 
+        Note: if the client is already logged in, this change is not applied until apply_filter_variables() is called
+        (see put_filter_variable() for details).
+
         See also put_filter_variable(), remove_all_filter_variables() and apply_filter_variables().
 
         Args:
@@ -772,6 +780,9 @@ class SyncClient:
 
     def remove_all_filter_variables(self):
         """Removes all previously added Sync filter variable values.
+
+        Note: if the client is already logged in, this change is not applied until apply_filter_variables() is called
+        (see put_filter_variable() for details).
 
         See also put_filter_variable(), remove_filter_variable() and apply_filter_variables().
         """
