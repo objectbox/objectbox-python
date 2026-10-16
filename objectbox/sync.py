@@ -398,16 +398,21 @@ class SyncClient:
                 'please visit https://objectbox.io/sync/ for options.')
 
         self.__store = store
-        self.__server_urls = [url.encode('utf-8') for url in server_urls]
 
         if not store._c_store:
             raise ValueError("Store is closed")
         if store._sync_client is not None:
             raise ValueError("Only one sync client can be active for a store")
 
-        self.__c_sync_client_ptr = c.obx_sync_urls(store._c_store,
-                                                   c.c_array_pointer(self.__server_urls, ctypes.c_char_p),
-                                                   len(self.__server_urls))
+        # Like Java and Dart, create the client via options (allows further options, e.g. flags)
+        c_options = c.obx_sync_opt(store._c_store)
+        try:
+            for url in server_urls:
+                c.obx_sync_opt_add_url(c_options, url.encode('utf-8'))
+        except BaseException:
+            c.obx_sync_opt_free(c_options)  # Only if not passed to obx_sync_create(), which frees them in any case
+            raise
+        self.__c_sync_client_ptr = c.obx_sync_create(c_options)
 
         # Close this client when the store is closed (the C API requires the client to be closed first).
         # Like in Java and Dart, the store keeps the client alive until it is closed, so the caller does not have to

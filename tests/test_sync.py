@@ -9,7 +9,7 @@ from typing import Callable, Optional
 import pytest
 
 from objectbox import Store
-from objectbox.exceptions import IllegalArgumentError
+from objectbox.exceptions import GeneralError, IllegalArgumentError
 from objectbox.sync import *
 from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE, create_test_store
 from tests.model import SyncTestEntity
@@ -348,6 +348,17 @@ def test_client_closed_if_credentials_fail(test_store):
     with pytest.raises(TypeError, match='Unsupported credentials'):
         Sync.client(test_store, NO_SYNC_SERVER_URL, "token")
     # The failed client is closed, i.e. not active for the store
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
+
+
+@pytest.mark.sync
+def test_client_unsupported_url(test_store):
+    # Fails when adding the URL to the options (are freed) and when creating the client (frees the options)
+    with pytest.raises(IllegalArgumentError, match="All URLs must have the same scheme"):
+        Sync.client(test_store, [NO_SYNC_SERVER_URL, "http://127.0.0.1:9999"], SyncCredentials.none())
+    with pytest.raises(GeneralError, match="Client transport not found"):
+        Sync.client(test_store, "http://127.0.0.1:9999", SyncCredentials.none())
+    assert test_store.sync_client() is None
     Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
 
 

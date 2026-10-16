@@ -1174,6 +1174,13 @@ class OBX_sync(ctypes.Structure):
 OBX_sync_p = ctypes.POINTER(OBX_sync)
 
 
+class OBX_sync_options(ctypes.Structure):
+    pass
+
+
+OBX_sync_options_p = ctypes.POINTER(OBX_sync_options)
+
+
 class OBX_sync_server(ctypes.Structure):
     pass
 
@@ -1280,6 +1287,20 @@ obx_sync = c_fn("obx_sync", OBX_sync_p, [OBX_store_p, ctypes.c_char_p])
 
 # OBX_sync* obx_sync_urls(OBX_store* store, const char* server_urls[], size_t server_urls_count);
 obx_sync_urls = c_fn("obx_sync_urls", OBX_sync_p, [OBX_store_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_size_t])
+
+# Client options (like Java and Dart, clients are created via options: allows e.g. flags and certificate paths)
+
+# OBX_sync_options* obx_sync_opt(OBX_store* store);
+obx_sync_opt = c_fn("obx_sync_opt", OBX_sync_options_p, [OBX_store_p])
+
+# obx_err obx_sync_opt_add_url(OBX_sync_options* opt, const char* url);
+obx_sync_opt_add_url = c_fn_rc("obx_sync_opt_add_url", [OBX_sync_options_p, ctypes.c_char_p])
+
+# OBX_sync* obx_sync_create(OBX_sync_options* opt);  Always frees the options, also on errors
+obx_sync_create = c_fn("obx_sync_create", OBX_sync_p, [OBX_sync_options_p])
+
+# void obx_sync_opt_free(OBX_sync_options* opt);  Only for unused options (obx_sync_create() frees them)
+obx_sync_opt_free = c_fn("obx_sync_opt_free", None, [OBX_sync_options_p])
 
 # Client Credentials
 
