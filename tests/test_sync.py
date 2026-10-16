@@ -396,6 +396,16 @@ def test_client_closed_if_credentials_fail(test_store):
 
 
 @pytest.mark.sync
+def test_client_flags(test_store):
+    flags = (SyncFlags.DEBUG_LOG_ID_MAPPING | SyncFlags.KEEP_DATA_ON_SYNC_ERROR | SyncFlags.DEBUG_LOG_FILTER_VARIABLES |
+             SyncFlags.REMOVE_WITH_OBJECT_DATA | SyncFlags.DEBUG_LOG_TX_LOGS | SyncFlags.SKIP_INVALID_TX_OPS)
+    assert flags == 63
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(), flags=flags)
+    assert client.state() == SyncState.CREATED
+    client.close()
+
+
+@pytest.mark.sync
 def test_client_unsupported_url(test_store):
     # Fails when adding the URL to the options (are freed) and when creating the client (frees the options)
     with pytest.raises(IllegalArgumentError, match="All URLs must have the same scheme"):

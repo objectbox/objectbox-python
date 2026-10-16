@@ -1,7 +1,7 @@
 import ctypes
 import threading
 import typing
-from enum import Enum, auto, IntEnum
+from enum import Enum, auto, IntEnum, IntFlag
 
 import objectbox.c as c
 from objectbox import Store
@@ -228,6 +228,33 @@ class SyncRequestUpdatesMode(IntEnum):
     server. Similar to calling SyncClient.request_updates(False)."""
 
 
+class SyncFlags(IntFlag):
+    """Flags to adjust the Sync client behavior (see Sync.client()); combine them with ``|``."""
+
+    DEBUG_LOG_ID_MAPPING = 1
+    """Enables (rather extensive) logging on how IDs are mapped (local <-> global)."""
+
+    KEEP_DATA_ON_SYNC_ERROR = 2
+    """If the client gets in a state that does not allow any further synchronization, this flag instructs Sync to keep
+    local data nevertheless. While this preserves data, you need to resolve the situation manually, e.g. back up the
+    data and start with a fresh database. By default (without this flag), existing data of all Sync entity types is
+    wiped and synced from scratch from the server."""
+
+    DEBUG_LOG_FILTER_VARIABLES = 4
+    """Logs Sync filter variables used for each client (server-only: no effect for Sync clients)."""
+
+    REMOVE_WITH_OBJECT_DATA = 8
+    """Remove operations include the full object data in the TX log. This allows Sync filters to filter out remove
+    operations based on the object content; without this flag, remove operations only contain the object ID and
+    cannot be filtered. Note: this increases the size of TX logs for remove operations."""
+
+    DEBUG_LOG_TX_LOGS = 16
+    """Enables debug logging of TX log processing."""
+
+    SKIP_INVALID_TX_OPS = 32
+    """Skips invalid (put object) operations in the TX log instead of failing."""
+
+
 class SyncCode(IntEnum):
     """Sync response/error codes."""
 
@@ -367,7 +394,8 @@ class SyncClient:
     """
 
     def __init__(self, store: Store, server_urls: typing.List[str],
-                 filter_variables: typing.Optional[typing.Dict[str, str]] = None):
+                 filter_variables: typing.Optional[typing.Dict[str, str]] = None, *,
+                 flags: int = 0):
         """Creates a Sync client associated with the given store and options.
 
         This does not initiate any connection attempts yet: call start() to do so.
@@ -376,6 +404,7 @@ class SyncClient:
             store: The ObjectBox store to sync.
             server_urls: List of server URLs to connect to.
             filter_variables: Optional dictionary of filter variable names to values.
+            flags: SyncFlags to adjust the client behavior (combine with ``|``).
 
         Raises:
             ValueError: If a sync client is already active (not closed) for the given store.
@@ -409,6 +438,8 @@ class SyncClient:
         try:
             for url in server_urls:
                 c.obx_sync_opt_add_url(c_options, url.encode('utf-8'))
+            if flags:
+                c.obx_sync_opt_flags(c_options, flags)
         except BaseException:
             c.obx_sync_opt_free(c_options)  # Only if not passed to obx_sync_create(), which frees them in any case
             raise
@@ -848,7 +879,9 @@ class Sync:
             store: Store,
             server_url: typing.Union[str, typing.List[str]],
             credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]],
-            filter_variables: typing.Optional[typing.Dict[str, str]] = None
+            filter_variables: typing.Optional[typing.Dict[str, str]] = None,
+            *,
+            flags: int = 0
     ) -> SyncClient:
         """Creates a Sync client associated with the given store and configures it
         with the given options.
@@ -863,6 +896,9 @@ class Sync:
         value to filter_variables. Sync client filter variables can be used in
         server-side Sync filters to filter out objects that do not match the filter.
 
+        To adjust the client behavior, pass SyncFlags to flags, e.g. SyncFlags.REMOVE_WITH_OBJECT_DATA (recommended
+        with Sync filters).
+
         Args:
             store: The ObjectBox store to sync.
             server_url: The URL of the Sync server to connect to, e.g. "ws://127.0.0.1:9999" ("wss://" for an encrypted
@@ -871,12 +907,13 @@ class Sync:
             credentials: The credentials to use for authentication; or a list of credentials (see
                 SyncClient.set_credentials()).
             filter_variables: Optional dictionary of filter variable names to values.
+            flags: SyncFlags to adjust the client behavior (combine with ``|``).
 
         Returns:
             A configured SyncClient instance.
         """
         server_urls = [server_url] if isinstance(server_url, str) else list(server_url)
-        client = SyncClient(store, server_urls, filter_variables)
+        client = SyncClient(store, server_urls, filter_variables, flags=flags)
         try:
             client.set_credentials(credentials)
         except BaseException:
