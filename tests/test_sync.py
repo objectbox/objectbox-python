@@ -11,7 +11,7 @@ import pytest
 from objectbox import Store
 from objectbox.exceptions import IllegalArgumentError
 from objectbox.sync import *
-from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE
+from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE, create_test_store
 from tests.model import SyncTestEntity
 
 
@@ -366,13 +366,42 @@ def test_client_on_closed_store(test_store):
 
 
 @pytest.mark.sync
-def test_client_not_kept_alive_by_store(test_store):
-    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
-    client_ref = weakref.ref(client)
-    del client
+def test_client_kept_alive_by_store(test_store):
+    assert test_store.sync_client() is None
+
+    def start_client():
+        Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).start()  # No reference kept
+
+    start_client()
     gc.collect()
-    assert client_ref() is None  # Closed via __del__
+    client = test_store.sync_client()  # Like Java and Dart, the store keeps its client alive
+    assert client is not None and not client.is_closed()
+    assert client.state() in (SyncState.STARTED, SyncState.DISCONNECTED)  # Started (no server to connect to)
+
+    client.close()
+    assert test_store.sync_client() is None
     assert len(test_store._close_listeners) == 0
+
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
+    assert test_store.sync_client() is client
+    test_store.close()
+    assert client.is_closed()
+    assert test_store.sync_client() is None
+
+
+@pytest.mark.sync
+def test_client_and_store_closed_when_dropped():
+    """A store and its client that are both no longer referenced (a reference cycle) are closed by the cyclic GC."""
+    store = create_test_store()
+    client = Sync.client(store, NO_SYNC_SERVER_URL, SyncCredentials.none())
+    client.start()
+    store_ref = weakref.ref(store)
+    client_ref = weakref.ref(client)
+    del store, client
+    gc.collect()
+    assert store_ref() is None and client_ref() is None
+    store = create_test_store(clear_db=False)  # Raises if the previous store at the same path is still open
+    store.close()
 
 
 def assert_raises_value_error(fn: Callable[[], Optional[object]], message: Optional[str] = None):

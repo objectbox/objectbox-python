@@ -140,6 +140,7 @@ class Store:
 
         self._c_store = None
         self._c_log_callback = None
+        self._sync_client = None  # The open SyncClient (set by it); the store keeps it alive, like Java and Dart
         self._close_listeners: List[Callable[[], None]] = []  # Called before closing, e.g. to close a SyncClient
         if not c_store:
             options = StoreOptions()
@@ -344,10 +345,12 @@ class Store:
         """
         c.obx_remove_db_files(c.c_str(db_dir))
 
+    def sync_client(self) -> Optional['objectbox.sync.SyncClient']:
+        """Returns the Sync client of this store, if one was created and is not closed yet (see Sync.client())."""
+        return self._sync_client
+
     def _add_close_listener(self, listener: Callable[[], None]):
-        """Internal: adds a listener that is called when the store is about to be closed (before the C store is closed).
-        Note: the store keeps a strong reference to the listener, so it should not reference e.g. a SyncClient strongly;
-        otherwise the SyncClient would be kept alive by the store."""
+        """Internal: adds a listener that is called when the store is about to be closed (before the C store is closed)."""
         self._close_listeners.append(listener)
 
     def _remove_close_listener(self, listener: Callable[[], None]):

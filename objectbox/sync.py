@@ -1,7 +1,6 @@
 import ctypes
 import threading
 import typing
-import weakref
 from enum import Enum, auto, IntEnum
 
 import objectbox.c as c
@@ -360,14 +359,11 @@ class SyncChangeListener:
         pass
 
 
-# The active (not closed) SyncClient of each store; weak references to not keep stores and clients alive
-_clients_by_store: 'weakref.WeakKeyDictionary[Store, weakref.ReferenceType[SyncClient]]' = weakref.WeakKeyDictionary()
-
-
 class SyncClient:
     """Sync client is used to connect to an ObjectBox sync server.
 
-    Usually created via Sync.client().
+    Usually created via Sync.client(). A store has at most one open client, which it keeps alive (no need to keep a
+    reference to it) until the client or the store is closed; see Store.sync_client().
     """
 
     def __init__(self, store: Store, server_urls: typing.List[str],
@@ -406,8 +402,7 @@ class SyncClient:
 
         if not store._c_store:
             raise ValueError("Store is closed")
-        existing_ref = _clients_by_store.get(store)
-        if existing_ref is not None and existing_ref() is not None and not existing_ref().is_closed():
+        if store._sync_client is not None:
             raise ValueError("Only one sync client can be active for a store")
 
         self.__c_sync_client_ptr = c.obx_sync_urls(store._c_store,
@@ -415,10 +410,11 @@ class SyncClient:
                                                    len(self.__server_urls))
 
         # Close this client when the store is closed (the C API requires the client to be closed first).
-        # The store must not keep this client alive (would prevent closing it via __del__), so use a weak reference.
-        self.__on_store_close = SyncClient.__close_on_store_close_func(weakref.ref(self))
+        # Like in Java and Dart, the store keeps the client alive until it is closed, so the caller does not have to
+        # keep a reference (a store and its client that are both no longer referenced are closed by the cyclic GC).
+        self.__on_store_close = self.close
         self.__store._add_close_listener(self.__on_store_close)
-        _clients_by_store[store] = weakref.ref(self)
+        store._sync_client = self
 
         try:
             for name, value in (filter_variables or {}).items():
@@ -428,18 +424,8 @@ class SyncClient:
             raise
 
     def __del__(self):
-        # Close the SyncClient when this instance is destructed
-        # for ex. when garbage collected.
+        # Close the SyncClient when this instance is destructed, e.g. garbage collected together with its store
         self.close()
-
-    @staticmethod
-    def __close_on_store_close_func(client_ref: 'weakref.ReferenceType[SyncClient]'):
-        def close_sync_client():
-            client = client_ref()
-            if client is not None:
-                client.close()
-
-        return close_sync_client
 
     def __check_sync_ptr_not_null(self):
         if self.__c_sync_client_ptr is None:
@@ -608,7 +594,7 @@ class SyncClient:
 
         It can no longer be used afterwards, make a new sync client instead.
         Does nothing if this sync client has already been closed.
-        Also called when the store is closed, or when this client is no longer referenced (garbage collected).
+        Also called when the store is closed. Note: the store keeps its client alive until either is closed.
 
         Note: do not call this from a listener (it is called by the client's background thread, which this joins),
         and do not use this client concurrently from other threads while closing.
@@ -619,9 +605,8 @@ class SyncClient:
                 return
             self.__c_sync_client_ptr = None
         self.__store._remove_close_listener(self.__on_store_close)
-        active_ref = _clients_by_store.get(self.__store)
-        if active_ref is not None and active_ref() is self:
-            del _clients_by_store[self.__store]
+        if self.__store._sync_client is self:
+            self.__store._sync_client = None
         # Stops the client and joins its background thread; thus, no listener is called after this returns
         c.obx_sync_close(c_sync_client_ptr)
         # Now the C callbacks are no longer used and can be released
