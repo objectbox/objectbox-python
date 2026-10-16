@@ -149,8 +149,32 @@ def test_sync_entity():
     assert entities_json["MySharedIdsEntity"]["flags"] == 6  # SYNC_ENABLED | SHARED_GLOBAL_IDS
     assert "flags" not in entities_json["MyLocalEntity"]
 
-    with pytest.raises(TypeError, match="above @Entity"):
-        @Entity(model="sync-entity-test")
-        @SyncEntity()
-        class WrongOrder:
-            id = Id()
+    # Below @Entity() works too
+    @Entity(model="sync-entity-test")
+    @SyncEntity()
+    class SyncBelowEntity:
+        id = Id()
+
+    @Entity(model="sync-entity-test")
+    @SyncEntity(shared_global_ids=True)
+    class SharedIdsBelowEntity:
+        id = Id()
+
+    assert SyncBelowEntity._flags == c.OBXEntityFlags.SYNC_ENABLED
+    assert SharedIdsBelowEntity._flags == c.OBXEntityFlags.SYNC_ENABLED | c.OBXEntityFlags.SHARED_GLOBAL_IDS
+    assert not hasattr(SyncBelowEntity._user_type, "_objectbox_entity_flags")  # Moved to the entity
+
+    # A subclass of a Sync entity's class does not inherit the flags (each entity is decorated on its own)
+    @SyncEntity()
+    class SyncBase:
+        id = Id()
+
+    @Entity(model="sync-entity-test")
+    class LocalSubclass(SyncBase):
+        id = Id()  # Properties are not inherited
+
+    assert LocalSubclass._flags == 0
+    Entity(model="sync-entity-test")(SyncBase)
+
+    with pytest.raises(TypeError, match="must be applied to an entity class"):
+        SyncEntity()(Id())

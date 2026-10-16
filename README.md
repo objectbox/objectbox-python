@@ -108,7 +108,7 @@ pip uninstall objectbox  # If installed
 pip install --upgrade objectbox-sync
 ```
 
-Enable Sync for an entity with `@SyncEntity()` (above `@Entity()`) and start a Sync client for the store:
+Enable Sync for an entity with `@SyncEntity()` (together with `@Entity()`) and start a Sync client for the store:
 
 ```python
 from objectbox import Entity, Id, String, Store, SyncEntity
