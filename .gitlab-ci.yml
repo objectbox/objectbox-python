@@ -100,11 +100,22 @@ test:mac:
   # CPU agnostic: the wheel ships a universal macOS library (x64 and arm64)
   tags: [mac, arm64]
 
+# Windows in a venv: pip install --user on this shell runner would keep packages of earlier pipelines (any branch) in
+# the user site, e.g. a stale distribution owning files of the objectbox package.
+# The runner's shell is bash; the venv's Python is called with forward slashes (also work in PowerShell).
 test:windows:x64:
   extends: .test
   tags: [windows, x64, python]
-  variables:
-    PYTHON: "python.exe"
+  script:
+    - python.exe -m venv .venv
+    - .venv/Scripts/python.exe -m pip install pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - rm -r objectbox_clib
+    - rm -r objectbox_sync_clib
+    - .venv/Scripts/python.exe -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # See .test
+    - .venv/Scripts/python.exe -m pytest -rs
+    - .venv/Scripts/python.exe -m pytest -rs --fast-flatbuffers-builder
+    - .venv/Scripts/python.exe -m pytest -rs --flatbuffers-codegen
 
 # Sync version test jobs: test the objectbox-sync metapackage, i.e. objectbox-api and objectbox-sync-clib (without
 # objectbox-clib)
