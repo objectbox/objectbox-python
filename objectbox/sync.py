@@ -429,6 +429,16 @@ class SyncChangeListener:
         pass
 
 
+class SyncListener(SyncLoginListener, SyncCompletedListener, SyncConnectionListener, SyncChangeListener,
+                   SyncTimeListener):
+    """Listener for all Sync events (login, completed, connection, change and server time); set via
+    SyncClient.set_listener(). Override the methods for the events of interest (the others do nothing).
+
+    Use the more specific listeners, like SyncLoginListener, to only receive a sub-set of events.
+    """
+    pass
+
+
 class SyncClient:
     """Sync client is used to connect to an ObjectBox sync server.
 
@@ -781,6 +791,19 @@ class SyncClient:
             c.OBX_sync_listener_complete_t,
             None if completed_listener is None else (lambda arg: completed_listener.on_updates_completed()))
         c.obx_sync_listener_complete(self.__c_sync_client_ptr, c_complete_listener, None)
+
+    def set_listener(self, listener: typing.Optional[SyncListener]):
+        """Sets a listener for all Sync events, replacing any previously set login, completed, connection, change and
+        time listener (like calling each set_*_listener() with it).
+
+        Args:
+            listener: The listener to receive all events; None to remove all these listeners.
+        """
+        self.set_login_listener(listener)
+        self.set_completed_listener(listener)
+        self.set_connection_listener(listener)
+        self.set_change_listener(listener)
+        self.set_time_listener(listener)
 
     def set_time_listener(self, time_listener: typing.Optional[SyncTimeListener]):
         """Sets a listener to observe server time updates, replacing a previously set one.

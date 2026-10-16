@@ -422,6 +422,48 @@ def test_client_certificate_paths(test_store):
     Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(), certificate_paths=[]).close()
 
 
+class AllEventsListener(SyncListener):
+    def __init__(self):
+        self.events = []
+        self.completed = threading.Event()
+
+    def on_logged_in(self):
+        self.events.append("logged_in")
+
+    def on_connected(self):
+        self.events.append("connected")
+
+    def on_updates_completed(self):
+        self.events.append("completed")
+        self.completed.set()
+
+    def on_server_time_update(self, server_time_nanos: int):
+        self.events.append("time")
+
+
+@pytest.mark.sync
+def test_sync_listener_all_events(sync_server, test_store):
+    client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
+    listener = AllEventsListener()
+    client.set_listener(listener)
+    client.start()
+    assert client.wait_for_logged_in_state(timeout_millis=5000)
+    assert listener.completed.wait(timeout=5)
+    assert {"connected", "logged_in", "completed", "time"} <= set(listener.events)
+    client.close()
+
+    # None removes all listeners
+    client = Sync.client(test_store, sync_server.url, SyncCredentials.none())
+    listener = AllEventsListener()
+    client.set_listener(listener)
+    client.set_listener(None)
+    client.start()
+    assert client.wait_for_logged_in_state(timeout_millis=5000)
+    assert not listener.completed.wait(timeout=0.5)
+    assert listener.events == []
+    client.close()
+
+
 @pytest.mark.sync
 def test_server_time_unknown_without_server(sync_client):
     assert sync_client.server_time_nanos() == 0
