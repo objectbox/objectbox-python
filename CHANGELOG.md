@@ -76,7 +76,9 @@ ObjectBox Python ChangeLog
   the new option `cache_dir` caches the compiled code for other processes (~0.5 ms then), e.g. for short-lived ones.
 * Sync (preview): new module `objectbox.sync` with a Sync client (`Sync.client()`, `SyncClient`) to synchronize data
   with an ObjectBox Sync server; `@SyncEntity()` enables Sync for an entity (optionally with shared global IDs);
-  `SyncClock` and `SyncPrecedence` properties for Sync conflict resolution.
+  `SyncClock` and `SyncPrecedence` properties for Sync conflict resolution. Client options include Sync filter
+  variables, flags (`SyncFlags`) and certificate paths; listeners for login, connection, completed, change and server
+  time events.
   Requires the Sync variant of the C library: install the new package `objectbox-sync` instead of `objectbox`
   (`pip install objectbox-sync`; it installs `objectbox-api` and `objectbox-sync-clib`, the Sync variant of the library).
 
