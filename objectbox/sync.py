@@ -5,6 +5,7 @@ from enum import Enum, auto, IntEnum
 
 import objectbox.c as c
 from objectbox import Store
+from objectbox.model.entity import _Entity
 from objectbox.c import OBX_sync_change_array
 
 
@@ -264,18 +265,24 @@ def _to_sync_code(code: int) -> typing.Union[SyncCode, int]:
 
 
 class SyncChange:
-    """Sync incoming data event."""
+    """Sync incoming data event: the changes received from the Sync server for a single entity type."""
 
-    def __init__(self, entity_id: int, puts: typing.List[int], removals: typing.List[int]):
+    def __init__(self, entity_id: int, puts: typing.List[int], removals: typing.List[int],
+                 entity: typing.Optional[_Entity] = None):
         """Creates a SyncChange event.
 
         Args:
             entity_id: Entity ID this change relates to.
             puts: List of "put" (inserted/updated) object IDs.
             removals: List of removed object IDs.
+            entity: The entity (class) this change relates to, if known.
         """
         self.entity_id = entity_id
         """Entity ID this change relates to."""
+
+        self.entity = entity
+        """The entity (class decorated with @Entity()) this change relates to, e.g. to compare with or for
+        store.box(change.entity); None if the store was opened without a model."""
 
         self.puts = puts
         """List of "put" (inserted/updated) object IDs."""
@@ -681,6 +688,8 @@ class SyncClient:
             change_listener: The listener to receive change events; None to remove the listener.
         """
         self.__check_sync_ptr_not_null()
+        model = self.__store._model
+        entities_by_id = {entity._id: entity for entity in model.entities} if model is not None else {}
 
         def c_change_callback(arg, sync_change_array_ptr):
             sync_change_array = ctypes.cast(sync_change_array_ptr, ctypes.POINTER(OBX_sync_change_array)).contents
@@ -701,7 +710,8 @@ class SyncClient:
                 changes.append(SyncChange(
                     entity_id=c_sync_change.entity_id,
                     puts=puts,
-                    removals=removals
+                    removals=removals,
+                    entity=entities_by_id.get(c_sync_change.entity_id)
                 ))
             change_listener.on_change(changes)
 

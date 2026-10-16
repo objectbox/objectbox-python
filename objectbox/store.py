@@ -141,12 +141,14 @@ class Store:
         self._c_store = None
         self._c_log_callback = None
         self._sync_client = None  # The open SyncClient (set by it); the store keeps it alive, like Java and Dart
+        self._model: Optional[Model] = None  # The model passed (resolved), if any; e.g. to map entity IDs to entities
         self._close_listeners: List[Callable[[], None]] = []  # Called before closing, e.g. to close a SyncClient
         if not c_store:
             options = StoreOptions()
             try:
                 if model is not None:
                     model = Store._sync_model(model, model_json_file, skip_model_sync)
+                    self._model = model
                     if not (skip_model_sync and Store._store_exists(directory)):
                         options.model(model)
                 if directory is not None:

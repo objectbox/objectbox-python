@@ -1,3 +1,4 @@
+import ctypes
 import gc
 import os
 import shutil
@@ -10,11 +11,12 @@ from typing import Callable, Optional
 import pytest
 
 from objectbox import Entity, Id, Model, Store, String, SyncClock, SyncEntity, SyncPrecedence
+import objectbox.c as c
 from objectbox.c import OBXPropertyFlags_SYNC_CLOCK, OBXPropertyFlags_SYNC_PRECEDENCE
 from objectbox.exceptions import GeneralError, IllegalArgumentError, SchemaError
 from objectbox.sync import *
 from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE, create_test_store
-from tests.model import SyncTestEntity
+from tests.model import SyncTestEntity, TestEntity
 
 
 def test_sync_is_available():
@@ -129,12 +131,14 @@ def open_sync_test_store(name: str) -> Store:
 class ChangeCollector(SyncChangeListener):
     def __init__(self):
         self.put_ids_by_entity_id = {}
+        self.entities_by_id = {}
         self.condition = threading.Condition()
 
     def on_change(self, sync_changes):
         with self.condition:
             for change in sync_changes:
                 self.put_ids_by_entity_id.setdefault(change.entity_id, set()).update(change.puts)
+                self.entities_by_id[change.entity_id] = change.entity
             self.condition.notify_all()
 
     def wait_for(self, predicate: Callable[[], bool], timeout_seconds: float) -> bool:
@@ -167,6 +171,7 @@ def test_sync_data(sync_server):
             return any(obj.text == text for obj in store2.box(SyncTestEntity).get_many(list(put_ids)) if obj)
 
         assert change_collector.wait_for(received, timeout_seconds=10)
+        assert change_collector.entities_by_id[SyncTestEntity._id] is SyncTestEntity
     finally:
         store1.close()  # Also closes the sync clients
         store2.close()
@@ -330,6 +335,25 @@ def test_client_closed_when_store_closed(test_store, sync_client):
     assert not sync_client.is_closed()
     test_store.close()
     assert sync_client.is_closed()
+
+
+@pytest.mark.sync
+def test_sync_change_entity(test_store):
+    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
+    changes_received = []
+    listener = SyncChangeListener()
+    listener.on_change = changes_received.extend
+    client.set_change_listener(listener)
+    # Call the C callback directly with a C change array (would require a server sending changes)
+    ids = (c.obx_id * 2)(1, 2)
+    puts = c.OBX_id_array(ids, 2)
+    changes = (c.OBX_sync_change * 2)(c.OBX_sync_change(TestEntity._id, ctypes.pointer(puts), None),
+                                      c.OBX_sync_change(12345, None, None))  # An entity ID not in the model
+    change_array = c.OBX_sync_change_array(changes, 2)
+    client._SyncClient__c_callbacks[0](None, ctypes.pointer(change_array))
+    assert [(change.entity_id, change.entity, change.puts, change.removals) for change in changes_received] == [
+        (TestEntity._id, TestEntity, [1, 2], []), (12345, None, [], [])]
+    client.close()
 
 
 @pytest.mark.sync
