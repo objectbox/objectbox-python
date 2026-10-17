@@ -27,6 +27,7 @@ from objectbox.query import Query
 from objectbox.query_builder import QueryBuilder
 from objectbox.builder import Builder
 from objectbox.objectbox import ObjectBox
+from objectbox.query_builder import OrderFlags
 
 __all__ = [
     'Box',
@@ -77,7 +78,8 @@ __all__ = [
     'QueryBuilder',
     'SyncEntity',
     'SyncClock',
-    'SyncPrecedence'
+    'SyncPrecedence',
+    'OrderFlags'
 ]
 
 # Python binding version

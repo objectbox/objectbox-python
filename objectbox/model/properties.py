@@ -394,6 +394,32 @@ class _IntProperty(_NumericProperty):
         args = {'value': value}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
 
+    def one_of(self, values: List[int]) -> PropertyQueryCondition:
+        """ *one of* (``in``) condition to be passed to :func:`Box.query`;
+        matches if the property value equals any of the given values.
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties;
+        raises a ``TypeError`` for other properties (e.g. Int8, Int16, Bool). """
+        self._assert_ids_assigned()
+        self._assert_one_of_supported()
+        args = {'values': values}
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ONE_OF, args)
+
+    def not_one_of(self, values: List[int]) -> PropertyQueryCondition:
+        """ *not one of* (``not in``) condition to be passed to :func:`Box.query`;
+        matches if the property value equals none of the given values.
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties;
+        raises a ``TypeError`` for other properties (e.g. Int8, Int16, Bool). """
+        self._assert_ids_assigned()
+        self._assert_one_of_supported()
+        args = {'values': values}
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_ONE_OF, args)
+
+    def _assert_one_of_supported(self):
+        # The C API only supports 32-bit and 64-bit integers for "in" conditions
+        if self._ob_type not in (PropertyType.int, PropertyType.long, PropertyType.date, PropertyType.dateNano):
+            raise TypeError(f"Property \"{self.name}\" of type {PropertyType(self._ob_type).name} "
+                            f"does not support one_of()/not_one_of(); supported are 32-bit and 64-bit integers")
+
 
 # ID property (primary key)
 class Id(_IntProperty):
@@ -466,8 +492,13 @@ class String(Property):
         self._assert_ids_assigned()
         args = {'value': value, 'case_sensitive': case_sensitive}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
-    
 
+    def one_of(self, values: List[str], case_sensitive: bool = True) -> PropertyQueryCondition:
+        """ *one of* (``in``) condition (opt-in: case-sensitive) to be passed to :func:`Box.query`;
+        matches if the property value equals any of the given values. """
+        self._assert_ids_assigned()
+        args = {'values': values, 'case_sensitive': case_sensitive, 'string': True}
+        return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ONE_OF, args)
  
 # Signed Integer Numeric Properties
 class Int8(_IntProperty):

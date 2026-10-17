@@ -88,6 +88,8 @@ class PropertyQueryConditionOp(Enum):
     CONTAINS_KEY_VALUE = 12
     IS_NULL = 13
     NOT_NULL = 14
+    ONE_OF = 15
+    NOT_ONE_OF = 16
 
 
 class PropertyQueryCondition(QueryCondition):
@@ -112,6 +114,8 @@ class PropertyQueryCondition(QueryCondition):
         PropertyQueryConditionOp.CONTAINS_KEY_VALUE: "_contains_key_value",
         PropertyQueryConditionOp.IS_NULL: "_apply_is_null",
         PropertyQueryConditionOp.NOT_NULL: "_apply_not_null",
+        PropertyQueryConditionOp.ONE_OF: "_apply_one_of",
+        PropertyQueryConditionOp.NOT_ONE_OF: "_apply_not_one_of",
         # ... new property query conditions here ... :)
     }
 
@@ -130,7 +134,8 @@ class PropertyQueryCondition(QueryCondition):
         self._alias = None
 
     def alias(self, value: str):
-        """ Sets an alias for this condition that can later be used with Query's set_parameter_* methods. """
+        """ Sets an alias for this condition to change its value(s) on the built query via
+        ``Query.set_parameter_alias()`` or ``Query.set_parameters_alias()``. """
         self._alias = value
         return self
 
@@ -274,8 +279,21 @@ class PropertyQueryCondition(QueryCondition):
     def _apply_not_null(self, qb: QueryBuilder) -> obx_qb_cond:
         return qb.not_null(self._property_id)
 
+    def _apply_one_of(self, qb: QueryBuilder) -> obx_qb_cond:
+        values = self._args['values']
+        # Cannot tell strings from ints by the values (the list may be empty), so use the property kind
+        if self._args.get('string', False):
+            case_sensitive = self._args['case_sensitive']
+            return qb.in_strings(self._property_id, values, case_sensitive)
+        else:
+            return qb.in_ints(self._property_id, values)
+
+    def _apply_not_one_of(self, qb: QueryBuilder) -> obx_qb_cond:
+        values = self._args['values']
+        return qb.not_in_ints(self._property_id, values)
+
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         c_cond = self._op_func(qb)
         if self._alias is not None:
-            qb.alias(self._alias)
+            qb._alias_for_property(self._alias, self._property_id)
         return c_cond

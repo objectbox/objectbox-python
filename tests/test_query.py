@@ -3,6 +3,7 @@ from objectbox import *
 from objectbox.c import *
 from objectbox.query import *
 import pytest
+from datetime import datetime, timezone
 from tests.common import *
 from tests.model import *
 
@@ -39,7 +40,7 @@ def test_basics(test_store):
     assert query.find()[0].id == id2
 
     # String query
-    str_prop: Property = TestEntity.str
+    str_prop = TestEntity.str
 
     # Case Sensitive = True
     query = box_test_entity.query(str_prop.equals("bar", case_sensitive=True)).build()
@@ -124,7 +125,7 @@ def test_basics(test_store):
     assert query.find()[1].str == "bar"
 
     # Int queries using a reference to property
-    int_prop: Property = TestEntity.int64
+    int_prop = TestEntity.int64
 
     query = box_test_entity.query(int_prop.equals(123)).build()
     assert query.count() == 1
@@ -164,12 +165,13 @@ def test_basics(test_store):
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
+
 def test_integer_scalars(test_store):
     box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(int8=12, int16=12, int32=12, int64=12))
     id2 = box_test_entity.put(TestEntity(int8=45, int16=45, int32=45, int64=45))
 
-    props = [ "int8", "int16", "int32", "int64"]
+    props = ["int8", "int16", "int32", "int64"]
     for p in props:
         prop = TestEntity._get_property(p)
 
@@ -203,6 +205,7 @@ def test_integer_scalars(test_store):
         assert query.find()[0].id == id1
         assert query.find()[1].id == id2
 
+
 def test_float_scalars(test_store):
     box_test_entity = test_store.box(TestEntity)
     id1 = box_test_entity.put(TestEntity(float32=12.3, float64=12.3))
@@ -210,7 +213,7 @@ def test_float_scalars(test_store):
     id3 = box_test_entity.put(TestEntity(float32=45.7, float64=45.7))
 
     # Test int scalar literals
-    props = [ "float32", "float64" ]
+    props = ["float32", "float64"]
     for p in props:
         prop = TestEntity._get_property(p)
 
@@ -307,7 +310,7 @@ def test_offset_limit(test_store):
     box.put(TestEntity(str="c"))
     assert box.count() == 4
 
-    int_prop = TestEntity.int64 
+    int_prop = TestEntity.int64
 
     query = box.query(int_prop.equals(0)).build()
     assert query.count() == 4
@@ -442,11 +445,11 @@ def test_set_parameter(test_store):
     assert query.find_ids() == [1, 4, 5]
 
     # Test set_parameter_string
-    query.set_parameter_string("str", "bar")
+    query.set_parameter("str", "bar")
     assert query.find_ids() == [3, 6]
 
     # Test set_parameter_int
-    query.set_parameter_int("int64", 8)
+    query.set_parameter("int64", 8)
     assert query.find_ids() == [3]
 
     qb = box_vector_entity.query()
@@ -454,18 +457,17 @@ def test_set_parameter(test_store):
     query = qb.build()
     assert query.find_ids() == sorted([3, 4, 2])
 
-    # set_parameter_vector_f32
-    # set_parameter_int (NN count)
-    query.set_parameter_vector_f32("vector_euclidean", [4.9, 4.9])
+    # Vector; an int sets the NN count
+    query.set_parameter("vector_euclidean", [4.9, 4.9])
     assert query.find_ids() == sorted([5, 4, 3])
 
-    query.set_parameter_vector_f32("vector_euclidean", [0, 0])
+    query.set_parameter("vector_euclidean", [0, 0])
     assert query.find_ids() == sorted([1, 2, 3])
 
-    query.set_parameter_vector_f32("vector_euclidean", [2.5, 2.1])
+    query.set_parameter("vector_euclidean", [2.5, 2.1])
     assert query.find_ids() == sorted([2, 3, 1])
 
-    query.set_parameter_int("vector_euclidean", 2)
+    query.set_parameter("vector_euclidean", 2)
     assert query.find_ids() == sorted([2, 3])
 
 
@@ -482,9 +484,9 @@ def test_set_parameter_alias(test_store):
     box_vector.put(VectorEntity(name="Object 4", vector_euclidean=[4, 4]))
     box_vector.put(VectorEntity(name="Object 5", vector_euclidean=[5, 5]))
 
-    str_prop: Property = TestEntity.str 
-    int32_prop: Property = TestEntity.int32 
-    int64_prop: Property = TestEntity.int64
+    str_prop = TestEntity.str
+    int32_prop = TestEntity.int32
+    int64_prop = TestEntity.int64
 
     # Test set parameter alias on string
     qb = box.query(str_prop.equals("Foo").alias("foo_filter"))
@@ -493,7 +495,7 @@ def test_set_parameter_alias(test_store):
     assert query.find()[0].str == "Foo"
     assert query.count() == 1
 
-    query.set_parameter_alias_string("foo_filter", "FooBar")
+    query.set_parameter_alias("foo_filter", "FooBar")
     assert query.find()[0].str == "FooBar"
     assert query.count() == 1
 
@@ -504,7 +506,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
     assert query.find()[0].str == "FooBar"
 
-    query.set_parameter_alias_int("greater_than_filter", 1)
+    assert query.set_parameter_alias("greater_than_filter", 1) is query
 
     assert query.count() == 2
 
@@ -517,10 +519,10 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
     assert query.find()[0].str == "Foo"
 
-    query.set_parameter_alias_string("str condition", "FooBar")  # FooBar int32 isn't higher than 700 (49)
+    assert query.set_parameter_alias("str condition", "FooBar") is query  # FooBar int32 isn't higher than 700 (49)
     assert query.count() == 0
 
-    query.set_parameter_alias_int("int32 condition", 40)
+    query.set_parameter_alias("int32 condition", 40)
     assert query.find()[0].str == "FooBar"
 
     # Test with &
@@ -531,13 +533,13 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
 
     # Test set parameter alias on vector
-    vector_prop: Property = VectorEntity.vector_euclidean
+    vector_prop = VectorEntity.vector_euclidean
 
     query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
     assert query.count() == 3
     assert query.find_ids() == sorted([3, 4, 2])
 
-    query.set_parameter_alias_vector_f32("nearest_neighbour_filter", [4.9, 4.9])
+    assert query.set_parameter_alias("nearest_neighbour_filter", [4.9, 4.9]) is query
     assert query.count() == 3
     assert query.find_ids() == sorted([5, 4, 3])
 
@@ -590,29 +592,36 @@ def test_set_parameter_alias_advanced(test_store):
     ).build()
     assert len(query.find_ids()) == 0
 
-    # TODO currently we don't support set_parameter_* for int32/bool/other types...
-
-    query.set_parameter_alias_string("str_filter", "Apple")
-    query.set_parameter_alias_int("int64_filter", 300)
+    query.set_parameter_alias("str_filter", "Apple")
+    query.set_parameter_alias("int64_filter", 300)
     assert len(query.find_ids()) == 2  # Apple, APPLE
 
-    query.set_parameter_alias_string("str_filter", "orange")
-    query.set_parameter_alias_int("int64_filter", 1000)
+    query.set_parameter_alias("str_filter", "orange")
+    query.set_parameter_alias("int64_filter", 1000)
     assert len(query.find_ids()) == 1  # Orange
 
-    query.set_parameter_alias_string("str_filter", "Zucchini")
+    query.set_parameter_alias("str_filter", "Zucchini")
     assert len(query.find_ids()) == 1  # Zucchini
+
+    # Bool and int32 parameters via the generic set_parameter_alias()
+    query.set_parameter_alias("bool_filter", True)
+    assert len(query.find_ids()) == 0  # Zucchini is False
+    query.set_parameter_alias("str_filter", "orange")
+    query.set_parameter_alias("int32_filter", 1000)
+    assert len(query.find_ids()) == 1  # ORANGE (int32 798)
+    query.set_parameter_alias("int64_filter", 500)
+    assert len(query.find_ids()) == 2  # ORANGE, orange (int64 546)
 
 
 # Bytes query
 def test_bytes(test_store):
     box = test_store.box(TestEntity)
 
-    bytes_prop: Property = TestEntity.bytes 
+    bytes_prop = TestEntity.bytes
 
     id1 = box.put(TestEntity(bytes=bytes([9])))
-    id2 = box.put(TestEntity(bytes=bytes([1,0])))
-    id3 = box.put(TestEntity(bytes=bytes([0,1])))
+    id2 = box.put(TestEntity(bytes=bytes([1, 0])))
+    id3 = box.put(TestEntity(bytes=bytes([0, 1])))
     query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build()
     assert query.count() == 3
     query = box.query(bytes_prop.greater_or_equal(bytes([1]))).build()
@@ -621,29 +630,365 @@ def test_bytes(test_store):
     assert query.count() == 1
 
     assert box.remove_all() == 3
-    id1 = box.put(TestEntity(bytes=bytes([1,2,3,4])))
-    id2 = box.put(TestEntity(bytes=bytes([5,6,7,8,9,10,11])))
-    query = box.query(bytes_prop.equals(bytes([1,2,3,4]))).build()
+    id1 = box.put(TestEntity(bytes=bytes([1, 2, 3, 4])))
+    id2 = box.put(TestEntity(bytes=bytes([5, 6, 7, 8, 9, 10, 11])))
+    query = box.query(bytes_prop.equals(bytes([1, 2, 3, 4]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box.query(bytes_prop.greater_than(bytes([1,2,3,4]))).build()
+    query = box.query(bytes_prop.greater_than(bytes([1, 2, 3, 4]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id2
 
-    query = box.query(bytes_prop.greater_or_equal(bytes([1,2,3,4]))).build()
+    query = box.query(bytes_prop.greater_or_equal(bytes([1, 2, 3, 4]))).build()
     assert query.count() == 2
 
     query = box.query(bytes_prop.greater_or_equal(bytes([0]))).build()
     assert query.count() == 2
 
-    query = box.query(bytes_prop.less_than(bytes([5,6,7,8,9,10,11]))).build()
+    query = box.query(bytes_prop.less_than(bytes([5, 6, 7, 8, 9, 10, 11]))).build()
     assert query.count() == 1
     assert query.find()[0].id == id1
 
-    query = box.query(bytes_prop.less_or_equal(bytes([5,6,7,8,9,10,11]))).build()
+    query = box.query(bytes_prop.less_or_equal(bytes([5, 6, 7, 8, 9, 10, 11]))).build()
     assert query.count() == 2
 
     # bytes does not support not equals
     with pytest.raises(AttributeError):
         bytes_prop.not_equals(bytes([]))
+
+
+def test_order(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(str="mango", int64=-423))
+    id2 = box.put(TestEntity(str="apricot", int64=456))
+    id3 = box.put(TestEntity(str="Apple", int64=5))
+    id4 = box.put(TestEntity(str="Banana", int64=67))
+    id5 = box.put(TestEntity(str="coconut", int64=2859))
+    assert box.count() == 5
+
+    # Order by int64 (ascending)
+    query = box.query().order(TestEntity.int64).build()
+    assert query.count() == 5
+    assert [o.id for o in query.find()] == [id1, id3, id4, id2, id5]
+    assert query.find_ids() == [id1, id3, id4, id2, id5]
+
+    # Order by int64 (descending)
+    query = box.query().order(TestEntity.int64, OrderFlags.DESCENDING).build()
+    assert [o.id for o in query.find()] == [id5, id2, id4, id3, id1]
+    assert query.find_ids() == [id5, id2, id4, id3, id1]
+    query = box.query().order_desc(TestEntity.int64).build()
+    assert query.find_ids() == [id5, id2, id4, id3, id1]
+
+    # Order by int64 (unsigned ordering): -423 is the largest
+    query = box.query().order(TestEntity.int64, OrderFlags.UNSIGNED).build()
+    assert [o.id for o in query.find()] == [id3, id4, id2, id5, id1]
+
+    # Order by str (case-insensitive)
+    query = box.query().order(TestEntity.str).build()
+    assert [o.str for o in query.find()] == ["Apple", "apricot", "Banana", "coconut", "mango"]
+
+    # Order by str (case-sensitive)
+    query = box.query().order(TestEntity.str, OrderFlags.CASE_SENSITIVE).build()
+    assert [o.str for o in query.find()] == ["Apple", "Banana", "apricot", "coconut", "mango"]
+
+    # Combined flags; property given by name
+    query = box.query().order("str", OrderFlags.CASE_SENSITIVE | OrderFlags.DESCENDING).build()
+    assert [o.str for o in query.find()] == ["mango", "coconut", "apricot", "Banana", "Apple"]
+    query = box.query().order_desc("str", OrderFlags.CASE_SENSITIVE).build()
+    assert [o.str for o in query.find()] == ["mango", "coconut", "apricot", "Banana", "Apple"]
+
+    # With a condition, offset and limit
+    query = box.query(TestEntity.int64.greater_than(0)).order(TestEntity.str).build()
+    assert [o.str for o in query.find()] == ["Apple", "apricot", "Banana", "coconut"]
+    query.offset(1)
+    query.limit(2)
+    assert [o.str for o in query.find()] == ["apricot", "Banana"]
+
+    # TODO test NULLS_LAST/NULLS_ZERO when None values will be supported (i.e. optional properties)
+
+
+def test_order_multiple(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(str="b", int64=1))
+    id2 = box.put(TestEntity(str="a", int64=2))
+    id3 = box.put(TestEntity(str="B", int64=0))
+    id4 = box.put(TestEntity(str="a", int64=3))
+
+    # The first order is the primary one; the second one orders within equal values ("b" == "B" by default)
+    query = box.query().order(TestEntity.str).order(TestEntity.int64, OrderFlags.DESCENDING).build()
+    assert query.find_ids() == [id4, id2, id1, id3]
+
+    query = box.query().order(TestEntity.str).order(TestEntity.int64).build()
+    assert query.find_ids() == [id2, id4, id3, id1]
+
+
+def test_remove(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put(TestEntity(str="Object 1", int64=3))
+    box.put(TestEntity(str="Object 2", int64=43))
+    box.put(TestEntity(str="Object 3", int64=534))
+    box.put(TestEntity(str="Object 4", int64=234))
+    box.put(TestEntity(str="Object 5", int64=56))
+    assert box.count() == 5
+
+    query = box.query(TestEntity.int64.less_than(500)).build()
+    assert query.remove() == 4
+
+    assert box.count() == 1
+
+
+def test_string_one_of(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put(TestEntity(str="Apple"))
+    box.put(TestEntity(str="banana"))
+    box.put(TestEntity(str="Peach"))
+    box.put(TestEntity(str="MANGO"))
+    box.put(TestEntity(str="Strawberry"))
+    assert box.count() == 5
+
+    query = box.query(TestEntity.str.one_of(["Apple", "Banana", "Peach"])).build()
+    objects = query.find()
+    assert len(objects) == 2
+    assert objects[0].str == "Apple"
+    assert objects[1].str == "Peach"
+
+    query = box.query(TestEntity.str.one_of(["Apple", "Banana", "Peach"], case_sensitive=False)).build()
+    objects = query.find()
+    assert len(objects) == 3
+    assert objects[0].str == "Apple"
+    assert objects[1].str == "banana"
+    assert objects[2].str == "Peach"
+
+    query = box.query(TestEntity.str.one_of(["MANGO"])).build()
+    objects = query.find()
+    assert len(objects) == 1
+    assert objects[0].str == "MANGO"
+
+    query = box.query(TestEntity.str.one_of([])).build()
+    assert query.count() == 0
+
+
+def test_contains_string(test_store):
+    box = test_store.box(TestEntity)
+
+    box.put(TestEntity(str="Green apple"))
+    box.put(TestEntity(str="Red Apple"))
+    box.put(TestEntity(str="Rotten apple"))
+    box.put(TestEntity(str="Banana"))
+    assert box.count() == 4
+
+    query = box.query(TestEntity.str.contains("apple")).build()
+    objects = query.find()
+    assert len(objects) == 2
+    assert objects[0].str == "Green apple"
+    assert objects[1].str == "Rotten apple"
+
+    query = box.query(TestEntity.str.contains("apple", case_sensitive=False)).build()
+    objects = query.find()
+    assert len(objects) == 3
+    assert objects[0].str == "Green apple"
+    assert objects[1].str == "Red Apple"
+    assert objects[2].str == "Rotten apple"
+
+    query = box.query(TestEntity.str.contains("pear")).build()
+    assert query.count() == 0
+
+
+def test_int_one_of(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(int32=1, int64=-10, date=1000))
+    id2 = box.put(TestEntity(int32=2, int64=20, date=2000))
+    id3 = box.put(TestEntity(int32=3, int64=2 ** 40, date=3000))
+    id4 = box.put(TestEntity(int32=-4, int64=40, date=4000))
+
+    # Int32 uses the 32-bit C API variant, the others the 64-bit one
+    assert box.query(TestEntity.int32.one_of([1, 3, 5])).build().find_ids() == [id1, id3]
+    assert box.query(TestEntity.int32.not_one_of([1, 3, 5])).build().find_ids() == [id2, id4]
+    assert box.query(TestEntity.int64.one_of([-10, 2 ** 40])).build().find_ids() == [id1, id3]
+    assert box.query(TestEntity.int64.not_one_of([-10, 2 ** 40])).build().find_ids() == [id2, id4]
+    assert box.query(TestEntity.id.one_of([id2, id4])).build().find_ids() == [id2, id4]
+    assert box.query(TestEntity.date.one_of([2000, 4000])).build().find_ids() == [id2, id4]
+
+    # Tuples are accepted as well; combined with other conditions
+    query = box.query(TestEntity.int32.one_of((1, 2, 3)) & TestEntity.int64.greater_than(0)).build()
+    assert query.find_ids() == [id2, id3]
+
+    # Empty lists: nothing is "in" it; everything is "not in" it
+    assert box.query(TestEntity.int64.one_of([])).build().count() == 0
+    assert box.query(TestEntity.int64.not_one_of([])).build().count() == 4
+
+    # Not supported by the C API for 8/16-bit integers and bools
+    with pytest.raises(TypeError):
+        TestEntity.int8.one_of([1])
+    with pytest.raises(TypeError):
+        TestEntity.int16.not_one_of([1])
+    with pytest.raises(TypeError):
+        TestEntity.bool.one_of([True])
+
+
+def test_set_parameter_one_of(test_store):
+    box = test_store.box(TestEntity)
+
+    id1 = box.put(TestEntity(str="Apple", int32=1, int64=10))
+    id2 = box.put(TestEntity(str="Banana", int32=2, int64=20))
+    id3 = box.put(TestEntity(str="Cherry", int32=3, int64=30))
+
+    # Via property
+    query = box.query(TestEntity.str.one_of(["Apple"])).build()
+    assert query.find_ids() == [id1]
+    assert query.set_parameter(TestEntity.str, ["Banana", "Cherry"]).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.str, []).count() == 0
+
+    query = box.query(TestEntity.int32.one_of([1])).build()
+    assert query.set_parameter(TestEntity.int32, [2, 3]).find_ids() == [id2, id3]
+    query = box.query(TestEntity.int64.not_one_of([10])).build()
+    assert query.set_parameter("int64", [10, 20]).find_ids() == [id3]
+
+    # Via alias; int32 and int64 conditions need different C API calls
+    query = box.query(TestEntity.str.one_of(["Apple"], case_sensitive=False).alias("names")
+                      & TestEntity.int32.one_of([1]).alias("ints32")
+                      | TestEntity.int64.one_of([]).alias("ints64")).build()
+    assert query.find_ids() == [id1]
+    query.set_parameter_alias("names", ["BANANA", "cherry"])
+    assert query.find_ids() == []
+    query.set_parameter_alias("ints32", [2, 3])
+    assert query.find_ids() == [id2, id3]
+    query.set_parameter_alias("names", [])
+    query.set_parameter_alias("ints64", [10])
+    assert query.find_ids() == [id1]
+
+
+def test_set_parameter_generic(test_store):
+    """ set_parameter()/set_parameter_alias() choose the kind of parameter by the property type. """
+    box = test_store.box(TestEntity)
+    id1 = box.put(TestEntity(str="Apple", int32=1, int64=10))
+    id2 = box.put(TestEntity(str="Banana", int32=2, int64=20))
+    id3 = box.put(TestEntity(str="Cherry", int32=3, int64=30))
+
+    query = box.query(TestEntity.str.equals("Apple") & TestEntity.int64.greater_than(0)).build()
+    assert query.set_parameter(TestEntity.str, "Banana").find_ids() == [id2]
+    assert query.set_parameter("int64", 20).find_ids() == []
+
+    query = box.query(TestEntity.str.one_of(["Apple"]) & TestEntity.int32.one_of([1, 2, 3])).build()
+    assert query.set_parameter(TestEntity.str, ["Banana", "Cherry"]).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.int32, [3]).find_ids() == [id3]
+    assert query.set_parameter(TestEntity.str, []).count() == 0  # The property type decides: strings
+
+    # Aliases; the int32 and int64 "one of" conditions need different C API calls
+    query = box.query(TestEntity.str.equals("Apple").alias("name")
+                      | TestEntity.int32.one_of([]).alias("ints32")
+                      | TestEntity.int64.one_of([]).alias("ints64")).build()
+    assert query.find_ids() == [id1]
+    assert query.set_parameter_alias("name", "Cherry").find_ids() == [id3]
+    assert query.set_parameter_alias("ints32", [2]).find_ids() == [id2, id3]
+    assert query.set_parameter_alias("ints64", [10]).find_ids() == [id1, id2, id3]
+
+    assert "Cherry" in query.describe_parameters()
+
+    # Wrong value types
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, "1")
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, [1.5])
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.str, ["a", 1])
+    with pytest.raises(TypeError):
+        query.set_parameter_alias("name", 1.5)
+
+    # Vector: a list sets the search vector, an integer the maximum result count
+    vector_box = test_store.box(VectorEntity)
+    for i in range(1, 6):
+        vector_box.put(VectorEntity(name=f"Object {i}", vector_euclidean=[i, i]))
+    query = vector_box.query(VectorEntity.vector_euclidean.nearest_neighbor([3.4, 3.4], 3).alias("nn")).build()
+    assert sorted(query.find_ids()) == [2, 3, 4]
+    assert sorted(query.set_parameter(VectorEntity.vector_euclidean, [4.9, 4.9]).find_ids()) == [3, 4, 5]
+    assert sorted(query.set_parameter("vector_euclidean", 2).find_ids()) == [4, 5]
+    assert sorted(query.set_parameter_alias("nn", [0, 0]).find_ids()) == [1, 2]
+
+    # Alias set directly on the QueryBuilder: the property is unknown, so the value type (and for lists, the C type
+    # size: 0 for vectors) decides
+    qb = vector_box.query()
+    qb.nearest_neighbors_f32("vector_euclidean", [3.4, 3.4], 3)
+    qb.alias("qb_nn")
+    query = qb.build()
+    assert sorted(query.set_parameter_alias("qb_nn", [0.0, 0.0]).find_ids()) == [1, 2, 3]
+    assert sorted(query.set_parameter_alias("qb_nn", [5, 5]).find_ids()) == [3, 4, 5]
+    import numpy as np
+    with pytest.raises(TypeError):
+        query.set_parameter_alias("qb_nn", np.array([5, 5], dtype=np.float64))
+    qb = box.query()
+    qb.in_ints("int32", [1])
+    qb.alias("qb_ints32")
+    qb.in_strings("str", ["Apple"])
+    qb.alias("qb_names")
+    query = qb.build()
+    assert query.set_parameter_alias("qb_ints32", [2, 3]).set_parameter_alias("qb_names", []).find_ids() == []
+    assert query.set_parameter_alias("qb_names", ["Banana", "Cherry"]).find_ids() == [id2, id3]
+
+
+def test_set_parameter_types(test_store):
+    """ set_parameter() for float, bytes and date properties; set_parameters() for between(). """
+    box = test_store.box(TestEntity)
+    jan = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    feb = datetime(2024, 2, 1, tzinfo=timezone.utc)
+    mar = datetime(2024, 3, 1, tzinfo=timezone.utc)
+    id1 = box.put(TestEntity(int64=10, float64=1.5, float32=1.5, bytes=bytes([1]), date=jan, date_nano=1))
+    id2 = box.put(TestEntity(int64=20, float64=2.5, float32=2.5, bytes=bytes([2]), date=feb, date_nano=2))
+    id3 = box.put(TestEntity(int64=30, float64=3.5, float32=3.5, bytes=bytes([3]), date=mar, date_nano=3))
+
+    # Floating point: a single value (also given as int) and two values
+    for prop in (TestEntity.float64, TestEntity.float32):
+        query = box.query(prop.greater_than(0.0)).build()
+        assert query.set_parameter(prop, 2.0).find_ids() == [id2, id3]
+        assert query.set_parameter(prop, 3).find_ids() == [id3]
+        query = box.query(prop.between(0.0, 10.0).alias("range")).build()
+        assert query.set_parameters(prop, 1.0, 3.0).find_ids() == [id1, id2]
+        assert query.set_parameters_alias("range", 2, 4).find_ids() == [id2, id3]
+        with pytest.raises(TypeError):
+            query.set_parameter(prop, "1")
+
+    # Integers: two values
+    query = box.query(TestEntity.int64.between(0, 100).alias("range")).build()
+    assert query.set_parameters(TestEntity.int64, 15, 25).find_ids() == [id2]
+    assert query.set_parameters_alias("range", 20, 30).find_ids() == [id2, id3]
+    assert "20" in query.describe_parameters() and "30" in query.describe_parameters()
+    with pytest.raises(TypeError):
+        query.set_parameters(TestEntity.int64, 1.5, 2)
+    with pytest.raises(TypeError):
+        query.set_parameters(TestEntity.str, "a", "b")
+
+    # Bytes
+    query = box.query(TestEntity.bytes.equals(bytes([1])).alias("bytes")).build()
+    assert query.set_parameter(TestEntity.bytes, bytes([2])).find_ids() == [id2]
+    assert query.set_parameter_alias("bytes", bytearray([3])).find_ids() == [id3]
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, bytes([1]))
+
+    # Dates: datetime, float (seconds) or int (milliseconds; nanoseconds for DateNano)
+    query = box.query(TestEntity.date.greater_than(0)).build()
+    assert query.set_parameter(TestEntity.date, jan).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.date, feb.timestamp()).find_ids() == [id3]
+    assert query.set_parameter(TestEntity.date, int(jan.timestamp() * 1000) - 1).find_ids() == [id1, id2, id3]
+    query = box.query(TestEntity.date.between(0, 0)).build()
+    assert query.set_parameters(TestEntity.date, jan, feb).find_ids() == [id1, id2]
+    query = box.query(TestEntity.date.one_of([0])).build()
+    assert query.set_parameter(TestEntity.date, [jan, mar]).find_ids() == [id1, id3]
+    query = box.query(TestEntity.date_nano.equals(0).alias("nano")).build()
+    assert query.set_parameter_alias("nano", 2).find_ids() == [id2]
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, jan)
+
+    # Alias set via QueryBuilder.alias(): the value decides
+    qb = box.query()
+    qb.greater_than_double("float64", 0.0)
+    qb.alias("qb_float")
+    query = qb.build()
+    assert query.set_parameter_alias("qb_float", 2.0).find_ids() == [id2, id3]
+    with pytest.raises(TypeError):
+        query.set_parameter_alias("qb_float", jan)  # Unknown whether milliseconds or nanoseconds
