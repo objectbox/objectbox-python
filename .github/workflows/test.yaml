@@ -4,6 +4,10 @@
 name: Test
 on: [push, pull_request]
 
+env:
+  # E.g. setup-python with Python 3.8 on macOS (old pip): its "new release of pip" notice became an error annotation
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
   test:
     strategy:
