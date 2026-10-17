@@ -20,6 +20,16 @@ from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE, create_test_s
 from tests.model import SyncTestEntity, TestEntity
 
 
+def test_star_import_exports_only_the_sync_api():
+    import objectbox.sync
+    namespace = {}
+    exec("from objectbox.sync import *", namespace)
+    exported = {name for name in namespace if name != "__builtins__"}
+    assert exported == set(objectbox.sync.__all__)
+    assert all(name.startswith("Sync") for name in exported)
+    assert "Store" not in exported and "c" not in exported
+
+
 def test_sync_is_available():
     # Must not raise if Sync is not available (standard library)
     assert Sync.is_available() in (True, False)

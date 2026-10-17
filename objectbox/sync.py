@@ -9,6 +9,24 @@ from objectbox.model.entity import _Entity
 from objectbox.c import OBX_sync_change_array
 from objectbox.exceptions import FeatureNotAvailable, IllegalArgumentError, IllegalStateError
 
+__all__ = [
+    'Sync',
+    'SyncClient',
+    'SyncCredentials',
+    'SyncState',
+    'SyncRequestUpdatesMode',
+    'SyncFlags',
+    'SyncStats',
+    'SyncCode',
+    'SyncChange',
+    'SyncListener',
+    'SyncLoginListener',
+    'SyncConnectionListener',
+    'SyncCompletedListener',
+    'SyncTimeListener',
+    'SyncChangeListener',
+]
+
 
 def _to_bytearray(value: typing.Union[str, bytes]) -> bytearray:
     """Returns a new bytearray (UTF-8 for a str), which can be wiped after use (unlike str and bytes)."""
