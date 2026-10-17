@@ -3,6 +3,7 @@ from objectbox import *
 from objectbox.c import *
 from objectbox.query import *
 import pytest
+from datetime import datetime, timezone
 from tests.common import *
 from tests.model import *
 
@@ -592,8 +593,6 @@ def test_set_parameter_alias_advanced(test_store):
     ).build()
     assert len(query.find_ids()) == 0
 
-    # TODO currently we don't support set_parameter_* for int32/bool/other types...
-
     query.set_parameter_alias_string("str_filter", "Apple")
     query.set_parameter_alias_int("int64_filter", 300)
     assert len(query.find_ids()) == 2  # Apple, APPLE
@@ -604,6 +603,15 @@ def test_set_parameter_alias_advanced(test_store):
 
     query.set_parameter_alias_string("str_filter", "Zucchini")
     assert len(query.find_ids()) == 1  # Zucchini
+
+    # Bool and int32 parameters via the generic set_parameter_alias()
+    query.set_parameter_alias("bool_filter", True)
+    assert len(query.find_ids()) == 0  # Zucchini is False
+    query.set_parameter_alias("str_filter", "orange")
+    query.set_parameter_alias("int32_filter", 1000)
+    assert len(query.find_ids()) == 1  # ORANGE (int32 798)
+    query.set_parameter_alias("int64_filter", 500)
+    assert len(query.find_ids()) == 2  # ORANGE, orange (int64 546)
 
 
 # Bytes query
@@ -855,3 +863,120 @@ def test_set_parameter_one_of(test_store):
     query.set_parameter_alias_strings("names", [])
     query.set_parameter_alias_ints("ints64", [10])
     assert query.find_ids() == [id1]
+
+
+def test_set_parameter_generic(test_store):
+    """ set_parameter()/set_parameter_alias() pick the typed setter by the property type. """
+    box = test_store.box(TestEntity)
+    id1 = box.put(TestEntity(str="Apple", int32=1, int64=10))
+    id2 = box.put(TestEntity(str="Banana", int32=2, int64=20))
+    id3 = box.put(TestEntity(str="Cherry", int32=3, int64=30))
+
+    query = box.query(TestEntity.str.equals("Apple") & TestEntity.int64.greater_than(0)).build()
+    assert query.set_parameter(TestEntity.str, "Banana").find_ids() == [id2]
+    assert query.set_parameter("int64", 20).find_ids() == []
+
+    query = box.query(TestEntity.str.one_of(["Apple"]) & TestEntity.int32.one_of([1, 2, 3])).build()
+    assert query.set_parameter(TestEntity.str, ["Banana", "Cherry"]).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.int32, [3]).find_ids() == [id3]
+    assert query.set_parameter(TestEntity.str, []).count() == 0  # The property type decides: strings
+
+    # Aliases; the int32 and int64 "one of" conditions need different C API calls
+    query = box.query(TestEntity.str.equals("Apple").alias("name")
+                      | TestEntity.int32.one_of([]).alias("ints32")
+                      | TestEntity.int64.one_of([]).alias("ints64")).build()
+    assert query.find_ids() == [id1]
+    assert query.set_parameter_alias("name", "Cherry").find_ids() == [id3]
+    assert query.set_parameter_alias("ints32", [2]).find_ids() == [id2, id3]
+    assert query.set_parameter_alias("ints64", [10]).find_ids() == [id1, id2, id3]
+
+    assert "Cherry" in query.describe_parameters()
+
+    # Wrong value types
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, "1")
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, [1.5])
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.str, ["a", 1])
+    with pytest.raises(TypeError):
+        query.set_parameter_alias("name", 1.5)
+
+    # Vector: a list sets the search vector, an integer the maximum result count
+    vector_box = test_store.box(VectorEntity)
+    for i in range(1, 6):
+        vector_box.put(VectorEntity(name=f"Object {i}", vector_euclidean=[i, i]))
+    query = vector_box.query(VectorEntity.vector_euclidean.nearest_neighbor([3.4, 3.4], 3).alias("nn")).build()
+    assert sorted(query.find_ids()) == [2, 3, 4]
+    assert sorted(query.set_parameter(VectorEntity.vector_euclidean, [4.9, 4.9]).find_ids()) == [3, 4, 5]
+    assert sorted(query.set_parameter("vector_euclidean", 2).find_ids()) == [4, 5]
+    assert sorted(query.set_parameter_alias("nn", [0, 0]).find_ids()) == [1, 2]
+
+    # Alias set directly on the QueryBuilder: the property is unknown, so the value type decides
+    qb = vector_box.query()
+    qb.nearest_neighbors_f32("vector_euclidean", [3.4, 3.4], 3)
+    qb.alias("qb_nn")
+    query = qb.build()
+    assert sorted(query.set_parameter_alias("qb_nn", [0.0, 0.0]).find_ids()) == [1, 2, 3]
+
+
+def test_set_parameter_types(test_store):
+    """ set_parameter() for float, bytes and date properties; set_parameters() for between(). """
+    box = test_store.box(TestEntity)
+    jan = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    feb = datetime(2024, 2, 1, tzinfo=timezone.utc)
+    mar = datetime(2024, 3, 1, tzinfo=timezone.utc)
+    id1 = box.put(TestEntity(int64=10, float64=1.5, float32=1.5, bytes=bytes([1]), date=jan, date_nano=1))
+    id2 = box.put(TestEntity(int64=20, float64=2.5, float32=2.5, bytes=bytes([2]), date=feb, date_nano=2))
+    id3 = box.put(TestEntity(int64=30, float64=3.5, float32=3.5, bytes=bytes([3]), date=mar, date_nano=3))
+
+    # Floating point: a single value (also given as int) and two values
+    for prop in (TestEntity.float64, TestEntity.float32):
+        query = box.query(prop.greater_than(0.0)).build()
+        assert query.set_parameter(prop, 2.0).find_ids() == [id2, id3]
+        assert query.set_parameter(prop, 3).find_ids() == [id3]
+        query = box.query(prop.between(0.0, 10.0).alias("range")).build()
+        assert query.set_parameters(prop, 1.0, 3.0).find_ids() == [id1, id2]
+        assert query.set_parameters_alias("range", 2, 4).find_ids() == [id2, id3]
+        with pytest.raises(TypeError):
+            query.set_parameter(prop, "1")
+
+    # Integers: two values
+    query = box.query(TestEntity.int64.between(0, 100).alias("range")).build()
+    assert query.set_parameters(TestEntity.int64, 15, 25).find_ids() == [id2]
+    assert query.set_parameters_alias("range", 20, 30).find_ids() == [id2, id3]
+    assert "20" in query.describe_parameters() and "30" in query.describe_parameters()
+    with pytest.raises(TypeError):
+        query.set_parameters(TestEntity.int64, 1.5, 2)
+    with pytest.raises(TypeError):
+        query.set_parameters(TestEntity.str, "a", "b")
+
+    # Bytes
+    query = box.query(TestEntity.bytes.equals(bytes([1])).alias("bytes")).build()
+    assert query.set_parameter(TestEntity.bytes, bytes([2])).find_ids() == [id2]
+    assert query.set_parameter_alias("bytes", bytearray([3])).find_ids() == [id3]
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, bytes([1]))
+
+    # Dates: datetime, float (seconds) or int (milliseconds; nanoseconds for DateNano)
+    query = box.query(TestEntity.date.greater_than(0)).build()
+    assert query.set_parameter(TestEntity.date, jan).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.date, feb.timestamp()).find_ids() == [id3]
+    assert query.set_parameter(TestEntity.date, int(jan.timestamp() * 1000) - 1).find_ids() == [id1, id2, id3]
+    query = box.query(TestEntity.date.between(0, 0)).build()
+    assert query.set_parameters(TestEntity.date, jan, feb).find_ids() == [id1, id2]
+    query = box.query(TestEntity.date.one_of([0])).build()
+    assert query.set_parameter(TestEntity.date, [jan, mar]).find_ids() == [id1, id3]
+    query = box.query(TestEntity.date_nano.equals(0).alias("nano")).build()
+    assert query.set_parameter_alias("nano", 2).find_ids() == [id2]
+    with pytest.raises(TypeError):
+        query.set_parameter(TestEntity.int64, jan)
+
+    # Alias set via QueryBuilder.alias(): the value decides
+    qb = box.query()
+    qb.greater_than_double("float64", 0.0)
+    qb.alias("qb_float")
+    query = qb.build()
+    assert query.set_parameter_alias("qb_float", 2.0).find_ids() == [id2, id3]
+    with pytest.raises(TypeError):
+        query.set_parameter_alias("qb_float", jan)  # Unknown whether milliseconds or nanoseconds

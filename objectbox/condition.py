@@ -294,5 +294,5 @@ class PropertyQueryCondition(QueryCondition):
     def apply(self, qb: QueryBuilder) -> obx_qb_cond:
         c_cond = self._op_func(qb)
         if self._alias is not None:
-            qb.alias(self._alias)
+            qb._alias_for_property(self._alias, self._property_id)
         return c_cond

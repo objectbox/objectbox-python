@@ -14,7 +14,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from objectbox.c import *
+from objectbox.exceptions import IllegalArgumentError
+from objectbox.model.properties import PropertyType
+from objectbox.utils import date_value_to_int
 
 if TYPE_CHECKING:
     import numpy as np
@@ -26,12 +31,13 @@ class Query:
     It is created by calling ``Box.query()`` with conditions inside and finalizing with ``build()``.
     Note: Query objects are not thread-safe and should not be shared between threads.
     """
-    def __init__(self, c_query, box: 'Box'):
+    def __init__(self, c_query, box: 'Box', alias_property_ids: Optional[Dict[str, int]] = None):
         """ This is an internal constructor. Use ``Box.query()`` instead. """
         self._c_query = c_query
         self._box = box
         self._entity = self._box._entity
         self._store = box._store
+        self._alias_property_ids = alias_property_ids or {}
 
     def find(self) -> list:
         """ Finds a list of objects matching query. """
@@ -163,6 +169,144 @@ class Query:
         obx_query_limit(self._c_query, limit)
         return self
 
+    @overload
+    def set_parameter(self, prop: Union[int, str, 'Property'],
+                      value: Union[str, int, float, bytes, datetime]) -> 'Query': ...
+
+    @overload
+    def set_parameter(self, prop: Union[int, str, 'Property'],
+                      value: Union[List[str], List[int], List[float], List[datetime], np.ndarray]) -> 'Query': ...
+
+    def set_parameter(self, prop, value) -> 'Query':
+        """ Changes the value of the query condition on the given property, e.g. a string or a number, the list of
+        a "one of" condition or the vector of a nearest neighbor search. The type of the property decides which
+        kind of value is set; e.g. a list sets the vector for a vector property and the "one of" values otherwise.
+        For conditions with two values (e.g. ``between()``), use :meth:`set_parameters`.
+        If there are multiple conditions on the property, give them an alias and use :meth:`set_parameter_alias`.
+
+        Example: ``query.set_parameter(Person.name, "Joe")``
+
+        :param prop:
+            The property (or its name or ID).
+        :param value:
+            A string, integer, float, bytes, or a list of strings or integers ("one of" conditions), or a vector
+            (list or numpy array of floats). For a nearest neighbor search, an integer sets the maximum result count.
+            For ``Date``/``DateNano`` properties, also a ``datetime`` (or a float with seconds; integers are taken
+            as they are, i.e. milliseconds or nanoseconds).
+        :return:
+            This query (to chain calls).
+        :raises TypeError:
+            If the value does not fit the property type.
+        """
+        prop_id = self._entity._get_property_id(prop)
+        kind, value = self._parameter_value(self._property_type(prop_id), value)
+        return getattr(self, "set_parameter_" + kind)(prop_id, value)
+
+    @overload
+    def set_parameter_alias(self, alias: str, value: Union[str, int, float, bytes, datetime]) -> 'Query': ...
+
+    @overload
+    def set_parameter_alias(self, alias: str,
+                            value: Union[List[str], List[int], List[float], List[datetime], np.ndarray]) -> 'Query':
+        ...
+
+    def set_parameter_alias(self, alias: str, value) -> 'Query':
+        """ Like :meth:`set_parameter`, for the condition having the given alias
+        (see ``PropertyQueryCondition.alias()``).
+
+        Example: ``query.set_parameter_alias("name", "Joe")``
+
+        For an alias set via ``QueryBuilder.alias()``, the property is unknown, so the value decides: a list of
+        numbers is only taken as a vector if it is a numpy array or contains a float, and a ``datetime`` is not
+        supported; for these, use the typed ``set_parameter_alias_*()`` methods.
+        """
+        kind, value = self._parameter_value(self._alias_property_type(alias), value)
+        return getattr(self, "set_parameter_alias_" + kind)(alias, value)
+
+    def set_parameters(self, prop: Union[int, str, 'Property'], value_a: Union[int, float, datetime],
+                       value_b: Union[int, float, datetime]) -> 'Query':
+        """ Changes the two values of the query condition on the given property, i.e. the range of ``between()``.
+        The type of the property decides how; see :meth:`set_parameter` for single values.
+
+        Example: ``query.set_parameters(Person.age, 18, 30)``
+
+        :raises TypeError:
+            If the values do not fit the property type.
+        """
+        prop_id = self._entity._get_property_id(prop)
+        kind, value_a, value_b = self._parameter_values(self._property_type(prop_id), value_a, value_b)
+        return getattr(self, "set_parameter_" + kind)(prop_id, value_a, value_b)
+
+    def set_parameters_alias(self, alias: str, value_a: Union[int, float, datetime],
+                             value_b: Union[int, float, datetime]) -> 'Query':
+        """ Like :meth:`set_parameters`, for the condition having the given alias
+        (see ``PropertyQueryCondition.alias()``). """
+        kind, value_a, value_b = self._parameter_values(self._alias_property_type(alias), value_a, value_b)
+        return getattr(self, "set_parameter_alias_" + kind)(alias, value_a, value_b)
+
+    def describe_parameters(self) -> str:
+        """ Describes the query conditions with their current parameter values, e.g. for logging or debugging. """
+        return obx_query_describe_params(self._c_query).decode('utf-8')
+
+    def _property_type(self, prop_id: int) -> int:
+        for prop in self._entity._properties:
+            if prop.id == prop_id:
+                return prop._ob_type
+        raise IllegalArgumentError(f"Property ID {prop_id} not found in entity {self._entity._name}")
+
+    def _alias_property_type(self, alias: str) -> Optional[int]:
+        """ None if the property is unknown, i.e. the alias was set via QueryBuilder.alias(). """
+        prop_id = self._alias_property_ids.get(alias)
+        return self._property_type(prop_id) if prop_id is not None else None
+
+    @staticmethod
+    def _parameter_value(prop_type: Optional[int], value) -> Tuple[str, Any]:
+        """ Returns the suffix of the typed set_parameter method for the value and the (converted) value;
+        the property type is None if unknown (then the value decides). """
+        if isinstance(value, (list, tuple)) or is_ndarray(value):
+            if prop_type == OBXPropertyType_FloatVector or (prop_type is None and (
+                    is_ndarray(value) or any(isinstance(v, float) for v in value))):
+                if not is_ndarray(value) and not all(_is_number(v) for v in value):
+                    raise TypeError("A vector parameter must be a list of numbers or a numpy array")
+                return "vector_f32", value
+            if prop_type == OBXPropertyType_String or (prop_type is None and value
+                                                       and all(isinstance(v, str) for v in value)):
+                if not all(isinstance(v, str) for v in value):
+                    raise TypeError("The values for a string property must be strings")
+                return "strings", value
+            if prop_type is None or prop_type in _integer_types:
+                return "ints", [_int_parameter(prop_type, v) for v in value]
+            raise TypeError(f"A list parameter is not supported for property type {_type_name(prop_type)}")
+        if isinstance(value, str):
+            if prop_type not in (None, OBXPropertyType_String):
+                raise TypeError(f"A string value does not fit property type {_type_name(prop_type)}")
+            return "string", value
+        if isinstance(value, (bytes, bytearray)):
+            if prop_type not in (None, OBXPropertyType_ByteVector):
+                raise TypeError(f"A bytes value does not fit property type {_type_name(prop_type)}")
+            return "bytes", value
+        if prop_type in _float_types or (prop_type is None and isinstance(value, float)):
+            if not _is_number(value):
+                raise TypeError(f"A {type(value).__name__} value does not fit property type "
+                                f"{_type_name(prop_type)}")
+            return "double", float(value)
+        # Integer types; vector properties take an int as the maximum result count of a nearest neighbor search
+        if prop_type is None or prop_type in _integer_types or prop_type == OBXPropertyType_FloatVector:
+            return "int", _int_parameter(prop_type, value)
+        raise TypeError(f"A {type(value).__name__} value does not fit property type {_type_name(prop_type)}")
+
+    @staticmethod
+    def _parameter_values(prop_type: Optional[int], value_a, value_b) -> Tuple[str, Any, Any]:
+        """ Like _parameter_value() for two values (e.g. between). """
+        if prop_type in _float_types or (prop_type is None and (isinstance(value_a, float)
+                                                                 or isinstance(value_b, float))):
+            if not _is_number(value_a) or not _is_number(value_b):
+                raise TypeError(f"Two numbers expected for property type {_type_name(prop_type)}")
+            return "2doubles", float(value_a), float(value_b)
+        if prop_type is None or prop_type in _integer_types:
+            return "2ints", _int_parameter(prop_type, value_a), _int_parameter(prop_type, value_b)
+        raise TypeError(f"Two values are not supported for property type {_type_name(prop_type)}")
+
     def set_parameter_string(self, prop: Union[int, str, 'Property'], value: str) -> 'Query':
         prop_id = self._entity._get_property_id(prop)
         obx_query_param_string(self._c_query, self._entity._id, prop_id, c_str(value))
@@ -176,8 +320,7 @@ class Query:
     def set_parameter_vector_f32(self,
                                  prop: Union[int, str, 'Property'],
                                  value: Union[List[float], np.ndarray]) -> 'Query':
-        if is_ndarray(value) and value.dtype != "float32":
-            raise Exception(f"value dtype is expected to be np.float32, got: {value.dtype}")
+        _check_vector_dtype(value)
         prop_id = self._entity._get_property_id(prop)
         c_value = c_array(value, ctypes.c_float)
         num_el = len(value)
@@ -211,6 +354,7 @@ class Query:
         return self
 
     def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]) -> 'Query':
+        _check_vector_dtype(value)
         obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float),
                                              len(value))
         return self
@@ -232,3 +376,78 @@ class Query:
             c_values = c_array([int(value) for value in values], ctypes.c_int64)
             obx_query_param_alias_int64s(self._c_query, c_alias, c_values, len(values))
         return self
+
+    def set_parameter_double(self, prop: Union[int, str, 'Property'], value: float) -> 'Query':
+        prop_id = self._entity._get_property_id(prop)
+        obx_query_param_double(self._c_query, self._entity._id, prop_id, value)
+        return self
+
+    def set_parameter_bytes(self, prop: Union[int, str, 'Property'], value: bytes) -> 'Query':
+        prop_id = self._entity._get_property_id(prop)
+        obx_query_param_bytes(self._c_query, self._entity._id, prop_id, bytes(value), len(value))
+        return self
+
+    def set_parameter_2ints(self, prop: Union[int, str, 'Property'], value_a: int, value_b: int) -> 'Query':
+        """ Sets the two values of an integer ``between()`` condition on the given property. """
+        prop_id = self._entity._get_property_id(prop)
+        obx_query_param_2ints(self._c_query, self._entity._id, prop_id, value_a, value_b)
+        return self
+
+    def set_parameter_2doubles(self, prop: Union[int, str, 'Property'], value_a: float, value_b: float) -> 'Query':
+        """ Sets the two values of a floating point ``between()`` condition on the given property. """
+        prop_id = self._entity._get_property_id(prop)
+        obx_query_param_2doubles(self._c_query, self._entity._id, prop_id, value_a, value_b)
+        return self
+
+    def set_parameter_alias_double(self, alias: str, value: float) -> 'Query':
+        obx_query_param_alias_double(self._c_query, c_str(alias), value)
+        return self
+
+    def set_parameter_alias_bytes(self, alias: str, value: bytes) -> 'Query':
+        obx_query_param_alias_bytes(self._c_query, c_str(alias), bytes(value), len(value))
+        return self
+
+    def set_parameter_alias_2ints(self, alias: str, value_a: int, value_b: int) -> 'Query':
+        """ Sets the two values of the integer ``between()`` condition having the given alias. """
+        obx_query_param_alias_2ints(self._c_query, c_str(alias), value_a, value_b)
+        return self
+
+    def set_parameter_alias_2doubles(self, alias: str, value_a: float, value_b: float) -> 'Query':
+        """ Sets the two values of the floating point ``between()`` condition having the given alias. """
+        obx_query_param_alias_2doubles(self._c_query, c_str(alias), value_a, value_b)
+        return self
+
+
+_integer_types = (OBXPropertyType_Bool, OBXPropertyType_Byte, OBXPropertyType_Short, OBXPropertyType_Char,
+                  OBXPropertyType_Int, OBXPropertyType_Long, OBXPropertyType_Relation, OBXPropertyType_Date,
+                  OBXPropertyType_DateNano)
+_float_types = (OBXPropertyType_Float, OBXPropertyType_Double)
+
+
+def _is_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _int_parameter(prop_type: Optional[int], value) -> int:
+    """ Converts dates (datetime or float seconds) to milliseconds or nanoseconds for Date/DateNano properties. """
+    if prop_type == OBXPropertyType_Date:
+        return date_value_to_int(value, 1000)
+    if prop_type == OBXPropertyType_DateNano:
+        return date_value_to_int(value, 1000000000)
+    if not isinstance(value, int):
+        raise TypeError(f"A {type(value).__name__} value does not fit property type {_type_name(prop_type)}")
+    return value
+
+
+def _type_name(prop_type: Optional[int]) -> str:
+    if prop_type is None:
+        return "unknown (alias set via QueryBuilder.alias())"
+    try:
+        return PropertyType(prop_type).name
+    except ValueError:
+        return str(prop_type)
+
+
+def _check_vector_dtype(value):
+    if is_ndarray(value) and value.dtype != "float32":
+        raise TypeError(f"value dtype is expected to be np.float32, got: {value.dtype}")

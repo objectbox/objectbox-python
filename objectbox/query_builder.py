@@ -44,6 +44,7 @@ class QueryBuilder:
         self._box = box
         self._entity = box._entity
         self._c_builder = obx_query_builder(store._c_store, box._entity._id)
+        self._alias_property_ids: Dict[str, int] = {}  # Of the conditions' aliases; for Query.set_parameter_alias()
 
     def close(self) -> int:
         return obx_qb_close(self._c_builder)
@@ -305,8 +306,13 @@ class QueryBuilder:
 
     def build(self) -> Query:
         c_query = obx_query(self._c_builder)
-        return Query(c_query, self._box)
+        return Query(c_query, self._box, self._alias_property_ids)
 
     def alias(self, alias: str):
         obx_qb_param_alias(self._c_builder, c_str(alias))
         return self
+
+    def _alias_for_property(self, alias: str, prop_id: int):
+        """ Like alias(), also remembering the condition's property (for Query.set_parameter_alias()). """
+        self._alias_property_ids[alias] = prop_id
+        return self.alias(alias)

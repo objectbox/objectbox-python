@@ -1010,6 +1010,40 @@ obx_query_param_alias_int64s = c_fn_rc('obx_query_param_alias_int64s',
 obx_query_param_alias_int32s = c_fn_rc('obx_query_param_alias_int32s',
                                        [OBX_query_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int32), ctypes.c_size_t])
 
+# OBX_C_API obx_err obx_query_param_2ints(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id,
+#                                        int64_t value_a, int64_t value_b);
+obx_query_param_2ints = c_fn_rc('obx_query_param_2ints',
+                                [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.c_int64, ctypes.c_int64])
+
+# OBX_C_API obx_err obx_query_param_double(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id,
+#                                         double value);
+obx_query_param_double = c_fn_rc('obx_query_param_double', [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.c_double])
+
+# OBX_C_API obx_err obx_query_param_2doubles(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id,
+#                                           double value_a, double value_b);
+obx_query_param_2doubles = c_fn_rc('obx_query_param_2doubles',
+                                   [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.c_double, ctypes.c_double])
+
+# OBX_C_API obx_err obx_query_param_bytes(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id,
+#                                        const void* value, size_t size);
+obx_query_param_bytes = c_fn_rc('obx_query_param_bytes',
+                                [OBX_query_p, obx_schema_id, obx_schema_id, ctypes.c_void_p, ctypes.c_size_t])
+
+# OBX_C_API obx_err obx_query_param_alias_2ints(OBX_query* query, const char* alias, int64_t value_a, int64_t value_b);
+obx_query_param_alias_2ints = c_fn_rc('obx_query_param_alias_2ints',
+                                      [OBX_query_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64])
+
+# OBX_C_API obx_err obx_query_param_alias_double(OBX_query* query, const char* alias, double value);
+obx_query_param_alias_double = c_fn_rc('obx_query_param_alias_double', [OBX_query_p, ctypes.c_char_p, ctypes.c_double])
+
+# OBX_C_API obx_err obx_query_param_alias_2doubles(OBX_query* query, const char* alias, double value_a, double value_b);
+obx_query_param_alias_2doubles = c_fn_rc('obx_query_param_alias_2doubles',
+                                         [OBX_query_p, ctypes.c_char_p, ctypes.c_double, ctypes.c_double])
+
+# OBX_C_API obx_err obx_query_param_alias_bytes(OBX_query* query, const char* alias, const void* value, size_t size);
+obx_query_param_alias_bytes = c_fn_rc('obx_query_param_alias_bytes',
+                                      [OBX_query_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t])
+
 # OBX_C_API size_t obx_query_param_get_type_size(OBX_query* query, obx_schema_id entity_id, obx_schema_id property_id);
 # Not checked: returns 0 for non-scalar types (e.g. strings) and on errors.
 obx_query_param_get_type_size = c_fn_nocheck('obx_query_param_get_type_size', ctypes.c_size_t,
