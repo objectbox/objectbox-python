@@ -55,7 +55,7 @@ def test_sync_results_without_server(sync_client):
 def test_request_updates_mode(sync_client):
     for mode in SyncRequestUpdatesMode:
         sync_client.set_request_updates_mode(mode)
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalArgumentError, match="Not a SyncRequestUpdatesMode value: 'manual'"):
         sync_client.set_request_updates_mode("manual")
 
 
@@ -527,8 +527,8 @@ def test_server_time(sync_server, test_store):
 def test_stats_without_server(sync_client):
     for counter in SyncStats:
         assert sync_client.stats(counter) == 0
-    with pytest.raises(ValueError):
-        sync_client.stats(42)  # Not a SyncStats value
+    with pytest.raises(IllegalArgumentError, match="Not a SyncStats value: 42"):
+        sync_client.stats(42)
 
 
 @pytest.mark.sync

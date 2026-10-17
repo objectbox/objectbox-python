@@ -342,6 +342,14 @@ class SyncCode(IntEnum):
     """Transaction violated a unique constraint."""
 
 
+def _to_enum(enum_type, value):
+    """Converts to the given enum; raises IllegalArgumentError (a ValueError) for other values."""
+    try:
+        return enum_type(value)
+    except ValueError:
+        raise IllegalArgumentError(f"Not a {enum_type.__name__} value: {value!r}") from None
+
+
 def _to_sync_code(code: int) -> typing.Union[SyncCode, int]:
     """Converts to SyncCode; unknown codes (e.g. added by a newer library) are passed as int."""
     try:
@@ -614,10 +622,13 @@ class SyncClient:
 
         Args:
             counter: The counter to get, see SyncStats.
+
+        Raises:
+            IllegalArgumentError: If counter is not a SyncStats value.
         """
         self.__check_sync_ptr_not_null()
         count = ctypes.c_uint64(0)
-        c.obx_sync_stats_u64(self.__c_sync_client_ptr, SyncStats(counter), ctypes.byref(count))
+        c.obx_sync_stats_u64(self.__c_sync_client_ptr, _to_enum(SyncStats, counter), ctypes.byref(count))
         return count.value
 
     def set_max_messages_in_flight(self, value: int):
@@ -643,10 +654,10 @@ class SyncClient:
             mode: The request updates mode to use.
 
         Raises:
-            ValueError: If mode is not a SyncRequestUpdatesMode value.
+            IllegalArgumentError: If mode is not a SyncRequestUpdatesMode value.
         """
         self.__check_sync_ptr_not_null()
-        c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, SyncRequestUpdatesMode(mode))
+        c.obx_sync_request_updates_mode(self.__c_sync_client_ptr, _to_enum(SyncRequestUpdatesMode, mode))
 
     def state(self) -> SyncState:
         """Gets the current sync client state.
