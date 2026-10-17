@@ -18,6 +18,9 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "sync: Sync test, requires the Sync variant of the library (make depend-sync)")
+    if os.environ.get("OBX_TEST_REQUIRE_SYNC") == "1" and not Sync.is_available():
+        raise pytest.UsageError("OBX_TEST_REQUIRE_SYNC is set, but Sync is not available in the loaded library "
+                                "(see make depend-sync)")
     fast_builder = (config.getoption("--fast-flatbuffers-builder") or
                     os.environ.get("OBX_TEST_FAST_FLATBUFFERS_BUILDER") == "1")
     codegen = config.getoption("--flatbuffers-codegen") or os.environ.get("OBX_TEST_FLATBUFFERS_CODEGEN") == "1"
