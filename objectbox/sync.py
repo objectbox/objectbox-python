@@ -7,6 +7,7 @@ import objectbox.c as c
 from objectbox import Store
 from objectbox.model.entity import _Entity
 from objectbox.c import OBX_sync_change_array
+from objectbox.exceptions import FeatureNotAvailable, IllegalArgumentError, IllegalStateError
 
 
 def _to_bytearray(value: typing.Union[str, bytes]) -> bytearray:
@@ -158,14 +159,14 @@ class SyncCredentialsSecret(SyncCredentials):
             secret: UTF-8 encoded secret bytes; must not be empty. Wiped after use, so pass a copy.
         """
         if len(secret) == 0:
-            raise ValueError("Token must not be empty")
+            raise IllegalArgumentError("Token must not be empty")
         super().__init__(credential_type)
         self.secret = secret
         self.cleared = False
 
     def _check_not_cleared(self):
         if self.cleared:
-            raise ValueError("Credentials already have been used (and cleared); create new credentials")
+            raise IllegalStateError("Credentials already have been used (and cleared); create new credentials")
 
     def _pass_secret(self, c_function: typing.Callable[[ctypes.Array, int], None]):
         """Calls c_function(buffer, size) with the secret and wipes the secret afterwards (also if it raises)."""
@@ -489,10 +490,10 @@ class SyncClient:
         # (e.g. while a listener is replaced, the client's thread may be calling the previous one), so keep them all.
         self.__c_callbacks = []
         if not urls:
-            raise ValueError("Provide at least one server URL")
+            raise IllegalArgumentError("Provide at least one server URL")
 
         if not Sync.is_available():
-            raise RuntimeError(
+            raise FeatureNotAvailable(
                 'Sync is not available in the loaded ObjectBox runtime library. '
                 'Install ObjectBox with the Sync variant of the library via "pip install objectbox-sync" '
                 '(instead of objectbox); '
@@ -501,9 +502,9 @@ class SyncClient:
         self.__store = store
 
         if not store._c_store:
-            raise ValueError("Store is closed")
+            raise IllegalStateError("Store is closed")
         if store._sync_client is not None:
-            raise ValueError("Only one sync client can be active for a store")
+            raise IllegalStateError("Only one sync client can be active for a store")
 
         # Like Java and Dart, create the client via options (allows further options, e.g. flags)
         c_options = c.obx_sync_opt(store._c_store)
@@ -534,7 +535,7 @@ class SyncClient:
 
     def __check_sync_ptr_not_null(self):
         if self.__c_sync_client_ptr is None:
-            raise ValueError('SyncClient already closed')
+            raise IllegalStateError('SyncClient already closed')
 
     def set_credentials(self, credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]]):
         """Configure authentication credentials, depending on your server config.
@@ -550,20 +551,21 @@ class SyncClient:
                 accepts the client if any of them is valid), which must not include SyncCredentials.none().
 
         Raises:
-            ValueError: If the list is empty or contains SyncCredentials.none() (along with other credentials), or if
-                credentials were already used.
+            IllegalArgumentError: If the list is empty or contains SyncCredentials.none() (along with other
+                credentials).
+            IllegalStateError: If credentials were already used.
             TypeError: If credentials were not created by the SyncCredentials factory methods.
         """
         self.__check_sync_ptr_not_null()
         credentials_list = list(credentials) if isinstance(credentials, (list, tuple)) else [credentials]
         if len(credentials_list) == 0:
-            raise ValueError("Provide at least one credential")
+            raise IllegalArgumentError("Provide at least one credential")
         # Check all before adding any, as the C client would be left with an incomplete set of credentials
         for creds in credentials_list:
             if not isinstance(creds, (SyncCredentialsNone, SyncCredentialsUserPassword, SyncCredentialsSecret)):
                 raise TypeError(f"Unsupported credentials: {creds!r}; use the SyncCredentials factory methods")
             if isinstance(creds, SyncCredentialsNone) and len(credentials_list) > 1:
-                raise ValueError("SyncCredentials.none() is not supported with multiple credentials")
+                raise IllegalArgumentError("SyncCredentials.none() is not supported with multiple credentials")
             if isinstance(creds, SyncCredentialsSecret):
                 creds._check_not_cleared()
 
@@ -1063,8 +1065,9 @@ class Sync:
             A configured SyncClient instance.
 
         Raises:
-            ValueError: If a sync client is already active (not closed) for the given store, or the store is closed.
-            RuntimeError: If the loaded ObjectBox library does not support Sync.
+            IllegalStateError: If a sync client is already active (not closed) for the given store, or the store is
+                closed.
+            FeatureNotAvailable: If the loaded ObjectBox library does not support Sync.
         """
         urls = [url] if isinstance(url, str) else list(url)
         return SyncClient._create(store, urls, credentials, filter_variables, flags, certificate_paths)

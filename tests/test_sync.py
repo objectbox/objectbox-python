@@ -14,7 +14,7 @@ import pytest
 from objectbox import Entity, Id, Model, Store, String, SyncClock, SyncEntity, SyncPrecedence
 import objectbox.c as c
 from objectbox.c import OBXPropertyFlags_SYNC_CLOCK, OBXPropertyFlags_SYNC_PRECEDENCE
-from objectbox.exceptions import GeneralError, IllegalArgumentError, SchemaError
+from objectbox.exceptions import FeatureNotAvailable, GeneralError, IllegalArgumentError, IllegalStateError, SchemaError
 from objectbox.sync import *
 from tests.common import NO_SYNC_SERVER_URL, SYNC_MODEL_JSON_FILE, create_test_store
 from tests.model import SyncTestEntity, TestEntity
@@ -23,6 +23,13 @@ from tests.model import SyncTestEntity, TestEntity
 def test_sync_is_available():
     # Must not raise if Sync is not available (standard library)
     assert Sync.is_available() in (True, False)
+
+
+@pytest.mark.skipif(Sync.is_available(), reason="Sync is available")
+def test_client_without_sync(test_store):
+    with pytest.raises(FeatureNotAvailable, match="pip install objectbox-sync"):
+        Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
+    assert test_store.sync_client() is None
 
 
 @pytest.mark.sync
@@ -262,14 +269,14 @@ def test_outgoing_message_count(sync_client):
 
     sync_client.close()
 
-    with pytest.raises(ValueError, match='SyncClient already closed'):
+    with pytest.raises(IllegalStateError, match='SyncClient already closed'):
         sync_client.outgoing_message_count()
 
 
 @pytest.mark.sync
 def test_multiple_credentials(sync_client):
-    # empty list should raise ValueError
-    with pytest.raises(ValueError, match='Provide at least one credential'):
+    # empty list should raise IllegalArgumentError
+    with pytest.raises(IllegalArgumentError, match='Provide at least one credential'):
         sync_client.set_credentials([])
 
     # A list with a single element is fine, also SyncCredentials.none()
@@ -278,7 +285,7 @@ def test_multiple_credentials(sync_client):
 
     # Invalid elements are detected before adding any credentials;
     # SyncCredentials.none() is not supported with multiple credentials
-    with pytest.raises(ValueError, match=r'SyncCredentials.none\(\) is not supported with multiple credentials'):
+    with pytest.raises(IllegalArgumentError, match=r'SyncCredentials.none\(\) is not supported with multiple credentials'):
         sync_client.set_credentials([SyncCredentials.google_auth("token"), SyncCredentials.none()])
     with pytest.raises(TypeError, match='Unsupported credentials'):
         sync_client.set_credentials([SyncCredentials.google_auth("token"), "token"])
@@ -318,9 +325,9 @@ def test_credentials_empty_token():
     for create in (SyncCredentials.shared_secret, SyncCredentials.google_auth, SyncCredentials.jwt_id_token,
                    SyncCredentials.jwt_access_token, SyncCredentials.jwt_refresh_token,
                    SyncCredentials.jwt_custom_token):
-        with pytest.raises(ValueError, match="Token must not be empty"):
+        with pytest.raises(IllegalArgumentError, match="Token must not be empty"):
             create("")
-    with pytest.raises(ValueError, match="Token must not be empty"):
+    with pytest.raises(IllegalArgumentError, match="Token must not be empty"):
         SyncCredentials.shared_secret(b"")
 
 
@@ -339,9 +346,9 @@ def test_credentials_wiped_after_use(sync_client):
 
     # Used credentials can not be used again (checked before any are passed on)
     unused = SyncCredentials.jwt_id_token("token")
-    with pytest.raises(ValueError, match="Credentials already have been used"):
+    with pytest.raises(IllegalStateError, match="Credentials already have been used"):
         sync_client.set_credentials(single)
-    with pytest.raises(ValueError, match="Credentials already have been used"):
+    with pytest.raises(IllegalStateError, match="Credentials already have been used"):
         sync_client.set_credentials([unused, multiple[0]])
     assert not unused.cleared
 
@@ -388,7 +395,7 @@ def test_login_failure_code(test_store, login_listener):
 @pytest.mark.sync
 def test_one_client_per_store(test_store):
     client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
-    with pytest.raises(ValueError, match="Only one sync client can be active for a store"):
+    with pytest.raises(IllegalStateError, match="Only one sync client can be active for a store"):
         Sync.client(test_store, [NO_SYNC_SERVER_URL], SyncCredentials.none())
     client.close()
     Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
@@ -562,7 +569,7 @@ def test_client_constructor_is_internal(test_store):
 @pytest.mark.sync
 def test_client_on_closed_store(test_store):
     test_store.close()
-    with pytest.raises(ValueError, match="Store is closed"):
+    with pytest.raises(IllegalStateError, match="Store is closed"):
         Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
 
 
@@ -605,8 +612,8 @@ def test_client_and_store_closed_when_dropped():
     store.close()
 
 
-def assert_raises_value_error(fn: Callable[[], Optional[object]], message: Optional[str] = None):
-    with pytest.raises(ValueError, match=message):
+def assert_raises_illegal_state(fn: Callable[[], Optional[object]], message: Optional[str] = None):
+    with pytest.raises(IllegalStateError, match=message):
         fn()
 
 
@@ -618,18 +625,18 @@ def test_client_access_after_close_throws_error(sync_client):
 
     match_error = "SyncClient already closed"
 
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.start())
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.stop())
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.state())
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.outgoing_message_count())
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.set_credentials(SyncCredentials.none()))
-    assert_raises_value_error(message=match_error,
+    assert_raises_illegal_state(message=match_error, fn=lambda: sync_client.start())
+    assert_raises_illegal_state(message=match_error, fn=lambda: sync_client.stop())
+    assert_raises_illegal_state(message=match_error, fn=lambda: sync_client.state())
+    assert_raises_illegal_state(message=match_error, fn=lambda: sync_client.outgoing_message_count())
+    assert_raises_illegal_state(message=match_error, fn=lambda: sync_client.set_credentials(SyncCredentials.none()))
+    assert_raises_illegal_state(message=match_error,
                               fn=lambda: sync_client.set_credentials(SyncCredentials.google_auth("token_google")))
-    assert_raises_value_error(message=match_error, fn=lambda: sync_client.set_credentials([
+    assert_raises_illegal_state(message=match_error, fn=lambda: sync_client.set_credentials([
         SyncCredentials.google_auth("token_google"),
         SyncCredentials.user_and_password("user1", "password")
     ]))
-    assert_raises_value_error(message=match_error,
+    assert_raises_illegal_state(message=match_error,
                               fn=lambda: sync_client.set_request_updates_mode(SyncRequestUpdatesMode.AUTO))
 
 
