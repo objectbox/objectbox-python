@@ -1,9 +1,11 @@
 ObjectBox C library for Python
 ==============================
 This package contains the pre-built native [ObjectBox](https://objectbox.io) library (C library) used by the
-[objectbox](https://pypi.org/project/objectbox/) Python package. It contains no Python API.
+[objectbox](https://pypi.org/project/objectbox/) Python package (the Python API is in the package `objectbox-api`).
+It contains no Python API.
 
-You do not need to install this package directly: install `objectbox` instead, which depends on this package.
+You do not need to install this package directly: install `objectbox` instead, which depends on this package and
+`objectbox-api`.
 ```bash
 pip install objectbox
 ```
@@ -18,5 +20,5 @@ License
 The pre-built native library contained in this package is licensed under the
 [ObjectBox Binary Licence Agreement](https://objectbox.io/0209-ob-binary-license/).
 
-The ObjectBox Python binding (package `objectbox`) is licensed separately under the Apache License 2.0;
+The ObjectBox Python binding (packages `objectbox-api`, `objectbox` and `objectbox-sync`) is licensed separately under the Apache License 2.0;
 see [objectbox-python](https://github.com/objectbox/objectbox-python).

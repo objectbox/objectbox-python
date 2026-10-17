@@ -1,0 +1,25 @@
+ObjectBox Sync C library for Python
+===================================
+This package contains the pre-built native [ObjectBox](https://objectbox.io) library (C library) with
+[ObjectBox Sync](https://objectbox.io/sync/) support, used by the ObjectBox Python API (package `objectbox-api`).
+It contains no Python API.
+
+You do not need to install this package directly: install [objectbox-sync](https://pypi.org/project/objectbox-sync/)
+instead of `objectbox`, which depends on this package and `objectbox-api`.
+```bash
+pip install objectbox-sync
+```
+If this package is installed, the Python API uses its library instead of the one from the `objectbox-clib` package.
+
+There is a wheel for each supported platform, so only the library for your platform is installed:
+Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 11+ (Intel and Apple Silicon) and Windows (x64 and ARM64).
+
+The version of this package is the version of the ObjectBox C library it contains.
+
+License
+-------
+The pre-built native library contained in this package is licensed under the
+[ObjectBox Binary Licence Agreement](https://objectbox.io/0209-ob-binary-license/).
+
+The ObjectBox Python binding (packages `objectbox-api`, `objectbox` and `objectbox-sync`) is licensed separately under the Apache License 2.0;
+see [objectbox-python](https://github.com/objectbox/objectbox-python).

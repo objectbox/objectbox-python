@@ -4,13 +4,17 @@
 name: Test
 on: [push, pull_request]
 
+env:
+  # E.g. setup-python with Python 3.8 on macOS (old pip): its "new release of pip" notice became an error annotation
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
   test:
     strategy:
       fail-fast: false # To see all versions that fail.
       matrix:
         os: ["ubuntu", "windows", "macos"]
-        python: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"] # https://devguide.python.org/versions/#versions
+        python: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"] # https://devguide.python.org/versions/#versions
         exclude:
         - os: "macos"
           python: "3.7" # Prevent "The version '3.7' with architecture 'arm64' was not found for macOS 14.4.1"
@@ -39,3 +43,33 @@ jobs:
       - run: make test
       - run: make test-fast-flatbuffers-builder  # experimental; each object is verified against the reference
       - run: make test-flatbuffers-codegen  # experimental; each object is verified against the reference
+
+  # Sync variant of the library (make depend-sync; used instead of the standard one): runs the Sync tests, except those
+  # needing a Sync server (skipped; the GitLab CI runs them). One Python version per OS is enough here.
+  test-sync:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu", "windows", "macos"]
+        include:
+        - os: "windows-arm64"
+          runner: "windows-11-arm"
+    runs-on: ${{ matrix.runner || format('{0}-latest', matrix.os) }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Prepare environment
+        run: |
+          python -m pip install --upgrade pip
+
+      - run: make depend-sync
+      - run: make test
+        env:
+          OBX_TEST_REQUIRE_SYNC: "1"  # Fail instead of skipping all Sync tests if the Sync library is not used

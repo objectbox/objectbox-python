@@ -1,4 +1,15 @@
 import os
+import time
+import subprocess
+import socket
+import typing
+import platform
+import glob
+import zipfile
+import tarfile
+import shutil
+import urllib.request
+
 import pytest
 import objectbox
 from objectbox.logger import logger
@@ -6,6 +17,12 @@ from tests.model import *
 import numpy as np
 from datetime import datetime, timezone, timedelta
 from objectbox import *
+import logging
+
+from dataclasses import dataclass
+
+test_logger = logging.getLogger(__name__)
+
 
 def remove_json_model_file():
     path = os.path.dirname(os.path.realpath(__file__))
@@ -33,6 +50,174 @@ def create_test_store(db_path: str = "testdata", clear_db: bool = True) -> objec
         Store.remove_db_files(db_path)
         remove_json_model_file()
     return objectbox.Store(model=create_default_model(), directory=db_path)
+
+
+# Model JSON file of the Sync test model (SyncTestEntity in model.py, fixed UIDs); the Sync server must use it
+SYNC_MODEL_JSON_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "objectbox-model-sync.json")
+
+# A URL without a Sync server, for Sync tests not needing a server
+NO_SYNC_SERVER_URL = "ws://127.0.0.1:1"
+
+
+@dataclass
+class SyncServer:
+    url: str
+    process: typing.Optional[subprocess.Popen] = None  # If started by the tests
+
+
+def _get_sync_server_job_name() -> str:
+    """Returns the GitLab CI job name for downloading the sync server based on OS and architecture."""
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    if system == "darwin":
+        if machine in ("arm64", "aarch64"):
+            return "b:mac-arm64-server"
+        else:
+            return "b:mac-x64-server"
+    elif system == "linux":
+        if machine in ("arm64", "aarch64"):
+            return "b:linux-aarch64-server"
+        else:
+            return "b:linux-x64-server"
+    else:
+        raise RuntimeError(f"Unsupported platform: {system} {machine}")
+
+
+def _wait_for_port(port: int, process: typing.Optional[subprocess.Popen] = None, timeout_seconds: float = 10):
+    start_time = time.time()
+    while (time.time() - start_time) < timeout_seconds:
+        if process is not None and process.poll() is not None:
+            raise RuntimeError(f"Sync server exited with code {process.returncode}")
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                return
+        except OSError:
+            time.sleep(0.2)
+    raise RuntimeError("Timed out waiting for the Sync server")
+
+
+def start_sync_server() -> typing.Optional[SyncServer]:
+    """Provides a Sync server using the model SYNC_MODEL_JSON_FILE; returns None (and logs why) if not available:
+    - if the environment variable OBX_SYNC_SERVER_URL is set (e.g. "ws://127.0.0.1:9999"), uses that running server
+      (e.g. started via Docker, see sync_server_config.json);
+    - in GitLab CI (CI_SERVER_URL and CI_JOB_TOKEN set), downloads the Sync server from CI artifacts and starts it."""
+    external_url = os.environ.get("OBX_SYNC_SERVER_URL")
+    if external_url:
+        return SyncServer(url=external_url)
+
+    # Check for required environment variables
+    ci_server_url = os.environ.get("CI_SERVER_URL")
+    ci_job_token = os.environ.get("CI_JOB_TOKEN")
+
+    if not ci_server_url or not ci_job_token:
+        test_logger.warning("Neither OBX_SYNC_SERVER_URL nor CI_SERVER_URL and CI_JOB_TOKEN are set; no Sync server")
+        return None
+
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    work_dir = os.path.join(current_dir, "sync-server")  # Contains downloads and the server's database
+    process = None
+    try:
+        # GitLab artifact download configuration
+        project_id = "4"
+        job_name = _get_sync_server_job_name()
+        branch = "syncdev"
+
+        # URL-encode the job name (colon -> %3A)
+        job_name_encoded = job_name.replace(":", "%3A")
+
+        artifact_url = f"{ci_server_url}/api/v4/projects/{project_id}/jobs/artifacts/{branch}/download?job={job_name_encoded}"
+
+        print(f"Downloading sync-server artifact from: {artifact_url}")
+
+        # Download the artifact
+        os.makedirs(work_dir, exist_ok=True)
+        artifact_path = os.path.join(work_dir, "artifact.zip")
+        request = urllib.request.Request(artifact_url, headers={"JOB-TOKEN": ci_job_token})
+        with urllib.request.urlopen(request) as response, open(artifact_path, "wb") as out_file:
+            out_file.write(response.read())
+
+        # Extract the outer artifact zip
+        with zipfile.ZipFile(artifact_path, "r") as zip_ref:
+            zip_ref.extractall(work_dir)
+
+        # Find and extract the sync-server archive (could be .zip or .tar.gz)
+        artifacts_dir = os.path.join(work_dir, "artifacts")
+
+        # Look for both .zip and .tar.gz files
+        sync_server_zips = glob.glob(os.path.join(artifacts_dir, "objectbox-sync-server-*.zip"))
+        sync_server_tarballs = glob.glob(os.path.join(artifacts_dir, "objectbox-sync-server-*.tar.gz"))
+
+        if sync_server_zips:
+            sync_server_archive = sync_server_zips[0]
+            print(f"Found sync-server zip archive: {sync_server_archive}")
+            with zipfile.ZipFile(sync_server_archive, "r") as zip_ref:
+                zip_ref.extractall(work_dir)
+        elif sync_server_tarballs:
+            sync_server_archive = sync_server_tarballs[0]
+            print(f"Found sync-server tar.gz archive: {sync_server_archive}")
+            with tarfile.open(sync_server_archive, "r:gz") as tar_ref:
+                tar_ref.extractall(work_dir)
+        else:
+            raise RuntimeError("Could not find objectbox-sync-server-*.zip or *.tar.gz in artifacts")
+
+        # Verify sync-server executable exists
+        sync_server_executable = os.path.join(work_dir, "sync-server")
+        if platform.system().lower() == "windows":
+            sync_server_executable += ".exe"
+
+        if not os.path.exists(sync_server_executable):
+            raise RuntimeError("sync-server executable not found after extraction")
+
+        # Make executable on Unix systems
+        if os.name != "nt":
+            os.chmod(sync_server_executable, 0o755)
+
+        print("Starting sync-server in background...")
+
+        # Run sync-server in background, with a new database
+        db_dir = os.path.join(work_dir, "db")
+        if os.path.exists(db_dir):
+            shutil.rmtree(db_dir)
+        port = 9999
+        process = subprocess.Popen(
+            [
+                sync_server_executable,
+                "--model", SYNC_MODEL_JSON_FILE,
+                "--db-directory", db_dir,
+                "--bind", f"ws://127.0.0.1:{port}",
+                "--admin-off",
+                "--unsecured-no-authentication",
+            ],
+            cwd=work_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        print(f"Sync server started with PID: {process.pid}")
+        _wait_for_port(port, process)
+        print("Sync server is running")
+        return SyncServer(url=f"ws://127.0.0.1:{port}", process=process)
+
+    except Exception as e:
+        if process is not None:
+            stop_sync_server(SyncServer(url="", process=process))
+        test_logger.warning(f"Could not start ObjectBox Sync Server: {e}")
+        return None
+
+
+def stop_sync_server(server: SyncServer):
+    """Stops the Sync server if it was started by start_sync_server()."""
+    if server.process is None:
+        return
+    print(f"Stopping sync server (PID: {server.process.pid})...")
+    server.process.terminate()
+    try:
+        server.process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        print("Sync server still running after 10s, killing it...")
+        server.process.kill()
+        server.process.wait()
+    print("Stopped ObjectBox Sync Server")
 
 
 def assert_equal_prop(actual, expected, default):

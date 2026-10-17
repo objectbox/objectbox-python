@@ -14,9 +14,12 @@
 import gc
 import weakref
 
+import pytest
+
 import objectbox
-from objectbox.exceptions import DbError, NotFoundError
+from objectbox.exceptions import DbError, FeatureNotAvailable, IllegalArgumentError, IllegalStateError, NotFoundError
 from tests.common import create_test_store
+from tests.model import TestEntity
 
 
 def test_version():
@@ -60,3 +63,20 @@ def test_not_found_exception():
         raise NotFoundError()
     except DbError as e:
         assert e.code == 404
+
+
+def test_exception_message_and_builtin_bases():
+    e = IllegalStateError("Store is closed")
+    assert e.message == "Store is closed"
+    assert str(e) == "10001 (OBX_ERROR_ILLEGAL_STATE) - Store is closed"
+    assert isinstance(e, RuntimeError)
+    assert isinstance(IllegalArgumentError("x"), ValueError)
+    assert isinstance(FeatureNotAvailable("x"), RuntimeError)
+    assert issubclass(IllegalArgumentError, DbError) and issubclass(FeatureNotAvailable, DbError)
+
+
+def test_c_error_is_builtin_exception(test_store):
+    # Errors raised by the C library can also be caught as the matching built-in exception
+    with pytest.raises(ValueError, match="OBX_ERROR_ILLEGAL_ARGUMENT") as exc_info:
+        test_store.box(TestEntity).get(0)
+    assert type(exc_info.value) is IllegalArgumentError

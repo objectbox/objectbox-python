@@ -24,6 +24,7 @@ from objectbox.model.iduid import IdUid
 from objectbox.model.properties import Property
 from objectbox.utils import date_value_to_int
 import threading
+from typing import Optional
 
 
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
@@ -41,6 +42,7 @@ class _Entity(object):
         self._tl = threading.local()
         self._fast_builder = None  # experimental; created on first use after a sync
         self._codegen_builder = None  # experimental; created on first use after a sync
+        self._flags = 0
 
     @property
     def _id(self) -> int:
@@ -366,6 +368,11 @@ class _Entity(object):
 obx_models_by_name: Dict[str, List[_Entity]] = {}
 
 
+# Entity flags set on a plain class by a decorator applied before @Entity() (i.e. below it), e.g. @SyncEntity();
+# @Entity() moves them to the _Entity and removes the attribute.
+_ENTITY_FLAGS_ATTR = "_objectbox_entity_flags"
+
+
 def Entity(uid: int = 0, model: str = "default") -> _Entity:
     """
     Entity decorator for user classes using syntax ``@Entity([uid=])`` 
@@ -395,7 +402,11 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
             types = []
             obx_models_by_name[model] = types
 
+        flags = class_.__dict__.get(_ENTITY_FLAGS_ATTR, 0)  # Only the class's own, not inherited ones
+        if _ENTITY_FLAGS_ATTR in class_.__dict__:
+            delattr(class_, _ENTITY_FLAGS_ATTR)
         entity_type = _Entity(class_, uid)
+        entity_type._flags |= flags
         for existing in types:
             if existing._name == entity_type._name:
                 # OK for tests, where multiple models are created with the same entity name
@@ -408,3 +419,43 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
         return entity_type
 
     return wrapper
+
+
+def SyncEntity(entity=None, *, shared_global_ids: bool = False):
+    """
+    Decorator enabling Sync for an entity, i.e. its objects are synchronized with the Sync server.
+    Use it together with ``@Entity()``, in any order (above or below it).
+    Like ``@Entity()``, it is used with parentheses; ``@SyncEntity`` without parentheses works too.
+
+    Note: Sync cannot be enabled for an existing (non-synced) entity, and synced entities can only have relations to
+    other synced entities.
+
+    :param shared_global_ids:
+        Set to True to use shared global IDs for this entity: object IDs are then the same on all Sync clients instead
+        of being mapped between local and global IDs (the default). Only use this if IDs are unique across all
+        clients (e.g. assigned IDs); otherwise, clients overwrite each other's objects. Cannot be changed later.
+
+    Example::
+
+        @SyncEntity()
+        @Entity()
+        class MyEntity:
+            id = Id
+            name = String
+    """
+    flags = OBXEntityFlags.SYNC_ENABLED
+    if shared_global_ids:
+        flags |= OBXEntityFlags.SHARED_GLOBAL_IDS
+
+    def wrapper(entity_to_sync):
+        if isinstance(entity_to_sync, _Entity):  # Above @Entity()
+            entity_to_sync._flags |= flags
+        elif inspect.isclass(entity_to_sync):  # Below @Entity(): it takes the flags from the class
+            setattr(entity_to_sync, _ENTITY_FLAGS_ATTR, entity_to_sync.__dict__.get(_ENTITY_FLAGS_ATTR, 0) | flags)
+        else:
+            raise TypeError("@SyncEntity() must be applied to an entity class (together with @Entity())")
+        return entity_to_sync
+
+    if entity is None:  # Used with parentheses: @SyncEntity()
+        return wrapper
+    return wrapper(entity)

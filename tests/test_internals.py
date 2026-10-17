@@ -1,5 +1,7 @@
 from objectbox import *
 from objectbox.model.idsync import sync_model
+import objectbox.c as c
+import json
 
 import os
 import os.path
@@ -104,3 +106,75 @@ def test_entity_attribute_methods_nameclash_check():
     assert (
             len(not_prefixed) == 0
     ), f"INTERNAL: Public attributes/methods(s) detected in Class _Entity: {not_prefixed}\nPlease prefix with '_' to prevent name-collision with Property field-names."
+
+
+def test_sync_entity():
+    @SyncEntity()
+    @Entity(model="sync-entity-test")
+    class MySyncEntity:
+        id = Id()
+
+    @SyncEntity  # Without parentheses
+    @Entity(model="sync-entity-test")
+    class MySyncEntity2:
+        id = Id()
+
+    @SyncEntity(shared_global_ids=True)
+    @Entity(model="sync-entity-test")
+    class MySharedIdsEntity:
+        id = Id()
+
+    @Entity(model="sync-entity-test")
+    class MyLocalEntity:
+        id = Id()
+
+    assert MySyncEntity._flags == c.OBXEntityFlags.SYNC_ENABLED
+    assert MySyncEntity2._flags == c.OBXEntityFlags.SYNC_ENABLED
+    assert MySharedIdsEntity._flags == c.OBXEntityFlags.SYNC_ENABLED | c.OBXEntityFlags.SHARED_GLOBAL_IDS
+    assert MyLocalEntity._flags == 0
+
+    # The model JSON contains the entity flags
+    model = Model()
+    model.entity(MySyncEntity)
+    model.entity(MySharedIdsEntity)
+    model.entity(MyLocalEntity)
+    model_json_file = "test-sync-entity-model.json"
+    if os.path.exists(model_json_file):
+        os.remove(model_json_file)
+    sync_model(model, model_json_file)
+    with open(model_json_file) as file:
+        entities_json = {entity["name"]: entity for entity in json.load(file)["entities"]}
+    os.remove(model_json_file)
+    assert entities_json["MySyncEntity"]["flags"] == c.OBXEntityFlags.SYNC_ENABLED
+    assert entities_json["MySharedIdsEntity"]["flags"] == 6  # SYNC_ENABLED | SHARED_GLOBAL_IDS
+    assert "flags" not in entities_json["MyLocalEntity"]
+
+    # Below @Entity() works too
+    @Entity(model="sync-entity-test")
+    @SyncEntity()
+    class SyncBelowEntity:
+        id = Id()
+
+    @Entity(model="sync-entity-test")
+    @SyncEntity(shared_global_ids=True)
+    class SharedIdsBelowEntity:
+        id = Id()
+
+    assert SyncBelowEntity._flags == c.OBXEntityFlags.SYNC_ENABLED
+    assert SharedIdsBelowEntity._flags == c.OBXEntityFlags.SYNC_ENABLED | c.OBXEntityFlags.SHARED_GLOBAL_IDS
+    assert not hasattr(SyncBelowEntity._user_type, "_objectbox_entity_flags")  # Moved to the entity
+
+    # A subclass of a Sync entity's class does not inherit the flags (each entity is decorated on its own)
+    @SyncEntity()
+    class SyncBase:
+        id = Id()
+
+    @Entity(model="sync-entity-test")
+    class LocalSubclass(SyncBase):
+        id = Id()  # Properties are not inherited
+
+    assert LocalSubclass._flags == 0
+    Entity(model="sync-entity-test")(SyncBase)
+
+    with pytest.raises(TypeError, match="must be applied to an entity class"):
+        SyncEntity()(Id())

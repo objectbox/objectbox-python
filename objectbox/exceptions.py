@@ -1,16 +1,19 @@
-from typing import Dict, Type
+from typing import Dict, Optional, Type
 
 from objectbox.c import py_str, C, DbErrorCode
 
 
 class DbError(Exception):
     """The base class for all exceptions thrown by ObjectBox.
-    Every exception has a code attribute for identification."""
+    Every exception has a code attribute for identification.
+
+    Some also derive from the matching built-in exception, e.g. IllegalArgumentError is a ValueError."""
 
     code = DbErrorCode.OBX_NO_SUCCESS  # Re-defined by derived classes
 
-    def __init__(self):
-        self.message = py_str(C.obx_last_error_message())
+    def __init__(self, message: Optional[str] = None):
+        """Creates the exception with the given message, or by default the last error message of the C library."""
+        self.message = message if message is not None else py_str(C.obx_last_error_message())
         super().__init__(f"{self.code.value} ({self.code.name}) - {self.message}")
 
     @staticmethod
@@ -37,11 +40,13 @@ class TimeoutError(DbError):
     code = DbErrorCode.OBX_TIMEOUT
 
 
-class IllegalStateError(DbError):
+class IllegalStateError(DbError, RuntimeError):
+    """An operation is not allowed in the current state, e.g. on a closed object (also a RuntimeError)."""
     code = DbErrorCode.OBX_ERROR_ILLEGAL_STATE
 
 
-class IllegalArgumentError(DbError):
+class IllegalArgumentError(DbError, ValueError):
+    """An argument has an invalid value (also a ValueError)."""
     code = DbErrorCode.OBX_ERROR_ILLEGAL_ARGUMENT
 
 
@@ -53,7 +58,8 @@ class NumericOverflowError(DbError):
     code = DbErrorCode.OBX_ERROR_NUMERIC_OVERFLOW
 
 
-class FeatureNotAvailable(DbError):
+class FeatureNotAvailable(DbError, RuntimeError):
+    """The feature is not available in the loaded ObjectBox library (also a RuntimeError)."""
     code = DbErrorCode.OBX_ERROR_FEATURE_NOT_AVAILABLE
 
 

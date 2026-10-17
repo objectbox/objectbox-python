@@ -2,19 +2,24 @@ import urllib.request
 import tarfile
 import zipfile
 import os
+import sys
 
 from build_info import clib_version
 
 # Script used to download objectbox-c shared libraries for all supported platforms. Execute by running `make depend`
 # on first checkout of this repo and any time after changing the objectbox-c lib version.
+# With --sync (`make depend-sync`), downloads the Sync variant of the libraries into objectbox_sync_clib instead.
 
 version = "v" + clib_version()  # i.e. objectbox/c.py required_version
-variant = 'objectbox'  # or 'objectbox-sync'
+variant = 'objectbox'
+out_dir = "objectbox_clib/lib"
+if len(sys.argv) > 1 and sys.argv[1] == '--sync':
+    variant = 'objectbox-sync'
+    out_dir = "objectbox_sync_clib/lib"
 
 base_url = "https://github.com/objectbox/objectbox-c/releases/download/"
 
-# map between ./objectbox_clib/lib paths and artifact suffixes at https://github.com/objectbox/objectbox-c/releases
-out_dir = "objectbox_clib/lib"
+# map between <out_dir> paths and artifact suffixes at https://github.com/objectbox/objectbox-c/releases
 files = {
     # header file is the same for all platforms, get it from the linux x86_64 distributable
     "objectbox.h": "linux-x64.tar.gz",

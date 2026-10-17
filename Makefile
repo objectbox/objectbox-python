@@ -24,10 +24,17 @@ help:				## Show this help
 
 all: depend build test	## Get dependencies, clean, build and test
 
-build: ${VENV} clean	## Clean and build
+build: ${VENV} clean	## Clean and build: objectbox-clib wheels, objectbox-api and the objectbox metapackage
 	set -e ; \
 	${PYTHON} setup-clib.py all ; \
 	${PYTHON} setup.py bdist_wheel ; \
+	${PYTHON} setup-meta.py bdist_wheel ; \
+	ls -lh dist
+
+build-sync: ${VENV}		## Build objectbox-sync-clib wheels and the objectbox-sync metapackage (requires depend-sync; adds to dist, e.g. after build)
+	set -e ; \
+	${PYTHON} setup-clib.py --sync all ; \
+	${PYTHON} setup-meta.py --sync bdist_wheel ; \
 	ls -lh dist
 
 ${VENV}: ${VENVBIN}/activate
@@ -50,6 +57,10 @@ depend:	${VENV}			## Prepare dependencies
 	set -e ; \
 	${PYTHON} download-c-lib.py
 
+depend-sync:	${VENV}		## Prepare dependencies: Sync variant of the C library (used instead if available)
+	set -e ; \
+	${PYTHON} download-c-lib.py --sync
+
 test: ${VENV}			## Test all targets
 	set -e ; \
 	${PYTHON} -m pytest --capture=no --verbose -rs
@@ -71,13 +82,19 @@ clean:					## Clean build artifacts
 	rm -rf dist/
 	rm -rf *.egg-info
 
-publish:				## Publish the package built by `make build`
+publish:				## Publish the packages built by `make build` (and `make build-sync`)
 	set -e
 	@echo "****************************************************************"
 	@echo ">>>  Please enter the API token when asked for a password.  <<<"
 	@echo ">>>  The API token starts with the prefix 'pypi-'.          <<<"
 	@echo ">>>  See https://pypi.org/help/#apitoken for details.       <<<"
 	@echo "****************************************************************"
-	# objectbox-clib first, as objectbox depends on it
+	# C libraries first, then objectbox-api, then the metapackages depending on them
 	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_clib-*.whl
+	# objectbox-sync-clib, if built (make build-sync)
+	if ls dist/objectbox_sync_clib-*.whl > /dev/null 2>&1 ; then ${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_sync_clib-*.whl ; fi
+	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_api-*.whl
+	# Metapackages: objectbox (note: wheel file names use "_", so objectbox-*.whl matches only this one) and
+	# objectbox-sync, if built
 	${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox-*.whl
+	if ls dist/objectbox_sync-*.whl > /dev/null 2>&1 ; then ${PYTHON} -m twine upload -u "__token__" --verbose dist/objectbox_sync-*.whl ; fi

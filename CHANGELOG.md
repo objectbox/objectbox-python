@@ -6,10 +6,17 @@ ObjectBox Python ChangeLog
 
 * Update to ObjectBox C library 5.3.2 (was 4.0.0), see https://github.com/objectbox/objectbox-c/blob/main/CHANGELOG.md;
 * New platform: Windows ARM64 (64-bit ARM, e.g. Snapdragon-based devices)
+* Requires Python 3.7 or newer (the package metadata claimed 3.4 before, but the code required 3.7 already)
 * Log callback (`log_callback`): the log level values passed to the callback changed (see `LogLevel`, now also `Trace`);
   code comparing against `LogLevel` members is not affected.
-* The ObjectBox C library is now a separate package, `objectbox-clib`, which is installed automatically as a dependency.
-  There is a wheel for each platform, so only the library for your platform is downloaded (was: libraries for all platforms):
+* Packaging: the Python code is now in the new package `objectbox-api` and the ObjectBox C library in the new package
+  `objectbox-clib`; `objectbox` installs both (it contains no code itself). Install `objectbox` as before.
+  **Upgrading from 4.x with pip: uninstall first** (`pip uninstall objectbox`, then `pip install objectbox`).
+  An in-place `pip install --upgrade objectbox` removes the files of the previous version after installing
+  `objectbox-api`, so `import objectbox` fails (e.g. "cannot import name 'Store' from 'objectbox' (unknown location)");
+  repair via `pip install --force-reinstall --no-deps objectbox-api`. Fresh installs and uv are not affected.
+* C library package `objectbox-clib`: there is a wheel for each platform, so only the library for your platform is
+  downloaded (was: libraries for all platforms):
   Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 11+ (universal) and Windows x64 and ARM64 (new).
   **Breaking:** Linux ARMv6hf (e.g. Raspberry Pi Zero/1) is no longer supported, as PyPI does not support wheels for it.
 * Linux: support 32-bit Python on a 64-bit kernel, e.g. Raspberry Pi OS 32-bit on a Raspberry Pi 4/5
@@ -19,6 +26,8 @@ ObjectBox Python ChangeLog
 * Exceptions: all exceptions raised by the database now derive from `DbError`, with a specific subclass per error,
   e.g. `IdNotFoundError`, `UniqueViolatedError` or `DbFullError` (see module `objectbox.exceptions`).
   **Breaking:** this replaces `CoreException` and `NotFoundException` (the latter was exported by the top-level module).
+  `IllegalArgumentError` is also a `ValueError`, `IllegalStateError` and `FeatureNotAvailable` are also a
+  `RuntimeError`, so they can be caught as the matching built-in exception, too.
 * Store: new `log_callback` option to receive the database's log messages
 * Top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`
 * API reference documentation (docstrings for the public API; generated via Sphinx)
@@ -68,6 +77,13 @@ ObjectBox Python ChangeLog
   for a small entity, ~8x faster for 21 properties.
   The code is compiled per process at the first put and first read of an entity (~2.8 ms for both with 38 properties);
   the new option `cache_dir` caches the compiled code for other processes (~0.5 ms then), e.g. for short-lived ones.
+* Sync (preview): new module `objectbox.sync` with a Sync client (`Sync.client()`, `SyncClient`) to synchronize data
+  with an ObjectBox Sync server; `@SyncEntity()` enables Sync for an entity (optionally with shared global IDs);
+  `SyncClock` and `SyncPrecedence` properties for Sync conflict resolution. Client options include Sync filter
+  variables, flags (`SyncFlags`) and certificate paths; listeners for login, connection, completed, change and server
+  time events.
+  Requires the Sync variant of the C library: install the new package `objectbox-sync` instead of `objectbox`
+  (`pip install objectbox-sync`; it installs `objectbox-api` and `objectbox-sync-clib`, the Sync variant of the library).
 
 4.0.0 (2024-05-28)
 ------------------

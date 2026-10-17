@@ -74,9 +74,9 @@ class IdSync:
             "modelVersionParserMinimum": MODEL_PARSER_VERSION,
             "entities": [],
             "lastEntityId": str(self.model.last_entity_iduid),
-            "lastIndexId": str(self.model.last_index_iduid)
+            "lastIndexId": str(self.model.last_index_iduid),
+            "lastRelationId": str(self.model.last_relation_iduid)
         }
-        # TODO lastRelationId
         # TODO modelVersion
         # TODO retiredEntityUids
         # TODO retiredIndexUids
@@ -91,6 +91,8 @@ class IdSync:
                 "lastPropertyId": str(entity._last_property_iduid),
                 "properties": []
             }
+            if entity._flags != 0:
+                entity_json["flags"] = entity._flags  # E.g. Sync enabled; like the model JSON of other ObjectBox APIs
             for prop in entity._properties:
                 prop_json = {
                     "id": str(prop.iduid),

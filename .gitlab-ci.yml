@@ -27,14 +27,35 @@ build:
     paths:
       - dist/*.whl
 
-# Next, test the packaged wheel built by "build"
+# Build the objectbox-sync-clib wheels (the Sync variant of the C library) and the objectbox-sync metapackage;
+# it uses the objectbox-api wheel built by "build"
+build-sync:
+  tags: [ x64, docker, linux ]
+  image: python:latest
+  stage: build
+  script:
+    - python -m pip install --upgrade pip
+    # Using released C library (Sync version)
+    - make depend-sync
+    - make test
+    - make build-sync
+  artifacts:
+    expire_in: 1 days
+    paths:
+      - dist/*.whl
+
+# Next, test the packaged wheels built by "build": the objectbox metapackage, i.e. objectbox-api and objectbox-clib
 .test:
   stage: test
+  needs: [ build ]  # Not build-sync: its wheels are not needed, and a failure there shall not block these tests
   script:
     - pip3 install --user pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
     - rm -r objectbox_clib  # todo this is ugly; let's copy required files in a sub-folder instead?
-    - pip3 install --user --force-reinstall dist/objectbox-*.whl --find-links dist  # Artifacts from the previous stage (downloaded by default); objectbox-clib for the platform via --find-links
+    - rm -r objectbox_sync_clib  # Separate command for PowerShell (Windows)
+    # Artifacts from the previous stage (downloaded by default). Note: wheel file names use "_", so objectbox-*.whl only
+    # matches the metapackage; objectbox-api and objectbox-clib (for the platform) are installed via --find-links.
+    - pip3 install --user --force-reinstall dist/objectbox-*.whl --find-links dist
     - ${PYTHON} -m pytest -rs  # -rs: list skipped tests with reason
     - ${PYTHON} -m pytest -rs --fast-flatbuffers-builder  # experimental; each object is verified against the reference
     - ${PYTHON} -m pytest -rs --flatbuffers-codegen  # experimental; each object is verified against the reference
@@ -51,8 +72,8 @@ build:
     - source .venv/bin/activate
     - python -m pip install pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
-    - rm -r objectbox_clib
-    - python -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # Artifacts from the previous stage (downloaded by default); objectbox-clib for the platform via --find-links
+    - rm -r objectbox_clib objectbox_sync_clib
+    - python -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # See .test
     - python -m pytest -rs
     - python -m pytest -rs --fast-flatbuffers-builder
     - python -m pytest -rs --flatbuffers-codegen
@@ -80,8 +101,62 @@ test:mac:
   # CPU agnostic: the wheel ships a universal macOS library (x64 and arm64)
   tags: [mac, arm64]
 
+# Windows in a venv: pip install --user on this shell runner would keep packages of earlier pipelines (any branch) in
+# the user site, e.g. a stale distribution owning files of the objectbox package.
+# The runner's shell is bash; the venv's Python is called with forward slashes (also work in PowerShell).
 test:windows:x64:
   extends: .test
   tags: [windows, x64, python]
+  script:
+    - python.exe -m venv .venv
+    - .venv/Scripts/python.exe -m pip install pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - rm -r objectbox_clib
+    - rm -r objectbox_sync_clib
+    - .venv/Scripts/python.exe -m pip install --force-reinstall dist/objectbox-*.whl --find-links dist  # See .test
+    - .venv/Scripts/python.exe -m pytest -rs
+    - .venv/Scripts/python.exe -m pytest -rs --fast-flatbuffers-builder
+    - .venv/Scripts/python.exe -m pytest -rs --flatbuffers-codegen
+
+# Sync version test jobs: test the objectbox-sync metapackage, i.e. objectbox-api and objectbox-sync-clib (without
+# objectbox-clib)
+.test-sync:
+  stage: test
+  needs: [ build, build-sync ]
+  script:
+    - pip3 install --user pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - rm -r objectbox_clib objectbox_sync_clib
+    - pip3 install --user --force-reinstall dist/objectbox_sync-*.whl --find-links dist  # Artifacts from build and build-sync
+    - ${PYTHON} -c "import importlib.util; assert importlib.util.find_spec('objectbox_clib') is None, 'objectbox-clib must not be installed'"
+    - ${PYTHON} -m pytest -s -rs
   variables:
-    PYTHON: "python.exe"
+    PYTHON: "python3"
+
+.test-sync:venv:
+  extends: .test-sync
+  script:
+    - ${PYTHON} -m venv .venv
+    - source .venv/bin/activate
+    - python -m pip install pytest
+    - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
+    - rm -r objectbox_clib objectbox_sync_clib
+    - python -m pip install --force-reinstall dist/objectbox_sync-*.whl --find-links dist  # Artifacts from build and build-sync
+    - python -c "import importlib.util; assert importlib.util.find_spec('objectbox_clib') is None, 'objectbox-clib must not be installed'"
+    - python -m pytest -s -rs
+
+test-sync:linux:x64:
+  extends: .test-sync
+  tags: [ x64, docker, linux ]
+  image: python:$PYTHON_VERSION
+  parallel:
+    matrix:
+      - PYTHON_VERSION: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12' ]
+
+test-sync:linux:aarch64:
+  extends: .test-sync:venv
+  tags: [ aarch64, shell, linux, python3 ]
+
+test-sync:mac:
+  extends: .test-sync:venv
+  tags: [ mac, arm64 ]

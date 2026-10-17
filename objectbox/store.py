@@ -140,11 +140,15 @@ class Store:
 
         self._c_store = None
         self._c_log_callback = None
+        self._sync_client = None  # The open SyncClient (set by it); the store keeps it alive, like Java and Dart
+        self._model: Optional[Model] = None  # The model passed (resolved), if any; e.g. to map entity IDs to entities
+        self._close_listeners: List[Callable[[], None]] = []  # Called before closing, e.g. to close a SyncClient
         if not c_store:
             options = StoreOptions()
             try:
                 if model is not None:
                     model = Store._sync_model(model, model_json_file, skip_model_sync)
+                    self._model = model
                     if not (skip_model_sync and Store._store_exists(directory)):
                         options.model(model)
                 if directory is not None:
@@ -323,10 +327,16 @@ class Store:
 
     def close(self):
         """Close database."""
-        c_store_to_close = self._c_store
-        if c_store_to_close:
-            self._c_store = None
-            c.obx_store_close(c_store_to_close)
+        listeners = self._close_listeners
+        self._close_listeners = []
+        try:
+            for listener in listeners:
+                listener()
+        finally:
+            c_store_to_close = self._c_store
+            if c_store_to_close:
+                self._c_store = None
+                c.obx_store_close(c_store_to_close)
 
     @staticmethod
     def remove_db_files(db_dir: str):
@@ -336,3 +346,18 @@ class Store:
             Path to DB directory.
         """
         c.obx_remove_db_files(c.c_str(db_dir))
+
+    def sync_client(self) -> Optional['objectbox.sync.SyncClient']:
+        """Returns the Sync client of this store, if one was created and is not closed yet (see Sync.client())."""
+        return self._sync_client
+
+    def _add_close_listener(self, listener: Callable[[], None]):
+        """Internal: adds a listener that is called when the store is about to be closed (before the C store is closed)."""
+        self._close_listeners.append(listener)
+
+    def _remove_close_listener(self, listener: Callable[[], None]):
+        """Internal: removes a listener added via _add_close_listener(), if present."""
+        try:
+            self._close_listeners.remove(listener)
+        except ValueError:
+            pass

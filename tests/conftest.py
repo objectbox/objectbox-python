@@ -4,6 +4,7 @@ import pytest
 from objectbox import experimental
 from objectbox.logger import logger
 from common import *
+from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncCredentials, Sync
 
 
 def pytest_addoption(parser):
@@ -16,6 +17,10 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+    config.addinivalue_line("markers", "sync: Sync test, requires the Sync variant of the library (make depend-sync)")
+    if os.environ.get("OBX_TEST_REQUIRE_SYNC") == "1" and not Sync.is_available():
+        raise pytest.UsageError("OBX_TEST_REQUIRE_SYNC is set, but Sync is not available in the loaded library "
+                                "(see make depend-sync)")
     fast_builder = (config.getoption("--fast-flatbuffers-builder") or
                     os.environ.get("OBX_TEST_FAST_FLATBUFFERS_BUILDER") == "1")
     codegen = config.getoption("--flatbuffers-codegen") or os.environ.get("OBX_TEST_FLATBUFFERS_CODEGEN") == "1"
@@ -51,3 +56,72 @@ def test_store():
     store = create_test_store()
     yield store
     store.close()
+
+
+class TestLoginListener(SyncLoginListener):
+    def __init__(self):
+        self.logged_in_called = False
+        self.login_failure_code = None
+
+    def on_logged_in(self):
+        self.logged_in_called = True
+
+    def on_login_failed(self, sync_login_code: int):
+        self.login_failure_code = sync_login_code
+
+
+class TestConnectionListener(SyncConnectionListener):
+    def __init__(self):
+        self.connected_called = False
+        self.disconnected_called = False
+
+    def on_connected(self):
+        self.connected_called = True
+
+    def on_disconnected(self):
+        self.disconnected_called = True
+
+
+@pytest.fixture
+def connection_listener():
+    listener = TestConnectionListener()
+    yield listener
+    listener.connected_called = False
+    listener.disconnected_called = False
+
+
+@pytest.fixture
+def login_listener():
+    listener = TestLoginListener()
+    yield listener
+    listener.logged_in_called = False
+    listener.login_failure_code = None
+
+
+@pytest.fixture
+def sync_client(test_store, login_listener, connection_listener):
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
+    client.set_login_listener(login_listener)
+    client.set_connection_listener(connection_listener)
+    yield client
+    client.close()
+
+
+@pytest.fixture(scope="session")
+def sync_server():
+    """A Sync server using the model objectbox-model-sync.json (see start_sync_server() for how it is provided);
+    skips the test if no server is available."""
+    server = start_sync_server()
+    if server is None:
+        pytest.skip("Sync server not available (e.g. set OBX_SYNC_SERVER_URL)")
+    yield server
+    stop_sync_server(server)
+
+
+def pytest_collection_modifyitems(config, items):
+    if Sync.is_available():
+        return
+    skip_sync = pytest.mark.skip(reason="Sync is not available in the loaded library (see make depend-sync)")
+    for item in items:
+        if "sync" in item.keywords:
+            item.add_marker(skip_sync)
