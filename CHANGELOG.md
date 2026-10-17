@@ -29,7 +29,8 @@ ObjectBox Python ChangeLog
   `IllegalArgumentError` is also a `ValueError`, `IllegalStateError` and `FeatureNotAvailable` are also a
   `RuntimeError`, so they can be caught as the matching built-in exception, too.
 * Query: order results via `QueryBuilder.order(property, flags)`, e.g. `box.query().order(Person.name).build()`;
-  `OrderFlags` (exported by the top-level module) adjust the order, e.g. `DESCENDING` or `CASE_SENSITIVE`
+  `OrderFlags` (exported by the top-level module) adjust the order, e.g. `DESCENDING` or `CASE_SENSITIVE`;
+  `order_desc(property)` orders descending
 * Query: new "one of" conditions `String.one_of(values)` and, for integer properties, `one_of(values)` and
   `not_one_of(values)`; their values can be changed on a built query via `set_parameter_strings()`/`set_parameter_ints()`
   and the `set_parameter_alias_*` variants

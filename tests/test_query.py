@@ -671,6 +671,8 @@ def test_order(test_store):
     query = box.query().order(TestEntity.int64, OrderFlags.DESCENDING).build()
     assert [o.id for o in query.find()] == [id5, id2, id4, id3, id1]
     assert query.find_ids() == [id5, id2, id4, id3, id1]
+    query = box.query().order_desc(TestEntity.int64).build()
+    assert query.find_ids() == [id5, id2, id4, id3, id1]
 
     # Order by int64 (unsigned ordering): -423 is the largest
     query = box.query().order(TestEntity.int64, OrderFlags.UNSIGNED).build()
@@ -686,6 +688,8 @@ def test_order(test_store):
 
     # Combined flags; property given by name
     query = box.query().order("str", OrderFlags.CASE_SENSITIVE | OrderFlags.DESCENDING).build()
+    assert [o.str for o in query.find()] == ["mango", "coconut", "apricot", "Banana", "Apple"]
+    query = box.query().order_desc("str", OrderFlags.CASE_SENSITIVE).build()
     assert [o.str for o in query.find()] == ["mango", "coconut", "apricot", "Banana", "Apple"]
 
     # With a condition, offset and limit

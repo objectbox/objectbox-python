@@ -288,6 +288,21 @@ class QueryBuilder:
         obx_qb_order(self._c_builder, prop_id, flags)
         return self
 
+    def order_desc(self, prop: Union[int, str, Property], flags: Union[OrderFlags, int] = 0) -> 'QueryBuilder':
+        """ Orders the query results by the given property, descending;
+        the same as ``order(prop, OrderFlags.DESCENDING | flags)``, see :meth:`order`.
+
+        Example: ``box.query().order_desc(Person.age).build()``
+
+        :param prop:
+            The property (or its name or ID) to order by.
+        :param flags:
+            Further :class:`OrderFlags` to adjust the order, e.g. ``OrderFlags.CASE_SENSITIVE``.
+        :return:
+            This QueryBuilder (to chain calls).
+        """
+        return self.order(prop, OrderFlags.DESCENDING | flags)
+
     def build(self) -> Query:
         c_query = obx_query(self._c_builder)
         return Query(c_query, self._box)
