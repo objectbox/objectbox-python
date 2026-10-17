@@ -47,6 +47,7 @@ build-sync:
 # Next, test the packaged wheels built by "build": the objectbox metapackage, i.e. objectbox-api and objectbox-clib
 .test:
   stage: test
+  needs: [ build ]  # Not build-sync: its wheels are not needed, and a failure there shall not block these tests
   script:
     - pip3 install --user pytest
     - rm -r objectbox  # todo this is ugly; let's copy required files in a sub-folder instead?
