@@ -4,7 +4,7 @@ import pytest
 from objectbox import experimental
 from objectbox.logger import logger
 from common import *
-from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncClient, SyncCredentials, Sync
+from objectbox.sync import SyncLoginListener, SyncConnectionListener, SyncCredentials, Sync
 
 
 def pytest_addoption(parser):
@@ -97,8 +97,7 @@ def login_listener():
 
 @pytest.fixture
 def sync_client(test_store, login_listener, connection_listener):
-    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
-    client.set_credentials(SyncCredentials.none())
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
     client.set_login_listener(login_listener)
     client.set_connection_listener(connection_listener)
     yield client

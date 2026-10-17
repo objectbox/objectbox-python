@@ -2,6 +2,7 @@ import ctypes
 import gc
 import os
 import shutil
+import sys
 import threading
 import time
 import uuid
@@ -190,7 +191,7 @@ def test_filter_variables(test_store):
         "name1": "val1",
         "name2": "val2"
     }
-    client = SyncClient(test_store, [NO_SYNC_SERVER_URL], filter_vars)
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none(), filter_vars)
 
     client.put_filter_variable("name2", "val2")
     client.remove_filter_variable("name2")
@@ -354,7 +355,7 @@ def test_client_closed_when_store_closed(test_store, sync_client):
 
 @pytest.mark.sync
 def test_sync_change_entity(test_store):
-    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
     changes_received = []
     listener = SyncChangeListener()
     listener.on_change = changes_received.extend
@@ -373,7 +374,7 @@ def test_sync_change_entity(test_store):
 
 @pytest.mark.sync
 def test_login_failure_code(test_store, login_listener):
-    client = SyncClient(test_store, [NO_SYNC_SERVER_URL])
+    client = Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
     client.set_login_listener(login_listener)
     # Call the C callback directly (would require a server rejecting the login)
     c_login_failure_listener = client._SyncClient__c_callbacks[1]
@@ -541,10 +542,28 @@ def test_client_close_twice(sync_client):
 
 
 @pytest.mark.sync
+def test_client_constructor_is_internal(test_store):
+    unraisable = []
+    old_hook = getattr(sys, "unraisablehook", None)  # Python 3.8+
+    if old_hook:
+        sys.unraisablehook = unraisable.append  # E.g. an exception in __del__ of the uninitialized client
+    try:
+        with pytest.raises(TypeError, match=r"Use Sync.client\(\) to create a SyncClient"):
+            SyncClient(test_store, [NO_SYNC_SERVER_URL])
+        gc.collect()
+    finally:
+        if old_hook:
+            sys.unraisablehook = old_hook
+    assert unraisable == []
+    assert test_store.sync_client() is None
+    Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none()).close()
+
+
+@pytest.mark.sync
 def test_client_on_closed_store(test_store):
     test_store.close()
     with pytest.raises(ValueError, match="Store is closed"):
-        SyncClient(test_store, [NO_SYNC_SERVER_URL])
+        Sync.client(test_store, NO_SYNC_SERVER_URL, SyncCredentials.none())
 
 
 @pytest.mark.sync

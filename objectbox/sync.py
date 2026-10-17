@@ -455,35 +455,40 @@ class SyncListener(SyncLoginListener, SyncCompletedListener, SyncConnectionListe
 class SyncClient:
     """Sync client is used to connect to an ObjectBox sync server.
 
-    Usually created via Sync.client(). A store has at most one open client, which it keeps alive (no need to keep a
-    reference to it) until the client or the store is closed; see Store.sync_client().
+    Create it via Sync.client() (the constructor is internal). A store has at most one open client, which it keeps
+    alive (no need to keep a reference to it) until the client or the store is closed; see Store.sync_client().
     """
 
-    def __init__(self, store: Store, server_urls: typing.List[str],
-                 filter_variables: typing.Optional[typing.Dict[str, str]] = None, *,
-                 flags: int = 0, certificate_paths: typing.Optional[typing.List[str]] = None):
-        """Creates a Sync client associated with the given store and options.
+    def __init__(self, *args, **kwargs):
+        raise TypeError("Use Sync.client() to create a SyncClient")
 
-        This does not initiate any connection attempts yet: call start() to do so.
+    @classmethod
+    def _create(cls, store: Store, urls: typing.List[str],
+                credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]],
+                filter_variables: typing.Optional[typing.Dict[str, str]], flags: int,
+                certificate_paths: typing.Optional[typing.List[str]]) -> 'SyncClient':
+        """Internal: creates a client for Sync.client() (see there for the parameters)."""
+        client = cls.__new__(cls)
+        client.__init_client(store, urls, flags, certificate_paths)
+        try:
+            for name, value in (filter_variables or {}).items():
+                client.put_filter_variable(name, value)
+            client.set_credentials(credentials)
+        except BaseException:
+            client.close()  # Not reachable by the caller, so close it now (it would block a new client for the store)
+            raise
+        return client
 
-        Args:
-            store: The ObjectBox store to sync.
-            server_urls: List of server URLs to connect to.
-            filter_variables: Optional dictionary of filter variable names to values.
-            flags: SyncFlags to adjust the client behavior (combine with ``|``).
-            certificate_paths: Paths of SSL certificates (in the local file system) for encrypted connections.
-
-        Raises:
-            ValueError: If a sync client is already active (not closed) for the given store.
-        """
-        # Set first, so close() (e.g. via __del__) works if this constructor raises
+    def __init_client(self, store: Store, urls: typing.List[str], flags: int,
+                      certificate_paths: typing.Optional[typing.List[str]]):
+        # Set first, so close() (e.g. via __del__) works if this raises
         self.__c_sync_client_ptr = None
         self.__close_lock = threading.Lock()
         self.__on_store_close = None
         # All ctypes callbacks passed to C: the C client may call them until it is closed, also replaced ones
         # (e.g. while a listener is replaced, the client's thread may be calling the previous one), so keep them all.
         self.__c_callbacks = []
-        if not server_urls:
+        if not urls:
             raise ValueError("Provide at least one server URL")
 
         if not Sync.is_available():
@@ -503,7 +508,7 @@ class SyncClient:
         # Like Java and Dart, create the client via options (allows further options, e.g. flags)
         c_options = c.obx_sync_opt(store._c_store)
         try:
-            for url in server_urls:
+            for url in urls:
                 c.obx_sync_opt_add_url(c_options, url.encode('utf-8'))
             for certificate_path in certificate_paths or []:
                 c.obx_sync_opt_add_cert_path(c_options, certificate_path.encode('utf-8'))
@@ -521,16 +526,11 @@ class SyncClient:
         self.__store._add_close_listener(self.__on_store_close)
         store._sync_client = self
 
-        try:
-            for name, value in (filter_variables or {}).items():
-                self.put_filter_variable(name, value)
-        except BaseException:
-            self.close()  # Not reachable by the caller, so close it now (it would block a new client for the store)
-            raise
-
     def __del__(self):
-        # Close the SyncClient when this instance is destructed, e.g. garbage collected together with its store
-        self.close()
+        # Close the SyncClient when this instance is destructed, e.g. garbage collected together with its store.
+        # Not if it was never initialized (the constructor raises; use Sync.client()).
+        if getattr(self, '_SyncClient__c_sync_client_ptr', None) is not None:
+            self.close()
 
     def __check_sync_ptr_not_null(self):
         if self.__c_sync_client_ptr is None:
@@ -1021,7 +1021,7 @@ class Sync:
     @staticmethod
     def client(
             store: Store,
-            server_url: typing.Union[str, typing.List[str]],
+            url: typing.Union[str, typing.List[str]],
             credentials: typing.Union[SyncCredentials, typing.List[SyncCredentials]],
             filter_variables: typing.Optional[typing.Dict[str, str]] = None,
             *,
@@ -1050,7 +1050,7 @@ class Sync:
 
         Args:
             store: The ObjectBox store to sync.
-            server_url: The URL of the Sync server to connect to, e.g. "ws://127.0.0.1:9999" ("wss://" for an encrypted
+            url: The URL of the Sync server to connect to, e.g. "ws://127.0.0.1:9999" ("wss://" for an encrypted
                 connection); or a list of URLs to work with multiple servers (a random URL is selected for each
                 connection attempt).
             credentials: The credentials to use for authentication; or a list of credentials (see
@@ -1061,12 +1061,10 @@ class Sync:
 
         Returns:
             A configured SyncClient instance.
+
+        Raises:
+            ValueError: If a sync client is already active (not closed) for the given store, or the store is closed.
+            RuntimeError: If the loaded ObjectBox library does not support Sync.
         """
-        server_urls = [server_url] if isinstance(server_url, str) else list(server_url)
-        client = SyncClient(store, server_urls, filter_variables, flags=flags, certificate_paths=certificate_paths)
-        try:
-            client.set_credentials(credentials)
-        except BaseException:
-            client.close()
-            raise
-        return client
+        urls = [url] if isinstance(url, str) else list(url)
+        return SyncClient._create(store, urls, credentials, filter_variables, flags, certificate_paths)
