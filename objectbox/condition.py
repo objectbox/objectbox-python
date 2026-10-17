@@ -134,7 +134,8 @@ class PropertyQueryCondition(QueryCondition):
         self._alias = None
 
     def alias(self, value: str):
-        """ Sets an alias for this condition that can later be used with Query's set_parameter_* methods. """
+        """ Sets an alias for this condition to change its value(s) on the built query via
+        ``Query.set_parameter_alias()`` or ``Query.set_parameters_alias()``. """
         self._alias = value
         return self
 

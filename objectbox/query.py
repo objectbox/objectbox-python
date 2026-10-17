@@ -199,8 +199,8 @@ class Query:
             If the value does not fit the property type.
         """
         prop_id = self._entity._get_property_id(prop)
-        kind, value = self._parameter_value(self._property_type(prop_id), value)
-        return getattr(self, "set_parameter_" + kind)(prop_id, value)
+        kind, value = _parameter_value(self._property_type(prop_id), value)
+        return self._set_parameter(prop_id, None, kind, value)
 
     @overload
     def set_parameter_alias(self, alias: str, value: Union[str, int, float, bytes, datetime]) -> 'Query': ...
@@ -216,12 +216,17 @@ class Query:
 
         Example: ``query.set_parameter_alias("name", "Joe")``
 
-        For an alias set via ``QueryBuilder.alias()``, the property is unknown, so the value decides: a list of
-        numbers is only taken as a vector if it is a numpy array or contains a float, and a ``datetime`` is not
-        supported; for these, use the typed ``set_parameter_alias_*()`` methods.
+        For an alias set via ``QueryBuilder.alias()``, the property is unknown, so the value decides; e.g. a float
+        sets a floating point value. ``datetime`` values are not supported then: pass milliseconds (``Date``) or
+        nanoseconds (``DateNano``) instead.
         """
-        kind, value = self._parameter_value(self._alias_property_type(alias), value)
-        return getattr(self, "set_parameter_alias_" + kind)(alias, value)
+        prop_type = self._alias_property_type(alias)
+        type_size = None
+        if prop_type is None and (isinstance(value, (list, tuple)) or is_ndarray(value)):
+            # 0 for non-scalar types (strings, vectors), so it tells integer lists from vectors
+            type_size = obx_query_param_alias_get_type_size(self._c_query, c_str(alias))
+        kind, value = _parameter_value(prop_type, value, type_size)
+        return self._set_parameter(None, alias, kind, value)
 
     def set_parameters(self, prop: Union[int, str, 'Property'], value_a: Union[int, float, datetime],
                        value_b: Union[int, float, datetime]) -> 'Query':
@@ -230,23 +235,40 @@ class Query:
 
         Example: ``query.set_parameters(Person.age, 18, 30)``
 
+        :return:
+            This query (to chain calls).
         :raises TypeError:
             If the values do not fit the property type.
         """
         prop_id = self._entity._get_property_id(prop)
-        kind, value_a, value_b = self._parameter_values(self._property_type(prop_id), value_a, value_b)
-        return getattr(self, "set_parameter_" + kind)(prop_id, value_a, value_b)
+        kind, value_a, value_b = _parameter_values(self._property_type(prop_id), value_a, value_b)
+        return self._set_parameter(prop_id, None, kind, value_a, value_b)
 
     def set_parameters_alias(self, alias: str, value_a: Union[int, float, datetime],
                              value_b: Union[int, float, datetime]) -> 'Query':
         """ Like :meth:`set_parameters`, for the condition having the given alias
         (see ``PropertyQueryCondition.alias()``). """
-        kind, value_a, value_b = self._parameter_values(self._alias_property_type(alias), value_a, value_b)
-        return getattr(self, "set_parameter_alias_" + kind)(alias, value_a, value_b)
+        kind, value_a, value_b = _parameter_values(self._alias_property_type(alias), value_a, value_b)
+        return self._set_parameter(None, alias, kind, value_a, value_b)
 
     def describe_parameters(self) -> str:
         """ Describes the query conditions with their current parameter values, e.g. for logging or debugging. """
         return obx_query_describe_params(self._c_query).decode('utf-8')
+
+    def _set_parameter(self, prop_id: Optional[int], alias: Optional[str], kind: str, *values) -> 'Query':
+        """ Calls the C function for the kind of parameter (see _parameter_functions) for the property or alias. """
+        if kind == "ints":  # The C API has separate functions for 32-bit and 64-bit integer properties
+            if alias is None:
+                type_size = obx_query_param_get_type_size(self._c_query, self._entity._id, prop_id)
+            else:
+                type_size = obx_query_param_alias_get_type_size(self._c_query, c_str(alias))
+            kind = "int32s" if type_size == 4 else "int64s"
+        by_property, by_alias, to_c_args = _parameter_functions[kind]
+        if alias is None:
+            by_property(self._c_query, self._entity._id, prop_id, *to_c_args(*values))
+        else:
+            by_alias(self._c_query, c_str(alias), *to_c_args(*values))
+        return self
 
     def _property_type(self, prop_id: int) -> int:
         for prop in self._entity._properties:
@@ -259,163 +281,73 @@ class Query:
         prop_id = self._alias_property_ids.get(alias)
         return self._property_type(prop_id) if prop_id is not None else None
 
-    @staticmethod
-    def _parameter_value(prop_type: Optional[int], value) -> Tuple[str, Any]:
-        """ Returns the suffix of the typed set_parameter method for the value and the (converted) value;
-        the property type is None if unknown (then the value decides). """
-        if isinstance(value, (list, tuple)) or is_ndarray(value):
-            if prop_type == OBXPropertyType_FloatVector or (prop_type is None and (
-                    is_ndarray(value) or any(isinstance(v, float) for v in value))):
-                if not is_ndarray(value) and not all(_is_number(v) for v in value):
-                    raise TypeError("A vector parameter must be a list of numbers or a numpy array")
-                return "vector_f32", value
-            if prop_type == OBXPropertyType_String or (prop_type is None and value
-                                                       and all(isinstance(v, str) for v in value)):
-                if not all(isinstance(v, str) for v in value):
-                    raise TypeError("The values for a string property must be strings")
-                return "strings", value
-            if prop_type is None or prop_type in _integer_types:
-                return "ints", [_int_parameter(prop_type, v) for v in value]
-            raise TypeError(f"A list parameter is not supported for property type {_type_name(prop_type)}")
-        if isinstance(value, str):
-            if prop_type not in (None, OBXPropertyType_String):
-                raise TypeError(f"A string value does not fit property type {_type_name(prop_type)}")
-            return "string", value
-        if isinstance(value, (bytes, bytearray)):
-            if prop_type not in (None, OBXPropertyType_ByteVector):
-                raise TypeError(f"A bytes value does not fit property type {_type_name(prop_type)}")
-            return "bytes", value
-        if prop_type in _float_types or (prop_type is None and isinstance(value, float)):
-            if not _is_number(value):
-                raise TypeError(f"A {type(value).__name__} value does not fit property type "
-                                f"{_type_name(prop_type)}")
-            return "double", float(value)
-        # Integer types; vector properties take an int as the maximum result count of a nearest neighbor search
-        if prop_type is None or prop_type in _integer_types or prop_type == OBXPropertyType_FloatVector:
-            return "int", _int_parameter(prop_type, value)
-        raise TypeError(f"A {type(value).__name__} value does not fit property type {_type_name(prop_type)}")
 
-    @staticmethod
-    def _parameter_values(prop_type: Optional[int], value_a, value_b) -> Tuple[str, Any, Any]:
-        """ Like _parameter_value() for two values (e.g. between). """
-        if prop_type in _float_types or (prop_type is None and (isinstance(value_a, float)
-                                                                 or isinstance(value_b, float))):
-            if not _is_number(value_a) or not _is_number(value_b):
-                raise TypeError(f"Two numbers expected for property type {_type_name(prop_type)}")
-            return "2doubles", float(value_a), float(value_b)
+# Kind of parameter: (C function by property, C function by alias, converts the value(s) to the C arguments)
+_parameter_functions = {
+    "string": (obx_query_param_string, obx_query_param_alias_string, lambda v: (c_str(v),)),
+    "strings": (obx_query_param_strings, obx_query_param_alias_strings,
+                lambda v: (c_array([c_str(s) for s in v], ctypes.c_char_p), len(v))),
+    "int": (obx_query_param_int, obx_query_param_alias_int, lambda v: (v,)),
+    "int32s": (obx_query_param_int32s, obx_query_param_alias_int32s,
+               lambda v: (c_array(v, ctypes.c_int32), len(v))),
+    "int64s": (obx_query_param_int64s, obx_query_param_alias_int64s,
+               lambda v: (c_array(v, ctypes.c_int64), len(v))),
+    "2ints": (obx_query_param_2ints, obx_query_param_alias_2ints, lambda a, b: (a, b)),
+    "double": (obx_query_param_double, obx_query_param_alias_double, lambda v: (v,)),
+    "2doubles": (obx_query_param_2doubles, obx_query_param_alias_2doubles, lambda a, b: (a, b)),
+    "bytes": (obx_query_param_bytes, obx_query_param_alias_bytes, lambda v: (bytes(v), len(v))),
+    "vector_f32": (obx_query_param_vector_float32, obx_query_param_alias_vector_float32,
+                   lambda v: (c_array(v, ctypes.c_float), len(v))),
+}
+
+
+def _parameter_value(prop_type: Optional[int], value, type_size: Optional[int] = None) -> Tuple[str, Any]:
+    """ Returns the kind of parameter (see _parameter_functions) and the (converted) value.
+    The property type is None if unknown (alias set via QueryBuilder.alias()); then the value decides, and for
+    lists, the type size (0 for strings and vectors). """
+    if isinstance(value, (list, tuple)) or is_ndarray(value):
+        if prop_type == OBXPropertyType_FloatVector or (prop_type is None and (is_ndarray(value) or (
+                value and not type_size and not all(isinstance(v, str) for v in value)))):
+            if is_ndarray(value):
+                if value.dtype != "float32":
+                    raise TypeError(f"A numpy vector must have dtype float32, got: {value.dtype}")
+            elif not all(_is_number(v) for v in value):
+                raise TypeError("A vector parameter must be a list of numbers or a numpy array")
+            return "vector_f32", value
+        if prop_type == OBXPropertyType_String or (prop_type is None and not type_size):
+            if not all(isinstance(v, str) for v in value):
+                raise TypeError("The values for a string property must be strings")
+            return "strings", value
         if prop_type is None or prop_type in _integer_types:
-            return "2ints", _int_parameter(prop_type, value_a), _int_parameter(prop_type, value_b)
-        raise TypeError(f"Two values are not supported for property type {_type_name(prop_type)}")
+            return "ints", [_int_parameter(prop_type, v) for v in value]
+        raise TypeError(f"A list parameter is not supported for property type {_type_name(prop_type)}")
+    if isinstance(value, str):
+        if prop_type not in (None, OBXPropertyType_String):
+            raise TypeError(f"A string value does not fit property type {_type_name(prop_type)}")
+        return "string", value
+    if isinstance(value, (bytes, bytearray)):
+        if prop_type not in (None, OBXPropertyType_ByteVector):
+            raise TypeError(f"A bytes value does not fit property type {_type_name(prop_type)}")
+        return "bytes", value
+    if prop_type in _float_types or (prop_type is None and isinstance(value, float)):
+        if not _is_number(value):
+            raise TypeError(f"A {type(value).__name__} value does not fit property type {_type_name(prop_type)}")
+        return "double", float(value)
+    # Integer types; vector properties take an int as the maximum result count of a nearest neighbor search
+    if prop_type is None or prop_type in _integer_types or prop_type == OBXPropertyType_FloatVector:
+        return "int", _int_parameter(prop_type, value)
+    raise TypeError(f"A {type(value).__name__} value does not fit property type {_type_name(prop_type)}")
 
-    def set_parameter_string(self, prop: Union[int, str, 'Property'], value: str) -> 'Query':
-        prop_id = self._entity._get_property_id(prop)
-        obx_query_param_string(self._c_query, self._entity._id, prop_id, c_str(value))
-        return self
 
-    def set_parameter_int(self, prop: Union[int, str, 'Property'], value: int) -> 'Query':
-        prop_id = self._entity._get_property_id(prop)
-        obx_query_param_int(self._c_query, self._entity._id, prop_id, value)
-        return self
-
-    def set_parameter_vector_f32(self,
-                                 prop: Union[int, str, 'Property'],
-                                 value: Union[List[float], np.ndarray]) -> 'Query':
-        _check_vector_dtype(value)
-        prop_id = self._entity._get_property_id(prop)
-        c_value = c_array(value, ctypes.c_float)
-        num_el = len(value)
-        obx_query_param_vector_float32(self._c_query, self._entity._id, prop_id, c_value, num_el)
-        return self
-
-    def set_parameter_strings(self, prop: Union[int, str, 'Property'], values: List[str]) -> 'Query':
-        """ Sets the values of a string "one of" condition (see ``String.one_of()``) on the given property. """
-        prop_id = self._entity._get_property_id(prop)
-        c_values = c_array([c_str(value) for value in values], ctypes.c_char_p)
-        obx_query_param_strings(self._c_query, self._entity._id, prop_id, c_values, len(values))
-        return self
-
-    def set_parameter_ints(self, prop: Union[int, str, 'Property'], values: List[int]) -> 'Query':
-        """ Sets the values of an integer "one of"/"not one of" condition on the given property. """
-        prop_id = self._entity._get_property_id(prop)
-        if obx_query_param_get_type_size(self._c_query, self._entity._id, prop_id) == 4:
-            c_values = c_array([int(value) for value in values], ctypes.c_int32)
-            obx_query_param_int32s(self._c_query, self._entity._id, prop_id, c_values, len(values))
-        else:
-            c_values = c_array([int(value) for value in values], ctypes.c_int64)
-            obx_query_param_int64s(self._c_query, self._entity._id, prop_id, c_values, len(values))
-        return self
-
-    def set_parameter_alias_string(self, alias: str, value: str) -> 'Query':
-        obx_query_param_alias_string(self._c_query, c_str(alias), c_str(value))
-        return self
-
-    def set_parameter_alias_int(self, alias: str, value: int) -> 'Query':
-        obx_query_param_alias_int(self._c_query, c_str(alias), value)
-        return self
-
-    def set_parameter_alias_vector_f32(self, alias: str, value: Union[List[float], np.ndarray]) -> 'Query':
-        _check_vector_dtype(value)
-        obx_query_param_alias_vector_float32(self._c_query, c_str(alias), c_array(value, ctypes.c_float),
-                                             len(value))
-        return self
-
-    def set_parameter_alias_strings(self, alias: str, values: List[str]) -> 'Query':
-        """ Sets the values of the string "one of" condition (see ``String.one_of()``) having the given alias. """
-        c_values = c_array([c_str(value) for value in values], ctypes.c_char_p)
-        obx_query_param_alias_strings(self._c_query, c_str(alias), c_values, len(values))
-        return self
-
-    def set_parameter_alias_ints(self, alias: str, values: List[int]) -> 'Query':
-        """ Sets the values of the integer "one of"/"not one of" condition having the given alias. """
-        c_alias = c_str(alias)
-        # The C API has separate functions for 32-bit and 64-bit integer properties
-        if obx_query_param_alias_get_type_size(self._c_query, c_alias) == 4:
-            c_values = c_array([int(value) for value in values], ctypes.c_int32)
-            obx_query_param_alias_int32s(self._c_query, c_alias, c_values, len(values))
-        else:
-            c_values = c_array([int(value) for value in values], ctypes.c_int64)
-            obx_query_param_alias_int64s(self._c_query, c_alias, c_values, len(values))
-        return self
-
-    def set_parameter_double(self, prop: Union[int, str, 'Property'], value: float) -> 'Query':
-        prop_id = self._entity._get_property_id(prop)
-        obx_query_param_double(self._c_query, self._entity._id, prop_id, value)
-        return self
-
-    def set_parameter_bytes(self, prop: Union[int, str, 'Property'], value: bytes) -> 'Query':
-        prop_id = self._entity._get_property_id(prop)
-        obx_query_param_bytes(self._c_query, self._entity._id, prop_id, bytes(value), len(value))
-        return self
-
-    def set_parameter_2ints(self, prop: Union[int, str, 'Property'], value_a: int, value_b: int) -> 'Query':
-        """ Sets the two values of an integer ``between()`` condition on the given property. """
-        prop_id = self._entity._get_property_id(prop)
-        obx_query_param_2ints(self._c_query, self._entity._id, prop_id, value_a, value_b)
-        return self
-
-    def set_parameter_2doubles(self, prop: Union[int, str, 'Property'], value_a: float, value_b: float) -> 'Query':
-        """ Sets the two values of a floating point ``between()`` condition on the given property. """
-        prop_id = self._entity._get_property_id(prop)
-        obx_query_param_2doubles(self._c_query, self._entity._id, prop_id, value_a, value_b)
-        return self
-
-    def set_parameter_alias_double(self, alias: str, value: float) -> 'Query':
-        obx_query_param_alias_double(self._c_query, c_str(alias), value)
-        return self
-
-    def set_parameter_alias_bytes(self, alias: str, value: bytes) -> 'Query':
-        obx_query_param_alias_bytes(self._c_query, c_str(alias), bytes(value), len(value))
-        return self
-
-    def set_parameter_alias_2ints(self, alias: str, value_a: int, value_b: int) -> 'Query':
-        """ Sets the two values of the integer ``between()`` condition having the given alias. """
-        obx_query_param_alias_2ints(self._c_query, c_str(alias), value_a, value_b)
-        return self
-
-    def set_parameter_alias_2doubles(self, alias: str, value_a: float, value_b: float) -> 'Query':
-        """ Sets the two values of the floating point ``between()`` condition having the given alias. """
-        obx_query_param_alias_2doubles(self._c_query, c_str(alias), value_a, value_b)
-        return self
+def _parameter_values(prop_type: Optional[int], value_a, value_b) -> Tuple[str, Any, Any]:
+    """ Like _parameter_value() for two values (e.g. between). """
+    if prop_type in _float_types or (prop_type is None and (isinstance(value_a, float) or isinstance(value_b, float))):
+        if not _is_number(value_a) or not _is_number(value_b):
+            raise TypeError(f"Two numbers expected for property type {_type_name(prop_type)}")
+        return "2doubles", float(value_a), float(value_b)
+    if prop_type is None or prop_type in _integer_types:
+        return "2ints", _int_parameter(prop_type, value_a), _int_parameter(prop_type, value_b)
+    raise TypeError(f"Two values are not supported for property type {_type_name(prop_type)}")
 
 
 _integer_types = (OBXPropertyType_Bool, OBXPropertyType_Byte, OBXPropertyType_Short, OBXPropertyType_Char,
@@ -446,8 +378,3 @@ def _type_name(prop_type: Optional[int]) -> str:
         return PropertyType(prop_type).name
     except ValueError:
         return str(prop_type)
-
-
-def _check_vector_dtype(value):
-    if is_ndarray(value) and value.dtype != "float32":
-        raise TypeError(f"value dtype is expected to be np.float32, got: {value.dtype}")

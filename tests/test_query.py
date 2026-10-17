@@ -445,11 +445,11 @@ def test_set_parameter(test_store):
     assert query.find_ids() == [1, 4, 5]
 
     # Test set_parameter_string
-    query.set_parameter_string("str", "bar")
+    query.set_parameter("str", "bar")
     assert query.find_ids() == [3, 6]
 
     # Test set_parameter_int
-    query.set_parameter_int("int64", 8)
+    query.set_parameter("int64", 8)
     assert query.find_ids() == [3]
 
     qb = box_vector_entity.query()
@@ -457,18 +457,17 @@ def test_set_parameter(test_store):
     query = qb.build()
     assert query.find_ids() == sorted([3, 4, 2])
 
-    # set_parameter_vector_f32
-    # set_parameter_int (NN count)
-    query.set_parameter_vector_f32("vector_euclidean", [4.9, 4.9])
+    # Vector; an int sets the NN count
+    query.set_parameter("vector_euclidean", [4.9, 4.9])
     assert query.find_ids() == sorted([5, 4, 3])
 
-    query.set_parameter_vector_f32("vector_euclidean", [0, 0])
+    query.set_parameter("vector_euclidean", [0, 0])
     assert query.find_ids() == sorted([1, 2, 3])
 
-    query.set_parameter_vector_f32("vector_euclidean", [2.5, 2.1])
+    query.set_parameter("vector_euclidean", [2.5, 2.1])
     assert query.find_ids() == sorted([2, 3, 1])
 
-    query.set_parameter_int("vector_euclidean", 2)
+    query.set_parameter("vector_euclidean", 2)
     assert query.find_ids() == sorted([2, 3])
 
 
@@ -496,7 +495,7 @@ def test_set_parameter_alias(test_store):
     assert query.find()[0].str == "Foo"
     assert query.count() == 1
 
-    query.set_parameter_alias_string("foo_filter", "FooBar")
+    query.set_parameter_alias("foo_filter", "FooBar")
     assert query.find()[0].str == "FooBar"
     assert query.count() == 1
 
@@ -507,7 +506,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
     assert query.find()[0].str == "FooBar"
 
-    assert query.set_parameter_alias_int("greater_than_filter", 1) is query
+    assert query.set_parameter_alias("greater_than_filter", 1) is query
 
     assert query.count() == 2
 
@@ -520,10 +519,10 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 1
     assert query.find()[0].str == "Foo"
 
-    assert query.set_parameter_alias_string("str condition", "FooBar") is query  # FooBar int32 isn't higher than 700 (49)
+    assert query.set_parameter_alias("str condition", "FooBar") is query  # FooBar int32 isn't higher than 700 (49)
     assert query.count() == 0
 
-    query.set_parameter_alias_int("int32 condition", 40)
+    query.set_parameter_alias("int32 condition", 40)
     assert query.find()[0].str == "FooBar"
 
     # Test with &
@@ -540,7 +539,7 @@ def test_set_parameter_alias(test_store):
     assert query.count() == 3
     assert query.find_ids() == sorted([3, 4, 2])
 
-    assert query.set_parameter_alias_vector_f32("nearest_neighbour_filter", [4.9, 4.9]) is query
+    assert query.set_parameter_alias("nearest_neighbour_filter", [4.9, 4.9]) is query
     assert query.count() == 3
     assert query.find_ids() == sorted([5, 4, 3])
 
@@ -593,15 +592,15 @@ def test_set_parameter_alias_advanced(test_store):
     ).build()
     assert len(query.find_ids()) == 0
 
-    query.set_parameter_alias_string("str_filter", "Apple")
-    query.set_parameter_alias_int("int64_filter", 300)
+    query.set_parameter_alias("str_filter", "Apple")
+    query.set_parameter_alias("int64_filter", 300)
     assert len(query.find_ids()) == 2  # Apple, APPLE
 
-    query.set_parameter_alias_string("str_filter", "orange")
-    query.set_parameter_alias_int("int64_filter", 1000)
+    query.set_parameter_alias("str_filter", "orange")
+    query.set_parameter_alias("int64_filter", 1000)
     assert len(query.find_ids()) == 1  # Orange
 
-    query.set_parameter_alias_string("str_filter", "Zucchini")
+    query.set_parameter_alias("str_filter", "Zucchini")
     assert len(query.find_ids()) == 1  # Zucchini
 
     # Bool and int32 parameters via the generic set_parameter_alias()
@@ -843,30 +842,30 @@ def test_set_parameter_one_of(test_store):
     # Via property
     query = box.query(TestEntity.str.one_of(["Apple"])).build()
     assert query.find_ids() == [id1]
-    assert query.set_parameter_strings(TestEntity.str, ["Banana", "Cherry"]).find_ids() == [id2, id3]
-    assert query.set_parameter_strings(TestEntity.str, []).count() == 0
+    assert query.set_parameter(TestEntity.str, ["Banana", "Cherry"]).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.str, []).count() == 0
 
     query = box.query(TestEntity.int32.one_of([1])).build()
-    assert query.set_parameter_ints(TestEntity.int32, [2, 3]).find_ids() == [id2, id3]
+    assert query.set_parameter(TestEntity.int32, [2, 3]).find_ids() == [id2, id3]
     query = box.query(TestEntity.int64.not_one_of([10])).build()
-    assert query.set_parameter_ints("int64", [10, 20]).find_ids() == [id3]
+    assert query.set_parameter("int64", [10, 20]).find_ids() == [id3]
 
     # Via alias; int32 and int64 conditions need different C API calls
     query = box.query(TestEntity.str.one_of(["Apple"], case_sensitive=False).alias("names")
                       & TestEntity.int32.one_of([1]).alias("ints32")
                       | TestEntity.int64.one_of([]).alias("ints64")).build()
     assert query.find_ids() == [id1]
-    query.set_parameter_alias_strings("names", ["BANANA", "cherry"])
+    query.set_parameter_alias("names", ["BANANA", "cherry"])
     assert query.find_ids() == []
-    query.set_parameter_alias_ints("ints32", [2, 3])
+    query.set_parameter_alias("ints32", [2, 3])
     assert query.find_ids() == [id2, id3]
-    query.set_parameter_alias_strings("names", [])
-    query.set_parameter_alias_ints("ints64", [10])
+    query.set_parameter_alias("names", [])
+    query.set_parameter_alias("ints64", [10])
     assert query.find_ids() == [id1]
 
 
 def test_set_parameter_generic(test_store):
-    """ set_parameter()/set_parameter_alias() pick the typed setter by the property type. """
+    """ set_parameter()/set_parameter_alias() choose the kind of parameter by the property type. """
     box = test_store.box(TestEntity)
     id1 = box.put(TestEntity(str="Apple", int32=1, int64=10))
     id2 = box.put(TestEntity(str="Banana", int32=2, int64=20))
@@ -912,12 +911,25 @@ def test_set_parameter_generic(test_store):
     assert sorted(query.set_parameter("vector_euclidean", 2).find_ids()) == [4, 5]
     assert sorted(query.set_parameter_alias("nn", [0, 0]).find_ids()) == [1, 2]
 
-    # Alias set directly on the QueryBuilder: the property is unknown, so the value type decides
+    # Alias set directly on the QueryBuilder: the property is unknown, so the value type (and for lists, the C type
+    # size: 0 for vectors) decides
     qb = vector_box.query()
     qb.nearest_neighbors_f32("vector_euclidean", [3.4, 3.4], 3)
     qb.alias("qb_nn")
     query = qb.build()
     assert sorted(query.set_parameter_alias("qb_nn", [0.0, 0.0]).find_ids()) == [1, 2, 3]
+    assert sorted(query.set_parameter_alias("qb_nn", [5, 5]).find_ids()) == [3, 4, 5]
+    import numpy as np
+    with pytest.raises(TypeError):
+        query.set_parameter_alias("qb_nn", np.array([5, 5], dtype=np.float64))
+    qb = box.query()
+    qb.in_ints("int32", [1])
+    qb.alias("qb_ints32")
+    qb.in_strings("str", ["Apple"])
+    qb.alias("qb_names")
+    query = qb.build()
+    assert query.set_parameter_alias("qb_ints32", [2, 3]).set_parameter_alias("qb_names", []).find_ids() == []
+    assert query.set_parameter_alias("qb_names", ["Banana", "Cherry"]).find_ids() == [id2, id3]
 
 
 def test_set_parameter_types(test_store):

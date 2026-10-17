@@ -32,13 +32,14 @@ ObjectBox Python ChangeLog
   `OrderFlags` (exported by the top-level module) adjust the order, e.g. `DESCENDING` or `CASE_SENSITIVE`;
   `order_desc(property)` orders descending
 * Query: new "one of" conditions `String.one_of(values)` and, for integer properties, `one_of(values)` and
-  `not_one_of(values)`; their values can be changed on a built query via `set_parameter_strings()`/`set_parameter_ints()`
-  and the `set_parameter_alias_*` variants
+  `not_one_of(values)`; their values can be changed on a built query via `set_parameter()` (see below)
 * Query: `set_parameter(property, value)` and `set_parameter_alias(alias, value)` change the value of a condition;
   the property type decides how, e.g. a list sets the vector of a nearest neighbor search or the values of a
   "one of" condition, and `Date` properties also take a `datetime`. `set_parameters(property, a, b)` and
   `set_parameters_alias(alias, a, b)` change the two values of `between()`. New are also parameters for floating point
-  and bytes properties (also as typed `set_parameter_*()` methods, which remain), and `describe_parameters()`.
+  and bytes properties, and `describe_parameters()`.
+  **Breaking:** the typed methods `set_parameter_string()`, `set_parameter_int()` and `set_parameter_vector_f32()` are
+  removed; use `set_parameter()` instead, and `set_parameter_alias()` for their `set_parameter_alias_*()` variants.
 * Store: new `log_callback` option to receive the database's log messages
 * Top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`
 * API reference documentation (docstrings for the public API; generated via Sphinx)
@@ -70,8 +71,7 @@ ObjectBox Python ChangeLog
   this failed with a `TypeError`. They read as the default now, like unset properties: the epoch (UTC), an empty array
   and `None`.
 * Query: fix `offset()` and `limit()` to return the query (as documented), e.g. for `query.offset(10).limit(5).find()`;
-  they returned a C result code (int), so chaining failed. `set_parameter_alias_*()` now also return the query, like
-  `set_parameter_*()`.
+  they returned a C result code (int), so chaining failed
 * Faster import: `import objectbox` no longer imports numpy (also not via flatbuffers, which imports numpy) and takes
   about half the time. numpy is imported when needed, e.g. for vector properties or the first put or get.
   Importing numpy may start BLAS threads (OpenBLAS: one per CPU core) that busy-wait for ~0.1 s, slowing down
