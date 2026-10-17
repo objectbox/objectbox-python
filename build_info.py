@@ -51,15 +51,12 @@ PROJECT_URLS = {
     'Tracker': 'https://github.com/objectbox/objectbox-python/issues',
     'Changelog': 'https://github.com/objectbox/objectbox-python/blob/main/CHANGELOG.md',
 }
-PYTHON_REQUIRES = '>=3.4, <4'
+PYTHON_REQUIRES = '>=3.7, <4'  # E.g. "from __future__ import annotations"; tested with 3.7+ in CI
 LICENSE = 'Apache 2.0'
 CLASSIFIERS = [
     "Development Status :: 5 - Production/Stable",
 
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.4",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",

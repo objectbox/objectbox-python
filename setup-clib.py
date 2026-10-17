@@ -18,7 +18,7 @@ try:
 except ImportError:
     from wheel.bdist_wheel import bdist_wheel
 
-from build_info import clib_version
+from build_info import clib_version, PYTHON_REQUIRES
 
 SYNC = sys.argv[1:2] == ["--sync"]
 if SYNC:
@@ -99,7 +99,7 @@ def setup():
             'Changelog': 'https://github.com/objectbox/objectbox-c/blob/main/CHANGELOG.md',  # Version of the C library
             'License': 'https://objectbox.io/0209-ob-binary-license/',
         },
-        python_requires='>=3.4, <4',
+        python_requires=PYTHON_REQUIRES,
         license='ObjectBox Binary License (https://objectbox.io/0209-ob-binary-license/)',
         license_files=[PACKAGE + "/LICENSE"],
         package_data={

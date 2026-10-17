@@ -6,6 +6,7 @@ ObjectBox Python ChangeLog
 
 * Update to ObjectBox C library 5.3.2 (was 4.0.0), see https://github.com/objectbox/objectbox-c/blob/main/CHANGELOG.md;
 * New platform: Windows ARM64 (64-bit ARM, e.g. Snapdragon-based devices)
+* Requires Python 3.7 or newer (the package metadata claimed 3.4 before, but the code required 3.7 already)
 * Log callback (`log_callback`): the log level values passed to the callback changed (see `LogLevel`, now also `Trace`);
   code comparing against `LogLevel` members is not affected.
 * Packaging: the Python code is now in the new package `objectbox-api` and the ObjectBox C library in the new package
