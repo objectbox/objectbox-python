@@ -250,6 +250,7 @@ class Property:
         self.iduid = IdUid(0, uid)
         self.name = ""  # Python attribute name; set in Entity.fill_properties()
         self._db_name = ""  # Name in the database and model JSON (camelCase by default); set in Entity.fill_properties()
+        self._entity = None  # The _Entity this property belongs to; set in Entity.fill_properties()
         self.index = kwargs.get('index', None)
 
         self._py_type = pytype

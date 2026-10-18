@@ -18,7 +18,7 @@ from datetime import datetime
 
 from objectbox.c import *
 from objectbox.exceptions import IllegalArgumentError
-from objectbox.model.properties import PropertyType
+from objectbox.model.properties import Property, PropertyType
 from objectbox.utils import date_value_to_int
 
 if TYPE_CHECKING:
@@ -31,13 +31,13 @@ class Query:
     It is created by calling ``Box.query()`` with conditions inside and finalizing with ``build()``.
     Note: Query objects are not thread-safe and should not be shared between threads.
     """
-    def __init__(self, c_query, box: 'Box', alias_property_ids: Optional[Dict[str, int]] = None):
+    def __init__(self, c_query, box: 'Box', alias_properties: Optional[Dict[str, Tuple['_Entity', int]]] = None):
         """ This is an internal constructor. Use ``Box.query()`` instead. """
         self._c_query = c_query
         self._box = box
         self._entity = self._box._entity
         self._store = box._store
-        self._alias_property_ids = alias_property_ids or {}
+        self._alias_properties = alias_properties or {}  # Alias -> (entity, property ID) of the condition
 
     def find(self) -> list:
         """ Finds a list of objects matching query. """
@@ -198,9 +198,9 @@ class Query:
         :raises TypeError:
             If the value does not fit the property type.
         """
-        prop_id = self._entity._get_property_id(prop)
-        kind, value = _parameter_value(self._property_type(prop_id), value)
-        return self._set_parameter(prop_id, None, kind, value)
+        entity, prop_id = self._entity_and_property_id(prop)
+        kind, value = _parameter_value(self._property_type(entity, prop_id), value)
+        return self._set_parameter(entity, prop_id, None, kind, value)
 
     @overload
     def set_parameter_alias(self, alias: str, value: Union[str, int, float, bytes, datetime]) -> 'Query': ...
@@ -226,7 +226,7 @@ class Query:
             # 0 for non-scalar types (strings, vectors), so it tells integer lists from vectors
             type_size = obx_query_param_alias_get_type_size(self._c_query, c_str(alias))
         kind, value = _parameter_value(prop_type, value, type_size)
-        return self._set_parameter(None, alias, kind, value)
+        return self._set_parameter(None, None, alias, kind, value)
 
     def set_parameters(self, prop: Union[int, str, 'Property'], value_a: Union[int, float, datetime],
                        value_b: Union[int, float, datetime]) -> 'Query':
@@ -240,46 +240,54 @@ class Query:
         :raises TypeError:
             If the values do not fit the property type.
         """
-        prop_id = self._entity._get_property_id(prop)
-        kind, value_a, value_b = _parameter_values(self._property_type(prop_id), value_a, value_b)
-        return self._set_parameter(prop_id, None, kind, value_a, value_b)
+        entity, prop_id = self._entity_and_property_id(prop)
+        kind, value_a, value_b = _parameter_values(self._property_type(entity, prop_id), value_a, value_b)
+        return self._set_parameter(entity, prop_id, None, kind, value_a, value_b)
 
     def set_parameters_alias(self, alias: str, value_a: Union[int, float, datetime],
                              value_b: Union[int, float, datetime]) -> 'Query':
         """ Like :meth:`set_parameters`, for the condition having the given alias
         (see ``PropertyQueryCondition.alias()``). """
         kind, value_a, value_b = _parameter_values(self._alias_property_type(alias), value_a, value_b)
-        return self._set_parameter(None, alias, kind, value_a, value_b)
+        return self._set_parameter(None, None, alias, kind, value_a, value_b)
 
     def describe_parameters(self) -> str:
         """ Describes the query conditions with their current parameter values, e.g. for logging or debugging. """
         return obx_query_describe_params(self._c_query).decode('utf-8')
 
-    def _set_parameter(self, prop_id: Optional[int], alias: Optional[str], kind: str, *values) -> 'Query':
+    def _set_parameter(self, entity, prop_id: Optional[int], alias: Optional[str], kind: str, *values) -> 'Query':
         """ Calls the C function for the kind of parameter (see _parameter_functions) for the property or alias. """
         if kind == "ints":  # The C API has separate functions for 32-bit and 64-bit integer properties
             if alias is None:
-                type_size = obx_query_param_get_type_size(self._c_query, self._entity._id, prop_id)
+                type_size = obx_query_param_get_type_size(self._c_query, entity._id, prop_id)
             else:
                 type_size = obx_query_param_alias_get_type_size(self._c_query, c_str(alias))
             kind = "int32s" if type_size == 4 else "int64s"
         by_property, by_alias, to_c_args = _parameter_functions[kind]
         if alias is None:
-            by_property(self._c_query, self._entity._id, prop_id, *to_c_args(*values))
+            by_property(self._c_query, entity._id, prop_id, *to_c_args(*values))
         else:
             by_alias(self._c_query, c_str(alias), *to_c_args(*values))
         return self
 
-    def _property_type(self, prop_id: int) -> int:
-        for prop in self._entity._properties:
+    def _entity_and_property_id(self, prop) -> Tuple['_Entity', int]:
+        """ The entity is the query's, or another one's for its Property, e.g. of a linked entity (see
+        QueryBuilder.link()). """
+        if isinstance(prop, Property) and prop._entity is not None:
+            return prop._entity, prop.id
+        return self._entity, self._entity._get_property_id(prop)
+
+    @staticmethod
+    def _property_type(entity, prop_id: int) -> int:
+        for prop in entity._properties:
             if prop.id == prop_id:
                 return prop._ob_type
-        raise IllegalArgumentError(f"Property ID {prop_id} not found in entity {self._entity._name}")
+        raise IllegalArgumentError(f"Property ID {prop_id} not found in entity {entity._name}")
 
     def _alias_property_type(self, alias: str) -> Optional[int]:
         """ None if the property is unknown, i.e. the alias was set via QueryBuilder.alias(). """
-        prop_id = self._alias_property_ids.get(alias)
-        return self._property_type(prop_id) if prop_id is not None else None
+        entity_and_prop_id = self._alias_properties.get(alias)
+        return self._property_type(*entity_and_prop_id) if entity_and_prop_id is not None else None
 
 
 # Kind of parameter: (C function by property, C function by alias, converts the value(s) to the C arguments)

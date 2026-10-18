@@ -65,6 +65,12 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 * Order results via `QueryBuilder.order(property, flags)`, e.g. `box.query().order(Person.name).build()`;
   `OrderFlags` (exported by the top-level module) adjust the order, e.g. `DESCENDING` or `CASE_SENSITIVE`;
   `order_desc(property)` orders descending
+* Link queries over to-one relations (`Relation` properties, see below), like in Java and Dart:
+  `QueryBuilder.link(relation, condition)` matches objects whose related object matches the condition, e.g. orders of
+  customers named "Ann" via `qb = box.query(); qb.link(Order.customer_id, Customer.name.equals("Ann"))`;
+  `backlink(relation, condition)` uses a relation in reverse, e.g. customers with a matching order. Both return the
+  builder of the linked entity to link further (any number of relations); `set_parameter()` also changes conditions
+  on linked entities.
 * New "one of" conditions `String.one_of(values)` and, for integer properties, `one_of(values)` and
   `not_one_of(values)`; their values can be changed on a built query via `set_parameter()` (see below)
 * New conditions `is_null()` and `is_not_null()` (e.g. `Task.text.is_null()`), also as `QueryBuilder.is_null()`

@@ -103,6 +103,7 @@ class _Entity(object):
         props_by_db_name = {}
         for prop_name, prop in variables.items():
             prop.name = prop_name
+            prop._entity = self
             prop._db_name = prop_name if self._python_names else camel_case(prop_name)
             other = props_by_db_name.get(prop._db_name)
             if other is not None:

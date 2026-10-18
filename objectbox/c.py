@@ -956,6 +956,14 @@ obx_qb_all = c_fn('obx_qb_all', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond_p
 # OBX_C_API obx_qb_cond obx_qb_any(OBX_query_builder* builder, const obx_qb_cond conditions[], size_t count);
 obx_qb_any = c_fn('obx_qb_any', obx_qb_cond, [OBX_query_builder_p, obx_qb_cond_p, ctypes.c_size_t])
 
+# OBX_C_API OBX_query_builder* obx_qb_link_property(OBX_query_builder* builder, obx_schema_id property_id);
+obx_qb_link_property = c_fn('obx_qb_link_property', OBX_query_builder_p, [OBX_query_builder_p, obx_schema_id])
+
+# OBX_C_API OBX_query_builder* obx_qb_backlink_property(OBX_query_builder* builder, obx_schema_id source_entity_id,
+#                                                       obx_schema_id source_property_id);
+obx_qb_backlink_property = c_fn('obx_qb_backlink_property', OBX_query_builder_p,
+                                [OBX_query_builder_p, obx_schema_id, obx_schema_id])
+
 # OBX_C_API obx_err obx_qb_param_alias(OBX_query_builder* builder, const char* alias);
 obx_qb_param_alias = c_fn_rc('obx_qb_param_alias', [OBX_query_builder_p, ctypes.c_char_p])
 

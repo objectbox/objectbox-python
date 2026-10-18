@@ -5,7 +5,9 @@ from enum import IntEnum
 from typing import *
 
 from objectbox.c import *
-from objectbox.model.properties import Property
+from objectbox.condition import QueryCondition
+from objectbox.exceptions import IllegalArgumentError, IllegalStateError
+from objectbox.model.properties import Property, Relation
 from objectbox.store import Store
 from objectbox.query import Query
 from objectbox.utils import check_float_vector
@@ -44,9 +46,96 @@ class QueryBuilder:
         self._box = box
         self._entity = box._entity
         self._c_builder = obx_query_builder(store._c_store, box._entity._id)
-        self._alias_property_ids: Dict[str, int] = {}  # Of the conditions' aliases; for Query.set_parameter_alias()
+        # Entity and property ID of the conditions' aliases; for Query.set_parameter_alias()
+        self._alias_properties: Dict[str, Tuple['_Entity', int]] = {}
+        self._root: Optional[QueryBuilder] = None  # For a builder of a linked entity (see link()): the query's builder
+
+    def _linked(self, c_builder, entity: '_Entity', condition: Optional[QueryCondition]) -> 'QueryBuilder':
+        """ Creates the builder for a linked entity, owned by the C builder of the query. """
+        linked = QueryBuilder.__new__(QueryBuilder)
+        linked._box = self._box
+        linked._entity = entity
+        linked._c_builder = c_builder
+        linked._alias_properties = self._alias_properties
+        linked._root = self._root or self
+        if condition is not None:
+            condition.apply(linked)
+        return linked
+
+    def _assert_root(self, method: str):
+        if self._root is not None:
+            raise IllegalStateError(f"{method}() is not supported on the builder of a linked entity (returned by "
+                                    f"link() or backlink()); call it on the query's builder (e.g. from box.query())")
+
+    def link(self, relation: Relation, condition: Optional[QueryCondition] = None) -> 'QueryBuilder':
+        """ Adds conditions on the target of a to-one relation of this builder's entity: matches objects whose
+        related object matches the condition. Returns the builder of the target entity, e.g. to link further.
+        Results are still objects of the query's entity.
+
+        Example (orders of customers named "Ann")::
+
+            qb = box.query(Order.text.starts_with("A"))
+            qb.link(Order.customer_id, Customer.name.equals("Ann"))
+            query = qb.build()
+
+        :param relation:
+            A :class:`Relation` property of this builder's entity.
+        :param condition:
+            The condition(s) on the target entity (optional, e.g. to only link further).
+        :return:
+            The builder of the target entity; call ``build()`` on the query's builder, not on this one.
+        """
+        self._assert_relation(relation)
+        if relation._entity._name != self._entity._name:
+            raise IllegalArgumentError(f"link(): relation {relation._entity._name}.{relation.name} is not a property "
+                                       f"of entity {self._entity._name}")
+        target = self._entity_by_name(relation._target_name)
+        return self._linked(obx_qb_link_property(self._c_builder, relation.id), target, condition)
+
+    def backlink(self, relation: Relation, condition: Optional[QueryCondition] = None) -> 'QueryBuilder':
+        """ Adds conditions on the objects whose to-one relation points to the objects of this builder's entity
+        (the relation used in reverse): matches objects referred to by at least one object that matches the condition.
+        Returns the builder of the relation's entity, e.g. to link further.
+        Results are still objects of the query's entity.
+
+        Example (customers with an order of more than 100)::
+
+            qb = customer_box.query()
+            qb.backlink(Order.customer_id, Order.total.greater_than(100))
+            query = qb.build()
+
+        :param relation:
+            A :class:`Relation` property of another entity (or of this one) targeting this builder's entity.
+        :param condition:
+            The condition(s) on the relation's entity (optional, e.g. to only link further).
+        :return:
+            The builder of the relation's entity; call ``build()`` on the query's builder, not on this one.
+        """
+        self._assert_relation(relation)
+        if relation._target_name != self._entity._name:
+            raise IllegalArgumentError(f"backlink(): relation {relation._entity._name}.{relation.name} targets entity "
+                                       f"{relation._target_name}, not {self._entity._name}")
+        source = self._entity_by_name(relation._entity._name)
+        c_builder = obx_qb_backlink_property(self._c_builder, source._id, relation.id)
+        return self._linked(c_builder, source, condition)
+
+    @staticmethod
+    def _assert_relation(relation):
+        if not isinstance(relation, Relation):
+            raise TypeError(f"Expected a Relation property, got {relation!r}")
+        relation._assert_ids_assigned()
+
+    def _entity_by_name(self, name: str) -> '_Entity':
+        """ The entity of the store's model (the entity of a relation may be an equal one of another model). """
+        model = self._box._store._model
+        if model is not None:
+            for entity in model.entities:
+                if entity._name == name:
+                    return entity
+        raise IllegalArgumentError(f"Entity {name} is not in the store's model")
 
     def close(self) -> int:
+        self._assert_root("close")
         return obx_qb_close(self._c_builder)
 
     def error_code(self) -> int:
@@ -285,6 +374,7 @@ class QueryBuilder:
         :return:
             This QueryBuilder (to chain calls).
         """
+        self._assert_root("order")  # The core ignores orders of linked entities
         prop_id = self._entity._get_property_id(prop)
         obx_qb_order(self._c_builder, prop_id, flags)
         return self
@@ -305,8 +395,9 @@ class QueryBuilder:
         return self.order(prop, OrderFlags.DESCENDING | flags)
 
     def build(self) -> Query:
+        self._assert_root("build")
         c_query = obx_query(self._c_builder)
-        return Query(c_query, self._box, self._alias_property_ids)
+        return Query(c_query, self._box, self._alias_properties)
 
     def alias(self, alias: str):
         obx_qb_param_alias(self._c_builder, c_str(alias))
@@ -314,5 +405,5 @@ class QueryBuilder:
 
     def _alias_for_property(self, alias: str, prop_id: int):
         """ Like alias(), also remembering the condition's property (for Query.set_parameter_alias()). """
-        self._alias_property_ids[alias] = prop_id
+        self._alias_properties[alias] = (self._entity, prop_id)
         return self.alias(alias)
