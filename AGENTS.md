@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Commands
 
-All `make` targets use (and create if needed) the virtualenv in `.venv` from `requirements.txt`.
+All `make` targets use (and create if needed, via `python3 -m venv`) the virtual environment in `.venv` from `requirements.txt`.
 
 - `make depend` — set up venv and download the ObjectBox C shared libraries (`download-c-lib.py`) into `objectbox_clib/lib/<arch>/`. Required once after checkout and whenever the C library version changes.
 - `make depend-sync` — download the Sync variant of the C libraries into `objectbox_sync_clib/lib/<arch>/`; if present, it is loaded instead (needed for the Sync tests).

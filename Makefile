@@ -7,6 +7,8 @@ PIP = ${PYTHON} -m pip
 # Detect windows - works on both 32 & 64-bit windows
 ifeq ($(OS),Windows_NT)
 VENVBIN = ${VENV}/Scripts
+# A venv on Windows has python.exe, but no python3.exe; "python3 -m venv" fails as it expects python3.exe in the venv
+PYTHON = python
 endif
 
 export PATH := $(abspath ${VENVBIN}):${PATH}
@@ -40,8 +42,8 @@ build-sync: ${VENV}		## Build objectbox-sync-clib wheels and the objectbox-sync 
 ${VENV}: ${VENVBIN}/activate
 
 venv-init:
-	${PIP} install --user virtualenv
-	${PYTHON} -m virtualenv ${VENV}
+	@# venv is part of Python; pip/setuptools/wheel come from requirements.txt (e.g. venv has no setuptools since 3.12)
+	${PYTHON} -m venv ${VENV} || { echo "Creating ${VENV} failed; on Debian/Ubuntu, install python3-venv" ; exit 1 ; }
 
 # 	remove packages not in the requirements.txt
 # 	install and upgrade based on the requirements.txt

@@ -29,7 +29,8 @@ platform) which actually implements the database functionality. The library shou
 #### Initial setup
 If you're just getting started, run the following simple steps to set up the repository on your machine
 * clone this repository
-* `make depend` to initialize `virtualenv` and get dependencies (objectbox-c shared library)
+* `make depend` to create a virtual environment (`.venv`) and get dependencies (objectbox-c shared library);
+  on Debian/Ubuntu, this requires the `python3-venv` package
 * `make` to build and test
 
 You can also run `make help` to see all available options.
