@@ -1,7 +1,7 @@
 ObjectBox Python ChangeLog
 ==========================
 
-5.0.0b1
+5.0.0b2
 -------
 
 ObjectBox Python 5.0 is a massive update with many highlights:

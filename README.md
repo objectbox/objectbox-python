@@ -70,7 +70,7 @@ Ready for more? Check the [example folder](https://github.com/objectbox/objectbo
 
 Getting started
 ---------------
-Latest version: 5.0.0b1 (beta)
+Latest version: 5.0.0b2 (beta)
 
 To install ObjectBox, run this:
 
