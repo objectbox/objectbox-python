@@ -100,6 +100,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `customer_id = Relation(Customer)` (or `Relation("Customer")`, e.g. to refer to the entity itself). Values are plain
   ints (0 for none); unlike an `Int64`, ObjectBox knows the target, e.g. removing the target object resets the relation
   to 0. It has an index (like the other ObjectBox languages, without zero values) and the usual integer conditions.
+  Name it with an `_id` suffix, e.g. `customer_id`: it is stored as `customerId`, like the target ID of a `ToOne`
+  named `customer` in Java, Kotlin and Dart, so models and data match (e.g. for Sync).
   An existing `Int64` property cannot be changed to a `Relation` (different type); add a new property instead.
 * Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`
   (the latter raises if the object does not exist yet, i.e. unlike `put()` it never inserts)

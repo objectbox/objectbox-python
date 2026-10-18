@@ -524,8 +524,12 @@ class Int64(_IntProperty):
 
 class Relation(_IntProperty):
     """To-one relation: the ID of an object of the target entity (an int; 0 for none), e.g.
-    ``customer_id = Relation(Customer)``. Unlike an ``Int64``, ObjectBox knows the target: e.g. removing the target object
-    resets the relation to 0. The relation is indexed (no index for 0).
+    ``customer_id = Relation(Customer)``. Unlike an ``Int64``, ObjectBox knows the target: e.g. removing the target
+    object resets the relation to 0. The relation is indexed (no index for 0).
+
+    Name it like the relation with an ``_id`` suffix (e.g. ``customer_id`` for a customer): it is stored as
+    ``customerId``, as a ``ToOne`` named ``customer`` in Java, Kotlin and Dart stores its target ID, so the model and
+    data match theirs (e.g. for Sync).
 
     :param target: the target entity, i.e. the class decorated with ``@Entity()``, or its name, e.g. for a relation to
         the entity itself (``parent_id = Relation("Node")``) or to an entity defined later.
