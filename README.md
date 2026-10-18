@@ -10,29 +10,14 @@ The ObjectBox database delivers high-performance on commodity hardware - locally
 On top, as an offline-first solution, ObjectBox makes sure your app reliably works offline as well as online
 (via [Sync](https://objectbox.io/sync/)).
 
-> **Upgrading from ObjectBox 4.x (or earlier) with pip? Uninstall `objectbox` first**, then install the new version:
->
-> ```bash
-> pip uninstall objectbox
-> pip install objectbox
-> ```
->
-> Since version 5, the Python code is in the package `objectbox-api`, which `objectbox` installs along with the
-> ObjectBox library. An in-place `pip install --upgrade objectbox` from 4.x breaks the installation: pip installs the
-> new packages first, then removes the files of the previous `objectbox` version, which are now part of
-> `objectbox-api`. `import objectbox` fails afterwards, e.g. with
-> `ImportError: cannot import name 'Store' from 'objectbox' (unknown location)` or a `ModuleNotFoundError`;
-> running the upgrade again does not fix it. To repair such an installation, run:
-> `pip install --force-reinstall --no-deps objectbox-api`.
-> Fresh installs and upgrades via uv (e.g. `uv pip install --upgrade objectbox`) are not affected.
-> For [ObjectBox Sync](#sync), install `objectbox-sync` instead of `objectbox` (also uninstall `objectbox` first).
+> **Upgrading from ObjectBox 4.x (or earlier) with pip? Uninstall `objectbox` first**, then install the new version;
+> an in-place `pip install --upgrade objectbox` breaks the installation. See [Updating from 4.x](#updating-from-4x).
 
 _Table of Contents_
 
 - [Feature Highlights](#feature-highlights)
 - [Code Example (CRUD - Create, Read, Update, Delete)](#code-example-crud-create-read-update-delete)
 - [Getting Started](#getting-started)
-- [Alpha Notes](#alpha-notes)
 - [Help wanted](#help-wanted)
 - [Feedback](#feedback)
 - [License](#license)
@@ -85,14 +70,40 @@ Ready for more? Check the [example folder](https://github.com/objectbox/objectbo
 
 Getting started
 ---------------
-Latest version: 4.0.0 (2024-05-28)
+Latest version: 5.0.0b1 (beta)
 
-To install or update the latest version of ObjectBox, run this:
+To install ObjectBox, run this:
 
 ```bash
-pip install --upgrade objectbox
+pip install objectbox
 ```
 Now you are ready to use ObjectBox in your Python project.
+
+> While version 5.0 is in beta, add `--pre` to the pip install commands, e.g. `pip install --pre objectbox`;
+> without it, pip installs the latest stable version (4.0.0).
+
+To update to the latest version (from version 5 on), run `pip install --upgrade objectbox`.
+
+### Updating from 4.x
+
+**Uninstall `objectbox` first**, then install the new version:
+
+```bash
+pip uninstall objectbox
+pip install objectbox  # While 5.0 is in beta: pip install --pre objectbox
+```
+
+Since version 5, the Python code is in the package `objectbox-api`, which `objectbox` installs along with the
+ObjectBox library (package `objectbox-clib`). An in-place `pip install --upgrade objectbox` from 4.x breaks the
+installation: pip installs the new packages first, then removes the files of the previous `objectbox` version, which
+are now part of `objectbox-api`. `import objectbox` fails afterwards, e.g. with
+`ImportError: cannot import name 'Store' from 'objectbox' (unknown location)` or a `ModuleNotFoundError`;
+running the upgrade again does not fix it. To repair such an installation, run:
+`pip install --force-reinstall --no-deps objectbox-api`.
+Fresh installs and upgrades via uv (e.g. `uv pip install --upgrade objectbox`) are not affected.
+For [ObjectBox Sync](#sync), install `objectbox-sync` instead of `objectbox` (also uninstall `objectbox` first).
+
+### Next steps
 
 Head over to the **[ObjectBox documentation](https://docs.objectbox.io)**
 and learn how to setup your first entity classes.
@@ -148,7 +159,7 @@ License
 -------
 
 ```text
-Copyright 2019-2024 ObjectBox Ltd. All rights reserved.
+Copyright 2019-2026 ObjectBox Ltd. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

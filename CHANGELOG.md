@@ -11,6 +11,11 @@ ObjectBox Python 5.0 is a massive update with many highlights:
 * More powerful Query and Box operations with an easy-to-use API
 * ObjectBox Sync to synchronize your data with a server and/or MongoDB
 
+**Upgrading from 4.x with pip: uninstall `objectbox` first** (`pip uninstall objectbox`, then `pip install objectbox`).
+An in-place `pip install --upgrade objectbox` would fail (e.g. "cannot import name 'Store' from 'objectbox' (unknown
+location)"); repair via `pip install --force-reinstall --no-deps objectbox-api`. Fresh installs and uv are not affected.
+As this is a beta version, add `--pre` to install it, e.g. `pip install --pre objectbox`.
+
 ### Performance
 
 * Faster reads (get, queries): copying an object's data from the database takes ~0.4 µs instead of ~1 µs.
@@ -42,11 +47,8 @@ ObjectBox Python 5.0 is a massive update with many highlights:
 ### Installation and platforms
 
 * Packaging: the Python code is now in the new package `objectbox-api` and the ObjectBox C library in the new package
-  `objectbox-clib`; `objectbox` installs both (it contains no code itself). Install `objectbox` as before.
-  **Upgrading from 4.x with pip: uninstall first** (`pip uninstall objectbox`, then `pip install objectbox`).
-  An in-place `pip install --upgrade objectbox` removes the files of the previous version after installing
-  `objectbox-api`, so `import objectbox` fails (e.g. "cannot import name 'Store' from 'objectbox' (unknown location)");
-  repair via `pip install --force-reinstall --no-deps objectbox-api`. Fresh installs and uv are not affected.
+  `objectbox-clib`; `objectbox` installs both (it contains no code itself). Install `objectbox` as before, but when
+  upgrading from 4.x with pip, uninstall it first (see above).
 * C library package `objectbox-clib`: there is a wheel for each platform, so only the library for your platform is
   downloaded (was: libraries for all platforms):
   Linux x86_64, aarch64 and armv7l (glibc 2.28+), macOS 11+ (universal) and Windows x64 and ARM64 (new).\
