@@ -31,9 +31,11 @@ Each entity class defines a set of properties. The following property types are 
         Float32
         Float64
         Date
+        Relation
         Float32Vector
 
-Note: ``Float32Vector`` is used for `on-device vector search <https://docs.objectbox.io/on-device-vector-search>`_.
+Note: ``Relation`` is a to-one relation (the ID of an object of the target entity) and ``Float32Vector`` is used for
+`on-device vector search <https://docs.objectbox.io/on-device-vector-search>`_.
 
 Classes
 -------

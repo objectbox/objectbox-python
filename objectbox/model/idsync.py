@@ -4,7 +4,7 @@ from typing import *
 from objectbox.logger import logger
 from objectbox.model.model import Model
 from objectbox.model.entity import _Entity, camel_case
-from objectbox.model.properties import Property, Index, HnswIndex
+from objectbox.model.properties import Property, Index, HnswIndex, Relation
 from objectbox.model.iduid import IdUid
 
 MODEL_PARSER_VERSION = 5
@@ -103,6 +103,8 @@ class IdSync:
                     prop_json["flags"] = prop._flags
                 if prop.index is not None:
                     prop_json["indexId"] = str(prop.index.iduid)
+                if isinstance(prop, Relation):
+                    prop_json["relationTarget"] = prop._target_name
                 entity_json["properties"].append(prop_json)
             model_json["entities"].append(entity_json)
 
@@ -289,6 +291,8 @@ class IdSync:
     def sync(self) -> bool:
         """ Syncs the provided model with the model JSON file.
         Returns True if the model JSON was written. """
+
+        self.model._validate_relation_targets()  # before writing the JSON
 
         if self.model_json is not None:
             self.model.last_entity_iduid = IdUid.from_str(self.model_json["lastEntityId"])

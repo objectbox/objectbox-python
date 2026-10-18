@@ -92,6 +92,7 @@ def test_fb_formats_match_flatbuffers_flags():
         PropertyType.double: flatbuffers.number_types.Float64Flags,
         PropertyType.date: flatbuffers.number_types.Int64Flags,
         PropertyType.dateNano: flatbuffers.number_types.Int64Flags,
+        PropertyType.relation: flatbuffers.number_types.Int64Flags,
     }
     expected_flags.update({t: flatbuffers.number_types.UOffsetTFlags for t in offsets})
     assert set(_fb_formats) == set(PropertyType) == set(expected_flags)

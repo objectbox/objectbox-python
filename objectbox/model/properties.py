@@ -34,7 +34,7 @@ class PropertyType(IntEnum):
     date = OBXPropertyType_Date
     dateNano = OBXPropertyType_DateNano
     flex = OBXPropertyType_Flex
-    # relation = OBXPropertyType_Relation
+    relation = OBXPropertyType_Relation
     boolVector = OBXPropertyType_BoolVector
     byteVector = OBXPropertyType_ByteVector
     shortVector = OBXPropertyType_ShortVector
@@ -61,7 +61,7 @@ _fb_formats = {
     PropertyType.date: 'q',
     PropertyType.dateNano: 'q',
     PropertyType.flex: 'I',
-    # PropertyType.relation: 'q',
+    PropertyType.relation: 'q',
     PropertyType.boolVector: 'I',
     PropertyType.byteVector: 'I',
     PropertyType.shortVector: 'I',
@@ -398,7 +398,7 @@ class _IntProperty(_NumericProperty):
     def one_of(self, values: List[int]) -> PropertyQueryCondition:
         """ *one of* (``in``) condition to be passed to :func:`Box.query`;
         matches if the property value equals any of the given values.
-        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties;
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano, Relation) integer properties;
         raises a ``TypeError`` for other properties (e.g. Int8, Int16, Bool). """
         self._assert_ids_assigned()
         self._assert_one_of_supported()
@@ -408,7 +408,7 @@ class _IntProperty(_NumericProperty):
     def not_one_of(self, values: List[int]) -> PropertyQueryCondition:
         """ *not one of* (``not in``) condition to be passed to :func:`Box.query`;
         matches if the property value equals none of the given values.
-        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano) integer properties;
+        Supported for 32-bit (Int32) and 64-bit (Int64, Id, Date, DateNano, Relation) integer properties;
         raises a ``TypeError`` for other properties (e.g. Int8, Int16, Bool). """
         self._assert_ids_assigned()
         self._assert_one_of_supported()
@@ -417,7 +417,8 @@ class _IntProperty(_NumericProperty):
 
     def _assert_one_of_supported(self):
         # The C API only supports 32-bit and 64-bit integers for "in" conditions
-        if self._ob_type not in (PropertyType.int, PropertyType.long, PropertyType.date, PropertyType.dateNano):
+        if self._ob_type not in (PropertyType.int, PropertyType.long, PropertyType.date, PropertyType.dateNano,
+                                 PropertyType.relation):
             raise TypeError(f"Property \"{self.name}\" of type {PropertyType(self._ob_type).name} "
                             f"does not support one_of()/not_one_of(); supported are 32-bit and 64-bit integers")
 
@@ -518,6 +519,29 @@ class Int64(_IntProperty):
     """Integer 64-bit Property"""
     def __init__(self, id : int = 0, uid : int = 0, **kwargs):
         super(Int64, self).__init__(int, type=PropertyType.long, id=id, uid=uid, **kwargs)
+
+
+class Relation(_IntProperty):
+    """To-one relation: the ID of an object of the target entity (an int; 0 for none), e.g.
+    ``customer_id = Relation(Customer)``. Unlike an ``Int64``, ObjectBox knows the target: e.g. removing the target object
+    resets the relation to 0. The relation is indexed (no index for 0).
+
+    :param target: the target entity, i.e. the class decorated with ``@Entity()``, or its name, e.g. for a relation to
+        the entity itself (``parent_id = Relation("Node")``) or to an entity defined later.
+    """
+
+    def __init__(self, target, id: int = 0, uid: int = 0):
+        from objectbox.model.entity import _Entity
+        if not isinstance(target, (_Entity, str)):
+            raise TypeError(f"Relation target must be an entity (a class decorated with @Entity()) or an entity name, "
+                            f"got {target!r}")
+        super(Relation, self).__init__(int, type=PropertyType.relation, id=id, uid=uid, index=Index())
+        self._flags |= OBXPropertyFlags_INDEX_PARTIAL_SKIP_ZERO
+        self._target = target
+
+    @property
+    def _target_name(self) -> str:
+        return self._target if isinstance(self._target, str) else self._target._name
 
 
 class SyncClock(Int64):

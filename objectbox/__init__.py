@@ -17,7 +17,7 @@
 from objectbox.store import Store
 from objectbox.box import Box
 from objectbox.model.entity import Entity, SyncEntity
-from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, HnswIndex, VectorDistanceType, HnswFlags, SyncClock, SyncPrecedence
+from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, Relation, HnswIndex, VectorDistanceType, HnswFlags, SyncClock, SyncPrecedence
 from objectbox.model.model import Model
 from objectbox.c import version_core, DebugFlags
 from objectbox.exceptions import DbError
@@ -63,6 +63,7 @@ __all__ = [
     'Date',
     'DateNano',
     'Flex',
+    'Relation',
     'Index',
     'HnswIndex',
     'VectorDistanceType',

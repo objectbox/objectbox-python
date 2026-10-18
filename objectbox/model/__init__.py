@@ -36,6 +36,7 @@ __all__ = [
     'Date',
     'DateNano',
     'Flex',
+    'Relation',
     'BoolVector',
     'Int8Vector',
     'Int16Vector',

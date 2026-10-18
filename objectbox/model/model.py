@@ -78,6 +78,14 @@ class Model:
         if has_indices and not self.last_index_iduid.is_assigned():
             raise ValueError("Last index ID/UID not assigned")
 
+    def _validate_relation_targets(self):
+        names = {entity._name for entity in self.entities}
+        for entity in self.entities:
+            for prop in entity._properties:
+                if isinstance(prop, Relation) and prop._target_name not in names:
+                    raise ValueError(f"Relation {entity._name}.{prop.name} targets entity \"{prop._target_name}\", "
+                                     f"which is not in the model")
+
     def _set_hnsw_params(self, index: HnswIndex):
         if index.dimensions is not None:
             obx_model_property_index_hnsw_dimensions(self._c_model, index.dimensions)
@@ -104,7 +112,9 @@ class Model:
         obx_model_property(self._c_model, c_str(prop._db_name), prop._ob_type, prop.id, prop.uid)
         if prop._flags != 0:
             obx_model_property_flags(self._c_model, prop._flags)
-        if prop.index is not None:
+        if isinstance(prop, Relation):
+            obx_model_property_relation(self._c_model, c_str(prop._target_name), prop.index.id, prop.index.uid)
+        elif prop.index is not None:
             self._create_index(prop.index)
 
     def _create_entity(self, entity: _Entity):
@@ -117,6 +127,7 @@ class Model:
     def _create_c_model(self) -> obx_model:  # Called by StoreOptions
         """ Creates the OBX model by invoking the C API.
         Before calling this method, IDs/UIDs must be assigned either manually or via sync_model(). """
+        self._validate_relation_targets()
         self._c_model = obx_model()
         for entity in self.entities:
             self._create_entity(entity)

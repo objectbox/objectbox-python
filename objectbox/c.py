@@ -509,6 +509,11 @@ obx_model_property_flags = c_fn_rc('obx_model_property_flags', [OBX_model_p, OBX
 # obx_err obx_model_property_index_id(OBX_model* model, obx_schema_id index_id, obx_uid index_uid)
 obx_model_property_index_id = c_fn_rc('obx_model_property_index_id', [OBX_model_p, obx_schema_id, obx_uid])
 
+# obx_err obx_model_property_relation(OBX_model* model, const char* target_entity, obx_schema_id index_id,
+#                                     obx_uid index_uid);
+obx_model_property_relation = c_fn_rc('obx_model_property_relation',
+                                      [OBX_model_p, ctypes.c_char_p, obx_schema_id, obx_uid])
+
 # obx_err obx_model_property_index_hnsw_dimensions(OBX_model* model, size_t value)
 obx_model_property_index_hnsw_dimensions = \
     c_fn_rc('obx_model_property_index_hnsw_dimensions', [OBX_model_p, ctypes.c_size_t])
