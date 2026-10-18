@@ -134,6 +134,52 @@ def test_json(env):
     assert doc['lastIndexId'] == json_p2['indexId']
 
 
+def test_json_empty_last_ids(env):
+    """ The C++ and Go generators write an empty string for unassigned IDs, e.g. "lastIndexId": "". """
+    with open(env.model_path, "w") as f:
+        json.dump({
+            "entities": [{
+                "id": "1:6645479796472661392",
+                "lastPropertyId": "2:8804670454579230281",
+                "name": "MyEntity",
+                "properties": [
+                    {"id": "1:9211738071025439652", "name": "id", "type": 6, "flags": 1},
+                    {"id": "2:8804670454579230281", "name": "text", "type": 9}
+                ],
+                "relations": []
+            }],
+            "lastEntityId": "1:6645479796472661392",
+            "lastIndexId": "",
+            "lastRelationId": "",
+            "modelVersion": 5,
+            "modelVersionParserMinimum": 5,
+            "retiredEntityUids": [],
+            "retiredIndexUids": [],
+            "retiredPropertyUids": [],
+            "retiredRelationUids": [],
+            "version": 1
+        }, f)
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        text = String()
+        text_indexed = String(index=Index())
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+
+    # IDs and UIDs from the JSON are kept; the first index gets ID 1
+    assert str(MyEntity._iduid) == "1:6645479796472661392"
+    assert str(MyEntity._get_property('text').iduid) == "2:8804670454579230281"
+    assert MyEntity._get_property('text_indexed').iduid.id == 3
+    index_iduid = MyEntity._get_property('text_indexed').index.iduid
+    assert index_iduid.id == 1
+    assert env.json()['lastIndexId'] == str(index_iduid)
+    env.create_store().box(MyEntity).put(MyEntity(text="a", text_indexed="b"))
+
+
 def test_basics(env):
     @Entity()
     class MyEntity:

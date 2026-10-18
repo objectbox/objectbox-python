@@ -20,7 +20,10 @@ class IdUid:
 
     @staticmethod
     def from_str(str_: str):
-        """ Parses IdUid from a string formatted like: "id:uid" """
+        """ Parses IdUid from a string formatted like: "id:uid"; an empty string (e.g. "lastIndexId" written by
+        the C++ and Go generators if there is none) is unassigned, like "0:0". """
+        if str_ == "":
+            return IdUid.unassigned()
         tmp = str_.split(":")
         return IdUid(int(tmp[0]), int(tmp[1]))
 

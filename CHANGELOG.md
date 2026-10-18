@@ -123,6 +123,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
   Still, prefer closing stores explicitly via `close()`.
 * Fix the `model_bytes` and `model_bytes_direct` options (failed with a `TypeError`)
+* Fix using a model JSON file with an empty `lastIndexId` (failed with a `ValueError`), e.g. one shared with
+  an app using ObjectBox C++ or Go, which write it like this if there is no index
 
 ### Other
 
