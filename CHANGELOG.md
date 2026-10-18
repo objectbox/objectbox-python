@@ -82,6 +82,14 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 
 ### Box and objects
 
+* Property names are now stored in camelCase in the database and the model JSON file, e.g. `dateCreated` for the
+  attribute `date_created`, like in the other ObjectBox languages (Java, Kotlin, Dart, Swift). This makes it easy to
+  share the model with them, e.g. for Sync, and shows the same names e.g. in the ObjectBox Admin.
+  Python code is not affected: it still uses the attribute names.
+  Existing databases and model JSON files are updated automatically: the properties are renamed, keeping their data.
+  To store names as written in Python instead, use `@Entity(python_names=True)`.\
+  **Breaking:** property names in the database and the model JSON file change (only for names with underscores);
+  e.g. queries in the ObjectBox Admin or data in MongoDB (via Sync) use the new names.
 * Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`
   (the latter raises if the object does not exist yet, i.e. unlike `put()` it never inserts)
 * Putting objects with `None` values: a property set to `None` is stored as null (left out of the stored object), where

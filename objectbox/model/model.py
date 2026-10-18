@@ -101,7 +101,7 @@ class Model:
         obx_model_property_index_id(self._c_model, index.id, index.uid)
 
     def _create_property(self, prop: Property):
-        obx_model_property(self._c_model, c_str(prop.name), prop._ob_type, prop.id, prop.uid)
+        obx_model_property(self._c_model, c_str(prop._db_name), prop._ob_type, prop.id, prop.uid)
         if prop._flags != 0:
             obx_model_property_flags(self._c_model, prop._flags)
         if prop.index is not None:

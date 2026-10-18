@@ -27,12 +27,25 @@ import threading
 from typing import Optional
 
 
+def camel_case(name: str) -> str:
+    """ Converts a snake_case name to camelCase, e.g. "date_created" to "dateCreated" (or "vec_2d" to "vec2d").
+    Leading and trailing underscores are kept, e.g. "_internal_value" becomes "_internalValue". """
+    core = name.strip("_")
+    if "_" not in core:
+        return name
+    leading = name[:len(name) - len(name.lstrip("_"))]
+    trailing = name[len(name.rstrip("_")):]
+    parts = [part for part in core.split("_") if part]
+    return leading + parts[0] + "".join(part[:1].upper() + part[1:] for part in parts[1:]) + trailing
+
+
 # _Entity class holds model information as well as conversions between python objects and FlatBuffers (ObjectBox data)
 class _Entity(object):
-    def __init__(self, user_type, uid: int = 0):
+    def __init__(self, user_type, uid: int = 0, python_names: bool = False):
         self._user_type = user_type
         self._iduid = IdUid(0, uid)
         self._name = user_type.__name__
+        self._python_names = python_names
         self._last_property_iduid = IdUid(0, 0)
 
         self._properties: List[Property] = list()  # List[Property]
@@ -87,8 +100,16 @@ class _Entity(object):
         variables = {k: v for k, v in variables.items(
         ) if issubclass(type(v), Property)}
 
+        props_by_db_name = {}
         for prop_name, prop in variables.items():
             prop.name = prop_name
+            prop._db_name = prop_name if self._python_names else camel_case(prop_name)
+            other = props_by_db_name.get(prop._db_name)
+            if other is not None:
+                raise ValueError(f"Properties \"{other.name}\" and \"{prop.name}\" of entity {self._name} both have the "
+                                 f"name \"{prop._db_name}\" in the database (camelCase); rename one of them or use "
+                                 f"@Entity(python_names=True)")
+            props_by_db_name[prop._db_name] = prop
             self._properties.append(prop)
 
             if prop.is_id():
@@ -373,7 +394,7 @@ obx_models_by_name: Dict[str, List[_Entity]] = {}
 _ENTITY_FLAGS_ATTR = "_objectbox_entity_flags"
 
 
-def Entity(uid: int = 0, model: str = "default") -> _Entity:
+def Entity(uid: int = 0, model: str = "default", python_names: bool = False) -> _Entity:
     """
     Entity decorator for user classes using syntax ``@Entity([uid=])`` 
     
@@ -383,8 +404,14 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
         class MyEntity:
             id = Id
             name = String(index=Index)
+            date_created = Date
 
-       
+    Property names are stored in camelCase in the database and the model JSON file (e.g. ``dateCreated`` for the
+    attribute ``date_created``), like in the other ObjectBox languages, e.g. to share the model with them for Sync.
+    The Python code always uses the attribute names. Set ``python_names=True`` to store the names as written in Python.
+    A model JSON file with the other form of a name (e.g. ``date_created`` from versions before 5.0) is matched and
+    renamed, keeping the property's data.
+
     Wraps the given user classes as an ``_Entity`` helper class.
     """
 
@@ -405,7 +432,7 @@ def Entity(uid: int = 0, model: str = "default") -> _Entity:
         flags = class_.__dict__.get(_ENTITY_FLAGS_ATTR, 0)  # Only the class's own, not inherited ones
         if _ENTITY_FLAGS_ATTR in class_.__dict__:
             delattr(class_, _ENTITY_FLAGS_ATTR)
-        entity_type = _Entity(class_, uid)
+        entity_type = _Entity(class_, uid, python_names)
         entity_type._flags |= flags
         for existing in types:
             if existing._name == entity_type._name:

@@ -23,13 +23,13 @@
         },
         {
           "id": "3:3330502346908829733",
-          "name": "date_created",
+          "name": "dateCreated",
           "type": 10,
           "flags": 0
         },
         {
           "id": "4:7654179801863866748",
-          "name": "date_finished",
+          "name": "dateFinished",
           "type": 10,
           "flags": 0
         }

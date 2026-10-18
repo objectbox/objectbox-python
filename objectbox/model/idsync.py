@@ -3,7 +3,7 @@ import random
 from typing import *
 from objectbox.logger import logger
 from objectbox.model.model import Model
-from objectbox.model.entity import _Entity
+from objectbox.model.entity import _Entity, camel_case
 from objectbox.model.properties import Property, Index, HnswIndex
 from objectbox.model.iduid import IdUid
 
@@ -96,7 +96,7 @@ class IdSync:
             for prop in entity._properties:
                 prop_json = {
                     "id": str(prop.iduid),
-                    "name": prop.name,
+                    "name": prop._db_name,
                     "type": prop._ob_type,
                 }
                 if prop._flags != 0:
@@ -223,10 +223,17 @@ class IdSync:
                 # elsewhere
                 self._validate_uid_unassigned(prop.uid)
             else:
-                write_json = prop.name != prop_json["name"]  # If renaming we shall update the JSON
+                write_json = prop._db_name != prop_json["name"]  # If renaming we shall update the JSON
         else:
             if entity_json is not None:
-                prop_json = self._find_property_json_by_name(entity_json, prop.name)
+                prop_json = self._find_property_json_by_name(entity_json, prop._db_name)
+                if prop_json is None:
+                    # The other form of the name, e.g. the Python name stored before 5.0 (no camelCase conversion);
+                    # matching it renames the property, keeping its data
+                    other_name = prop.name if prop._db_name != prop.name else camel_case(prop.name)
+                    if other_name != prop._db_name:
+                        prop_json = self._find_property_json_by_name(entity_json, other_name)
+                        write_json = prop_json is not None
 
         if prop_json is not None:  # Load existing IDs from JSON
             # Property was matched with a JSON property (either by UID or by name), make sure they're equal

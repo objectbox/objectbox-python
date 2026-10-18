@@ -119,19 +119,142 @@ def test_json(env):
 
     json_p1 = json_e0['properties'][1]
     assert json_p1['id'] == str(MyEntity._get_property('my_string').iduid)
-    assert json_p1['name'] == "my_string"
+    assert json_p1['name'] == "myString"
     assert json_p1.get('flags') is None
     assert json_p1.get('indexId') is None
 
     json_p2 = json_e0['properties'][2]
     assert json_p2['id'] == str(MyEntity._get_property('my_string_indexed').iduid)
-    assert json_p2['name'] == "my_string_indexed"
+    assert json_p2['name'] == "myStringIndexed"
     assert json_p2['flags'] == 8
     assert json_p2['indexId'] == str(MyEntity._get_property('my_string_indexed').index.iduid)
     assert json_e0['lastPropertyId'] == json_p2['id']
 
     assert doc['lastEntityId'] == e0_id
     assert doc['lastIndexId'] == json_p2['indexId']
+
+
+def test_camel_case():
+    from objectbox.model.entity import camel_case
+    assert camel_case("id") == "id"
+    assert camel_case("date_created") == "dateCreated"
+    assert camel_case("vec_2d") == "vec2d"
+    assert camel_case("a__b") == "aB"
+    assert camel_case("_internal_value") == "_internalValue"
+    assert camel_case("type_") == "type_"
+    assert camel_case("dateCreated") == "dateCreated"
+
+
+def test_names_camel_case(env):
+    @Entity()
+    class MyEntity:
+        id = Id
+        date_created = Date
+        text = String
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    names = [prop_json["name"] for prop_json in env.json()["entities"][0]["properties"]]
+    assert names == ["id", "dateCreated", "text"]
+    assert MyEntity.date_created.name == "date_created"  # The Python API uses the attribute names
+
+    @Entity(python_names=True)
+    class MyEntity:
+        id = Id
+        date_created = Date
+        text = String
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    names = [prop_json["name"] for prop_json in env.json()["entities"][0]["properties"]]
+    assert names == ["id", "date_created", "text"]
+
+
+def test_names_camel_case_collision():
+    with pytest.raises(ValueError, match="both have the name \"dateCreated\" in the database"):
+        @Entity()
+        class MyEntity:
+            id = Id
+            date_created = Date
+            dateCreated = Date
+
+    @Entity(python_names=True)
+    class MyEntity:
+        id = Id
+        date_created = Date
+        dateCreated = Date
+
+
+def test_names_camel_case_upgrade(env):
+    """ Model JSON and database with names as written in Python (before 5.0, or python_names=True): the properties
+    are renamed to camelCase, keeping their IDs, UIDs and data; and back with python_names=True. """
+
+    def define(python_names: bool):
+        @Entity(python_names=python_names)
+        class MyEntity:
+            id = Id
+            date_created = Int64
+            sort_key = String(index=Index())
+
+        return MyEntity
+
+    MyEntity = define(python_names=True)
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    json_before = env.json()
+    props_before = json_before["entities"][0]["properties"]
+    assert [prop_json["name"] for prop_json in props_before] == ["id", "date_created", "sort_key"]
+    env.create_store().box(MyEntity).put(MyEntity(date_created=42, sort_key="a"))
+
+    for python_names, names in [(False, ["id", "dateCreated", "sortKey"]),
+                                (True, ["id", "date_created", "sort_key"])]:
+        MyEntity = define(python_names=python_names)
+        model = Model()
+        model.entity(MyEntity)
+        assert env.sync(model)  # Renamed
+        doc = env.json()
+        props = doc["entities"][0]["properties"]
+        assert [prop_json["name"] for prop_json in props] == names
+        assert [(p["id"], p.get("indexId")) for p in props] == [(p["id"], p.get("indexId")) for p in props_before]
+        assert doc["entities"][0]["lastPropertyId"] == json_before["entities"][0]["lastPropertyId"]
+        assert doc["lastIndexId"] == json_before["lastIndexId"]
+
+        box = env.create_store().box(MyEntity)
+        objects = box.get_all()
+        assert len(objects) == 1
+        assert objects[0].date_created == 42
+        assert objects[0].sort_key == "a"
+        assert box.query(MyEntity.sort_key.equals("a")).build().count() == 1
+
+
+def test_names_camel_case_upgrade_uid(env):
+    """ Like test_names_camel_case_upgrade, but the property has a user supplied UID (matched by UID, not by name). """
+
+    @Entity(python_names=True)
+    class MyEntity:
+        id = Id
+        date_created = Int64(uid=7001)
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    prop_json_before = env.json()["entities"][0]["properties"][1]
+    assert prop_json_before["name"] == "date_created"
+
+    @Entity()
+    class MyEntity:
+        id = Id
+        date_created = Int64(uid=7001)
+
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)  # Renamed
+    prop_json = env.json()["entities"][0]["properties"][1]
+    assert prop_json["name"] == "dateCreated"
+    assert prop_json["id"] == prop_json_before["id"]
 
 
 def test_json_empty_last_ids(env):
