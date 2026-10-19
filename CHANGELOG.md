@@ -101,6 +101,11 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   To store names as written in Python instead, use `@Entity(python_names=True)`.\
   **Breaking:** property names in the database and the model JSON file change (only for names with underscores);
   e.g. queries in the ObjectBox Admin or data in MongoDB (via Sync) use the new names.
+* The default index type for String properties is now HASH (was VALUE), like in the other ObjectBox languages; it
+  takes less space. Other types still default to VALUE. Existing indexes are changed when the store is opened (the data
+  is kept); to keep a value index, use `Index(IndexType.VALUE)` (`IndexType` is now exported by the top-level
+  module).\
+  **Breaking:** the index of String properties with `Index()` changes (e.g. the model JSON file).
 * To-one relations: the new property type `Relation` stores the ID of an object of the target entity, e.g.
   `customer_id = Relation(Customer)` (or `Relation("Customer")`, e.g. to refer to the entity itself). Values are plain
   ints (0 for none); unlike an `Int64`, ObjectBox knows the target, e.g. removing the target object resets the relation

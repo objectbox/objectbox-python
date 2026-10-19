@@ -91,12 +91,16 @@ class IndexType(IntEnum):
 
 
 class Index:
-    """Property Index"""
+    """Property index, e.g. ``name = String(index=Index())``.
+
+    The default type is HASH for String properties (indexes a hash of the value, which takes less space) and VALUE for
+    other types, like in the other ObjectBox languages. Hash indexes are only supported for String properties.
+    Note: to use the index of a String property, query it with case-sensitive conditions (the default)."""
 
     # TODO HNSW isn't a `type` but HASH and HASH64 are, remove type member and make HashIndex and Hash64Index classes?
 
-    def __init__(self, type: IndexType = IndexType.VALUE, uid: int = 0):
-        self.type = type
+    def __init__(self, type: Optional[IndexType] = None, uid: int = 0):
+        self.type = type  # None: the default for the property type (_type_for())
 
         self.iduid = IdUid(0, uid)
 
@@ -112,6 +116,11 @@ class Index:
 
     def has_uid(self):
         return self.iduid.uid != 0
+
+    def _type_for(self, ob_type: int) -> IndexType:
+        if self.type is not None:
+            return self.type
+        return IndexType.HASH if ob_type == OBXPropertyType_String else IndexType.VALUE
 
 
 class HnswFlags(IntEnum):
@@ -321,7 +330,7 @@ class Property:
         if self.index is not None:
             self._flags |= OBXPropertyFlags_INDEXED
             if isinstance(self.index, Index):  # Generic index
-                self._flags |= self.index.type
+                self._flags |= self.index._type_for(self._ob_type)
 
     def is_null(self) -> PropertyQueryCondition:
         """ *Is null* condition to be passed to :func:`Box.query`: matches objects without a value for this property,

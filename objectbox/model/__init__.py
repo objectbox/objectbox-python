@@ -46,6 +46,7 @@ __all__ = [
     'Float32Vector',
     'Float64Vector',
     'Index',
+    'IndexType',
     'HnswIndex',
     'VectorDistanceType',
     'BoolList',

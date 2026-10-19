@@ -127,7 +127,7 @@ def test_json(env):
     json_p2 = json_e0['properties'][2]
     assert json_p2['id'] == str(MyEntity._get_property('my_string_indexed').iduid)
     assert json_p2['name'] == "myStringIndexed"
-    assert json_p2['flags'] == 8
+    assert json_p2['flags'] == 2048 | 8  # INDEX_HASH | INDEXED (the default index type for strings)
     assert json_p2['indexId'] == str(MyEntity._get_property('my_string_indexed').index.iduid)
     assert json_e0['lastPropertyId'] == json_p2['id']
 
@@ -1047,7 +1047,7 @@ def test_index_changes(env):
     written, prop_json = open_with(None)
     assert "indexId" not in prop_json and "flags" not in prop_json
 
-    written, prop_json = open_with(Index())  # Added
+    written, prop_json = open_with(Index(IndexType.VALUE))  # Added
     assert written
     assert prop_json["flags"] == OBXPropertyFlags_INDEXED
     index_id = prop_json["indexId"]
