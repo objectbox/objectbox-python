@@ -50,7 +50,11 @@ class Box:
         return int(count.value)
 
     def put(self, *objects):
-        """Puts an object (or a list of objects) and returns its ID (or nothing for a list objects)"""
+        """Puts an object (or a list of objects) and returns its ID (or nothing for a list objects).
+
+        A new object has the ID 0 and gets its ID assigned (set on the object). An object with a non-zero ID is
+        updated (or inserted if it does not exist, e.g. was removed); its ID must have been assigned by ObjectBox
+        before (else raises IllegalArgumentError), unless the ID property is ``Id(assignable=True)``."""
 
         if len(objects) != 1:
             self._put_many(objects)
@@ -60,18 +64,16 @@ class Box:
             return self._put_one(objects[0])
 
     def _put_one(self, obj) -> int:
+        # A new object (ID 0) gets its ID assigned while putting (saves a C call to reserve it); this writes the ID
+        # into the data, so it must be a writable copy. A non-zero ID must have been assigned by ObjectBox before
+        # (the C library checks it), unless the ID property is assignable.
         id = self._entity._get_object_id(obj)
-
-        if id:
-            data = self._entity._marshal(obj, id)
-            obx_box_put(self._c_box, id, bytes(data), len(data))
-            return id
-
-        # New object: the ID is assigned while putting (saves a C call to reserve it); this writes the ID into the
-        # data, so it must be a writable copy.
+        if id:  # The C library does not write into the data (the ID is set)
+            data = bytes(self._entity._marshal(obj, id))
+            return obx_box_put_object4(self._c_box, data, len(data), OBXPutMode_PUT)
         data = self._entity._marshal(obj, 0)
         size = len(data)
-        id = obx_box_put_object(self._c_box, ctypes.create_string_buffer(bytes(data), size), size)
+        id = obx_box_put_object4(self._c_box, ctypes.create_string_buffer(bytes(data), size), size, OBXPutMode_PUT)
         self._entity._set_object_id(obj, id)
         return id
 
@@ -84,6 +86,21 @@ class Box:
             if not id:
                 new[k] = 0
             ids[k] = id
+
+        with self._store.write_tx():  # One transaction for checking/reserving the IDs and putting
+            self._put_many_in_tx(objects, new, ids)
+
+        # assign new IDs on the object
+        for k in new.keys():
+            self._entity._set_object_id(objects[k], ids[k])
+
+    def _put_many_in_tx(self, objects, new, ids) -> None:
+        # Check the given IDs: obx_box_put_many() takes them as reserved; obx_box_id_for_put() raises for an ID not
+        # assigned by ObjectBox before (and advances the ID sequence for assignable IDs). Checking the highest ID
+        # covers all: lower IDs were assigned before, too.
+        max_id = max(ids.values(), default=0)
+        if max_id:
+            obx_box_id_for_put(self._c_box, max_id)
 
         # acquire IDs for the new objects and set them
         if len(new) > 0:
@@ -115,10 +132,6 @@ class Box:
 
         finally:
             obx_bytes_array_free(c_bytes_array_p)
-
-        # assign new IDs on the object
-        for k in new.keys():
-            self._entity._set_object_id(objects[k], ids[k])
 
     def update(self, object_):
         """Updates the existing object having the same ID as the given object.

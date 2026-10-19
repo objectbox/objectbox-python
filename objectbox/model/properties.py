@@ -426,9 +426,16 @@ class _IntProperty(_NumericProperty):
 
 # ID property (primary key)
 class Id(_IntProperty):
-    """Id Property"""
-    def __init__(self, id : int = 0, uid : int = 0, py_type: type = int):
+    """ID property: the object ID (an int), 0 for a new object; put() assigns it.
+
+    By default, IDs are assigned by ObjectBox only: putting an object with an ID that was not assigned by ObjectBox
+    raises (an IllegalArgumentError). Set ``assignable=True`` to put objects with IDs of your own (e.g. from another
+    system); new objects with ID 0 still get IDs assigned (higher than any ID put before)."""
+    def __init__(self, id : int = 0, uid : int = 0, py_type: type = int, assignable: bool = False):
         super(Id, self).__init__(py_type, id=id, uid=uid)
+        self.assignable = assignable
+        if assignable:
+            self._flags |= OBXPropertyFlags_ID_SELF_ASSIGNABLE
 
 # Bool property
 class Bool(_IntProperty):

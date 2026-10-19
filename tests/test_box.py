@@ -22,9 +22,8 @@ def test_box_basics(test_store):
     assert id == 1
     assert id == object.id
 
-    # create with a given ID and some data
+    # create another one with some data
     object = TestEntity()
-    object.id = 5
     object.bool = True
     object.int64 = 9223372036854775807
     object.int32 = 2147483647
@@ -55,7 +54,7 @@ def test_box_basics(test_store):
     object.transient = "abcd"
 
     id = box.put(object)
-    assert id == 5
+    assert id == 2
     assert id == object.id
     # check the count
     assert not box.is_empty()
@@ -73,7 +72,7 @@ def test_box_basics(test_store):
     object.date = floor(time.time_ns() / 1000000)  # check that date can also be an int
     object.date_nano = time.time()  # check that date_nano can also be a float
     id = box.put(object)
-    assert id == 5
+    assert id == 2
 
     # read again
     read = box.get(object.id)
@@ -142,14 +141,13 @@ def test_datetime(test_store):
     # assert id == 1
     # assert id == object.id
 
-    # create with a given ID and some data
+    # create with some data
     object = TestEntityDatetime()
-    object.id = 5
     object.date = datetime.now(timezone.utc)  # milliseconds since UNIX epoch
     object.date_nano = datetime.now(timezone.utc)  # nanoseconds since UNIX epoch
 
     id = box.put(object)
-    assert id == 5
+    assert id == 1
     assert id == object.id
     # check the count
     assert not box.is_empty()
@@ -165,7 +163,7 @@ def test_datetime(test_store):
     object.date = datetime.now(timezone.utc)
     object.date_nano = datetime.now(timezone.utc)
     id = box.put(object)
-    assert id == 5
+    assert id == 1
 
     # read again
     read = box.get(object.id)
@@ -383,3 +381,100 @@ def test_put_new_object_ids(test_store):
             box.put(failing)  # no write in a read transaction
     assert box._entity._get_object_id(failing) == 0  # not set
     assert box.count() == 2
+
+
+def _id_entity(assignable: bool):
+    @Entity(model="ids")
+    class Item:
+        id = Id(assignable=assignable)
+        name = String
+
+    return Item
+
+
+def _open_id_store(tmp_path, entity) -> objectbox.Store:
+    model = objectbox.Model()
+    model.entity(entity)
+    return objectbox.Store(model=model, directory=str(tmp_path / "db"),
+                           model_json_file=str(tmp_path / "model.json"))
+
+
+def test_put_unassigned_id(tmp_path):
+    """ Putting an object with an ID that ObjectBox did not assign raises; this used to put it, and a later new
+    object got the same ID and replaced it. """
+    Item = _id_entity(assignable=False)
+    store = _open_id_store(tmp_path, Item)
+    box = store.box(Item)
+    message = "ID is higher or equal to internal ID sequence"
+    with pytest.raises(IllegalArgumentError, match=message):
+        box.put(Item(id=3, name="preset"))
+    assert box.count() == 0
+
+    # put(list): nothing is put if one ID was not assigned, and new objects keep ID 0
+    new = Item(name="new")
+    with pytest.raises(IllegalArgumentError, match=message):
+        box.put([new, Item(id=9, name="preset")])
+    assert box.count() == 0 and box._entity._get_object_id(new) == 0
+
+    # New objects, then updates by their (assigned) IDs; new objects do not reuse an ID
+    ids = [box.put(Item(name="a%d" % i)) for i in range(3)]
+    assert ids == [1, 2, 3]
+    assert box.put(Item(id=2, name="b2")) == 2
+    box.put([Item(id=1, name="b1"), Item(id=3, name="b3"), Item(name="c")])
+    assert [o.name for o in box.get_all()] == ["b1", "b2", "b3", "c"]
+    assert box.put(Item(name="d")) == 5
+
+    # IDs of removed objects were assigned, so can be put again
+    box.remove(5)
+    assert box.put(Item(id=5, name="d again")) == 5
+    with pytest.raises(IllegalArgumentError, match=message):
+        box.put(Item(id=6, name="preset"))
+    store.close()
+
+    # The JSON model file has the ID flag only
+    assert _json_id_flags(tmp_path) == 1  # OBXPropertyFlags_ID
+
+
+def test_put_assignable_id(tmp_path):
+    Item = _id_entity(assignable=True)
+    store = _open_id_store(tmp_path, Item)
+    box = store.box(Item)
+    assert box.put(Item(id=10, name="ten")) == 10
+    new = Item(name="new")
+    assert box.put(new) == new.id == 11  # Above the highest ID put before
+    box.put([Item(id=100, name="hundred"), Item(id=5, name="five"), Item(name="new 2")])
+    assert box.put(Item(name="new 3")) == 102
+    assert [(o.id, o.name) for o in box.get_all()] == [(5, "five"), (10, "ten"), (11, "new"), (100, "hundred"),
+                                                         (101, "new 2"), (102, "new 3")]
+    store.close()
+    assert _json_id_flags(tmp_path) == 129  # OBXPropertyFlags_ID | OBXPropertyFlags_ID_SELF_ASSIGNABLE
+
+
+def test_put_assignable_id_changed(tmp_path):
+    """ An existing ID property can become assignable and back. """
+    Item = _id_entity(assignable=False)
+    store = _open_id_store(tmp_path, Item)
+    store.box(Item).put(Item(name="a"))
+    store.close()
+
+    Item = _id_entity(assignable=True)
+    store = _open_id_store(tmp_path, Item)
+    box = store.box(Item)
+    assert box.put(Item(id=50, name="b")) == 50
+    store.close()
+
+    Item = _id_entity(assignable=False)
+    store = _open_id_store(tmp_path, Item)
+    box = store.box(Item)
+    assert box.count() == 2
+    assert box.put(Item(name="c")) == 51
+    with pytest.raises(IllegalArgumentError):
+        box.put(Item(id=60, name="d"))
+    store.close()
+
+
+def _json_id_flags(tmp_path) -> int:
+    import json
+    with open(str(tmp_path / "model.json")) as file:
+        doc = json.load(file)
+    return [p["flags"] for p in doc["entities"][0]["properties"] if p["name"] == "id"][0]

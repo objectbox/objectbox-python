@@ -103,6 +103,12 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   Name it with an `_id` suffix, e.g. `customer_id`: it is stored as `customerId`, like the target ID of a `ToOne`
   named `customer` in Java, Kotlin and Dart, so models and data match (e.g. for Sync).
   An existing `Int64` property cannot be changed to a `Relation` (different type); add a new property instead.
+* Fix putting an object with an ID that ObjectBox did not assign (e.g. `MyEntity(id=3)` in an empty box): this was
+  accepted, but a new object put later could get the same ID and silently replaced it. Now it raises an
+  `IllegalArgumentError` ("ID is higher or equal to internal ID sequence"), like in the other ObjectBox languages.
+  To use your own IDs, declare the ID property as `Id(assignable=True)`; new objects (ID 0) then get an ID higher than
+  any ID put before.\
+  **Breaking:** code that puts objects with made-up IDs needs `Id(assignable=True)`.
 * Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`
   (the latter raises if the object does not exist yet, i.e. unlike `put()` it never inserts)
 * Putting objects with `None` values: a property set to `None` is stored as null (left out of the stored object), where

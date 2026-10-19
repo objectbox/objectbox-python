@@ -745,6 +745,9 @@ obx_box_put = c_fn_rc('obx_box_put', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes
 # data must be writable: for a new object (ID 0 in data), the assigned ID is written into it
 obx_box_put_object = c_fn('obx_box_put_object', obx_id, [OBX_box_p, ctypes.c_void_p, ctypes.c_size_t])
 
+# OBX_C_API obx_id obx_box_put_object4(OBX_box* box, void* data, size_t size, OBXPutMode mode);
+obx_box_put_object4 = c_fn('obx_box_put_object4', obx_id, [OBX_box_p, ctypes.c_void_p, ctypes.c_size_t, OBXPutMode])
+
 # OBX_C_API obx_err obx_box_insert(OBX_box* box, obx_id id, const void* data, size_t size);
 obx_box_insert = c_fn_rc('obx_box_insert', [OBX_box_p, obx_id, ctypes.c_void_p, ctypes.c_size_t])
 
