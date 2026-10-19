@@ -1080,7 +1080,7 @@ def test_query_store_closed(test_store):
     qb = box.query(TestEntity.str.equals("foo"))
     test_store.close()
     assert query.is_closed()  # Closed before the store
-    with pytest.raises(IllegalStateError, match="The query is closed"):
+    with pytest.raises(IllegalStateError, match="Store is closed"):
         query.count()
-    with pytest.raises(IllegalStateError, match="The query builder is closed"):
+    with pytest.raises(IllegalStateError, match="Store is closed"):
         qb.build()

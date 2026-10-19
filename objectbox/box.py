@@ -18,7 +18,7 @@ from objectbox.store import Store
 from objectbox.query_builder import QueryBuilder
 from objectbox.condition import QueryCondition
 from objectbox.c import *
-from objectbox.exceptions import DbError
+from objectbox.exceptions import DbError, IllegalStateError
 
 
 class Box:
@@ -27,9 +27,15 @@ class Box:
         if not isinstance(entity, _Entity):
             raise Exception("Given type is not an Entity")
 
-        self._store = store 
+        self._store = store
         self._entity = entity
-        self._c_box = obx_box(store._c_store, entity._id)
+        self._c_box_of_open_store = obx_box(store._c_store, entity._id)
+
+    @property
+    def _c_box(self):
+        if self._store._c_store_or_none is None:  # The C box would be invalid
+            raise IllegalStateError("Store is closed")
+        return self._c_box_of_open_store
 
     def contains(self, object_id: int) -> bool:
         """Checks whether the box contains the given object ID."""
@@ -145,11 +151,12 @@ class Box:
 
     def get(self, id: int):
         """Get object by given Id or None if not found."""
-        tx = obx_txn_read(self._store._c_store)  # not via read_tx(): less overhead for this hot path
+        c_box = self._c_box  # Raises if the store is closed
+        tx = obx_txn_read(self._store._c_store_or_none)  # not via read_tx(): less overhead for this hot path
         try:
             c_data = ctypes.c_void_p()
             c_size = ctypes.c_size_t()
-            code : obx_err = obx_box_get(self._c_box, id, ctypes.byref(
+            code : obx_err = obx_box_get(c_box, id, ctypes.byref(
                     c_data), ctypes.byref(c_size))
             if code == 404:
                 return None

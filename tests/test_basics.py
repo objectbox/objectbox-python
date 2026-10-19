@@ -41,6 +41,42 @@ def test_open():
     store.close()
 
 
+def test_store_used_after_close(capfd):
+    """ Using a closed store, or a box or query of it, raises IllegalStateError("Store is closed"); this used to fail
+    with misleading errors (e.g. "Argument "store" must not be null") or used the freed C store. """
+    store = create_test_store()
+    box = store.box(TestEntity)
+    id = box.put(TestEntity(str="foo"))
+    query = box.query(TestEntity.str.equals("foo")).build()
+    store.close()
+    store.close()  # Closing again does nothing
+
+    uses = [
+        lambda: store.box(TestEntity),
+        lambda: store.read_tx(),
+        lambda: store.write_tx(),
+        lambda: box.get(id),
+        lambda: box.get_many([id]),
+        lambda: box.get_all(),
+        lambda: box.put(TestEntity(str="bar")),
+        lambda: box.put([TestEntity(str="bar"), TestEntity(str="baz")]),
+        lambda: box.update(TestEntity(id=id, str="bar")),
+        lambda: box.contains(id),
+        lambda: box.count(),
+        lambda: box.is_empty(),
+        lambda: box.remove(id),
+        lambda: box.remove_all(),
+        lambda: box.query(),
+    ]
+    for use in uses:
+        with pytest.raises(IllegalStateError, match="Store is closed$"):
+            use()
+    for use in (query.find, query.count):
+        with pytest.raises(IllegalStateError, match="Store is closed$"):
+            use()
+    assert "Irrecoverable" not in capfd.readouterr().err  # The C library detected no use of a dead store
+
+
 def test_store_closed_when_dropped():
     """A store that is no longer referenced must be closed right away, without relying on the cyclic GC."""
     gc_was_enabled = gc.isenabled()

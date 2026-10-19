@@ -23,7 +23,7 @@ import objectbox.transaction
 from objectbox.model.idsync import sync_model
 from objectbox.store_options import StoreOptions
 import objectbox
-from objectbox.exceptions import DbError
+from objectbox.exceptions import DbError, IllegalStateError
 from objectbox.model.entity import _Entity
 from objectbox.model.model import Model
 from typing import *
@@ -139,7 +139,7 @@ class Store:
             Internal parameter for deprecated ObjectBox interface. Do not use it; other options would be ignored if passed.
         """
 
-        self._c_store = None
+        self._c_store_or_none = None  # None if closed; use _c_store (raises if closed)
         self._c_log_callback = None
         self._sync_client = None  # The open SyncClient (set by it); the store keeps it alive, like Java and Dart
         self._model: Optional[Model] = None  # The model passed (resolved), if any; e.g. to map entity IDs to entities
@@ -207,9 +207,16 @@ class Store:
                 raise
             # Keep the C callback object alive as long as the store, which may call it (options are freed by open)
             self._c_log_callback = getattr(options, "_c_log_cb", None)
-            self._c_store = c.obx_store_open(options._c_handle)
+            self._c_store_or_none = c.obx_store_open(options._c_handle)
         else:
-            self._c_store = c_store
+            self._c_store_or_none = c_store
+
+    @property
+    def _c_store(self):
+        c_store = self._c_store_or_none
+        if c_store is None:
+            raise IllegalStateError("Store is closed")
+        return c_store
 
     @staticmethod
     def _sync_model(model: Optional[Union[Model, str]],
@@ -337,9 +344,9 @@ class Store:
         finally:
             for resource in list(self._native_resources):
                 resource.close()
-            c_store_to_close = self._c_store
+            c_store_to_close = self._c_store_or_none
             if c_store_to_close:
-                self._c_store = None
+                self._c_store_or_none = None
                 c.obx_store_close(c_store_to_close)
 
     @staticmethod

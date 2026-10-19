@@ -527,8 +527,7 @@ class SyncClient:
 
         self.__store = store
 
-        if not store._c_store:
-            raise IllegalStateError("Store is closed")
+        store._c_store  # Raises if the store is closed
         if store._sync_client is not None:
             raise IllegalStateError("Only one sync client can be active for a store")
 

@@ -55,7 +55,8 @@ class QueryBuilder:
     def _c_builder(self):
         root = self._root or self
         if root._c_builder_or_none is None:
-            raise IllegalStateError("The query builder is closed: build() closes it (or the store was closed)")
+            self._box._store._c_store  # Raises if the store is closed (which closed the builder)
+            raise IllegalStateError("The query builder is closed: build() closes it")
         return self._c_builder_or_none
 
     def _linked(self, c_builder, entity: '_Entity', condition: Optional[QueryCondition]) -> 'QueryBuilder':

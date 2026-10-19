@@ -161,6 +161,9 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 * A store that is no longer referenced is now closed right away (was: only when Python's cyclic GC ran);
   e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
   Still, prefer closing stores explicitly via `close()`.
+* Using a closed store raises an `IllegalStateError` ("Store is closed"), also via its boxes and queries; before,
+  errors were misleading (e.g. `IllegalArgumentError` 'Argument "store" must not be null') and a box obtained before
+  closing used the freed native store (the C library reported "Irrecoverable memory error").
 * Fix the `model_bytes` and `model_bytes_direct` options (failed with a `TypeError`)
 * Fix using a model JSON file with an empty `lastIndexId` (failed with a `ValueError`), e.g. one shared with
   an app using ObjectBox C++ or Go, which write it like this if there is no index

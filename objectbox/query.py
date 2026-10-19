@@ -44,7 +44,8 @@ class Query:
     def _c_query(self):
         c_query = self._c_query_or_none
         if c_query is None:
-            raise IllegalStateError("The query is closed (or its store)")
+            self._store._c_store  # Raises if the store is closed (which closed the query)
+            raise IllegalStateError("The query is closed")
         return c_query
 
     def close(self):
