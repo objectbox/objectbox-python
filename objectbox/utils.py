@@ -10,9 +10,9 @@ if TYPE_CHECKING:
 def check_float_vector(vector: Union[np.ndarray, List[float]], vector_name: str):
     """ Checks that the given vector is a float vector (either np.ndarray or Python's list). """
     if is_ndarray(vector) and vector.dtype != "float32":
-        raise Exception(f"{vector_name} dtype is expected to be np.float32, got: {vector.dtype}")
+        raise TypeError(f"{vector_name} dtype is expected to be np.float32, got: {vector.dtype}")
     elif isinstance(vector, list) and len(vector) > 0 and (type(vector[0]) is not float):
-        raise Exception(f"{vector_name} is expected to be a float list, got vector[0]: {type(vector[0])}")
+        raise TypeError(f"{vector_name} is expected to be a float list, got vector[0]: {type(vector[0])}")
 
 
 def vector_distance_f32(distance_type: VectorDistanceType,

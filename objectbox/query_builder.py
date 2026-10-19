@@ -263,7 +263,7 @@ class QueryBuilder:
         for prop in self._entity._properties:
             if prop.id == prop_id:
                 return prop._ob_type == OBXPropertyType_Int
-        raise Exception(f"Property ID {prop_id} not found in Entity \"{self._entity._name}\"")
+        raise IllegalArgumentError(f"Property ID {prop_id} not found in Entity \"{self._entity._name}\"")
 
     def greater_than_int(self, prop: Union[int, str, Property], value: int) -> obx_qb_cond:
         prop_id = self._entity._get_property_id(prop)

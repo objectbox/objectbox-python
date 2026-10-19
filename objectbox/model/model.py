@@ -47,11 +47,11 @@ class Model:
 
     def entity(self, entity: _Entity):
         if not isinstance(entity, _Entity):
-            raise Exception(f"The given type is not an Entity: {type(entity)}. "
+            raise TypeError(f"The given type is not an Entity: {type(entity)}. "
                             f"Ensure to have an @Entity annotation on the class.")
         for other_entity in self.entities:  # Linear search (we should't have many entities)
             if entity._name == other_entity._name:
-                raise Exception(f"Duplicate entity: \"{entity._name}\"")
+                raise ValueError(f"Duplicate entity: \"{entity._name}\"")
         self.entities.append(entity)
         self._synced_json_file = None  # Changed model; must be synced again
         self._synced_json_file_given = None

@@ -133,3 +133,48 @@ def test_c_error_is_builtin_exception(test_store):
     with pytest.raises(ValueError, match="OBX_ERROR_ILLEGAL_ARGUMENT") as exc_info:
         test_store.box(TestEntity).get(0)
     assert type(exc_info.value) is IllegalArgumentError
+
+
+def test_error_types(test_store):
+    """ Wrong arguments raise TypeError or IllegalArgumentError (a ValueError), not a plain Exception, an
+    AttributeError or a ctypes.ArgumentError. """
+    from tests.model import TestEntityDatetime, VectorEntity
+    from objectbox.exceptions import create_db_error
+    box = test_store.box(TestEntity)
+    id = box.put(TestEntity(str="foo"))
+    other = TestEntityDatetime()
+
+    with pytest.raises(TypeError, match="Expected an entity"):
+        objectbox.Box(test_store, object())
+    with pytest.raises(TypeError, match="Expected an object of entity TestEntity"):
+        box.put(other)  # AttributeError before
+    with pytest.raises(TypeError, match="Expected an object of entity TestEntity"):
+        box.put([TestEntity(str="bar"), other])
+    assert box.count() == 1
+    with pytest.raises(TypeError, match="Expected an object of entity TestEntity"):
+        box.update(other)
+    with pytest.raises(IllegalArgumentError, match="Cannot update an object without an ID"):
+        box.update(TestEntity(str="new"))
+    for invalid in ("1", other, 1.0):
+        with pytest.raises(TypeError, match=r"Expected an ID \(int\) or an object of entity TestEntity"):
+            box.remove(invalid)  # ctypes.ArgumentError before
+    assert box.count() == 1
+
+    with pytest.raises(TypeError, match="Property int64 takes int values in conditions, got '1'"):
+        TestEntity.int64.equals("1")  # KeyError before
+    with pytest.raises(TypeError, match="Unsupported type for 'EQ'"):
+        box.query(TestEntity.str.equals(1.5))
+    with pytest.raises(IllegalArgumentError, match="query_vector can't be empty"):
+        test_store.box(VectorEntity).query(VectorEntity.vector_euclidean.nearest_neighbors([], 1))
+    with pytest.raises(TypeError, match="has no property \"nope\""):
+        TestEntity(nope=1)
+    with pytest.raises(TypeError, match="The given type is not an Entity"):
+        objectbox.Model().entity(object())
+    query = box.query(TestEntity.str.equals("foo")).build()
+    with pytest.raises(IllegalArgumentError, match="Property \"nope\" not found"):
+        query.set_parameter("nope", "x")
+
+    # A C error code unknown to Python is a DbError with that code
+    error = create_db_error(12345)
+    assert type(error) is DbError and error.code == 12345 and str(error).startswith("12345 - ")
+    assert type(create_db_error(10002)) is IllegalArgumentError

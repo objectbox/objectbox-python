@@ -474,12 +474,12 @@ def c_array(py_list: Union[List[Any], np.ndarray], c_type):
     """ Converts the given python list or ndarray into a C array of c_type. """
     if is_ndarray(py_list):
         if py_list.ndim != 1:
-            raise Exception(f"ndarray is expected to be 1-dimensional. Input shape: {py_list.shape}")
+            raise ValueError(f"ndarray is expected to be 1-dimensional. Input shape: {py_list.shape}")
         return py_list.ctypes.data_as(ctypes.POINTER(c_type))
     elif isinstance(py_list, list):
         return (c_type * len(py_list))(*py_list)
     else:
-        raise Exception(f"Unsupported Python list type: {type(py_list)}")
+        raise TypeError(f"Unsupported Python list type: {type(py_list)}")
 
 
 def c_array_pointer(py_list: Union[List[Any], np.ndarray], c_type):

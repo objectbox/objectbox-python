@@ -14,7 +14,9 @@ class DbError(Exception):
     def __init__(self, message: Optional[str] = None):
         """Creates the exception with the given message, or by default the last error message of the C library."""
         self.message = message if message is not None else py_str(C.obx_last_error_message())
-        super().__init__(f"{self.code.value} ({self.code.name}) - {self.message}")
+        code = self.code
+        label = f"{code.value} ({code.name})" if isinstance(code, DbErrorCode) else str(code)
+        super().__init__(f"{label} - {self.message}")
 
     @staticmethod
     def from_code(code: int):
@@ -216,7 +218,11 @@ _init_db_errror_map()
 
 def create_db_error(code: int) -> DbError:
     if code == DbErrorCode.OBX_SUCCESS:
-        raise Exception("Can't create a StorageException for code: OBX_SUCCESS")
-    elif code not in obx_db_error_map:
-        raise Exception(f"Unrecognized StorageException code: {code}")
-    return obx_db_error_map[code]()
+        raise ValueError("Can't create a DbError for code: OBX_SUCCESS")
+    error_class = obx_db_error_map.get(code)
+    if error_class is None:  # E.g. a code of a newer C library: a DbError with that code
+        error = DbError.__new__(DbError)
+        error.code = DbErrorCode(code) if code in DbErrorCode._value2member_map_ else code
+        DbError.__init__(error)
+        return error
+    return error_class()

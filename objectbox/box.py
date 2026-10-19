@@ -18,14 +18,14 @@ from objectbox.store import Store
 from objectbox.query_builder import QueryBuilder
 from objectbox.condition import QueryCondition
 from objectbox.c import *
-from objectbox.exceptions import DbError, IllegalStateError
+from objectbox.exceptions import DbError, IllegalArgumentError, IllegalStateError
 
 
 class Box:
     """Interface to Entities"""
     def __init__(self, store: Store, entity: _Entity):
         if not isinstance(entity, _Entity):
-            raise Exception("Given type is not an Entity")
+            raise TypeError(f"Expected an entity (a class decorated with @Entity()), got {entity!r}")
 
         self._store = store
         self._entity = entity
@@ -74,6 +74,7 @@ class Box:
         # A new object (ID 0) gets its ID assigned while putting (saves a C call to reserve it); this writes the ID
         # into the data, so it must be a writable copy. A non-zero ID must have been assigned by ObjectBox before
         # (the C library checks it), unless the ID property is assignable.
+        self._check_type(obj)
         id = self._entity._get_object_id(obj)
         if id:  # The C library does not write into the data (the ID is set)
             data = bytes(self._entity._marshal(obj, id))
@@ -91,6 +92,7 @@ class Box:
         new = {}
         ids = {}
         for k in range(len(objects)):
+            self._check_type(objects[k])
             id = self._entity._get_object_id(objects[k])
             if not id:
                 new[k] = 0
@@ -147,9 +149,10 @@ class Box:
         """Updates the existing object having the same ID as the given object.
 
         Raises if the object has no ID (i.e. it was never put) or the ID doesn't match any stored object."""
+        self._check_type(object_)
         object_id = self._entity._get_object_id(object_)
         if not object_id:
-            raise ValueError("Cannot update an object without an ID; use put() for new objects")
+            raise IllegalArgumentError("Cannot update an object without an ID; use put() for new objects")
         data = self._entity._marshal(object_, object_id)
         obx_box_update(self._c_box, object_id, bytes(data), len(data))
 
@@ -248,9 +251,20 @@ class Box:
         return int(count.value)
 
     def _id_of(self, id_or_object) -> int:
-        if isinstance(id_or_object, self._entity._user_type):
+        if self._is_entity_object(id_or_object):
             return self._entity._get_object_id(id_or_object)
+        if not isinstance(id_or_object, int) or isinstance(id_or_object, bool):
+            raise TypeError(f"Expected an ID (int) or an object of entity {self._entity._name}, got {id_or_object!r}")
         return id_or_object
+
+    def _check_type(self, obj):
+        if not self._is_entity_object(obj):
+            raise TypeError(f"Expected an object of entity {self._entity._name}, got {obj!r}")
+
+    def _is_entity_object(self, obj) -> bool:
+        # Also accepts the same class defined again, e.g. by re-running a notebook cell
+        user_type = self._entity._user_type
+        return isinstance(obj, user_type) or type(obj).__name__ == user_type.__name__
 
     def remove_all(self) -> int:
         """Removes all objects and returns number of removed."""

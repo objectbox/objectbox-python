@@ -225,7 +225,7 @@ class Store:
         if isinstance(model, str):  # Model name provided; get entities collected via @Entity
             model = Store._model_for_name(model)
         elif not isinstance(model, Model):
-            raise ValueError("Model must be a Model object or a string.")
+            raise TypeError("Model must be a Model object or a string.")
 
         # A model already synced with the model JSON file (e.g. by a previous Store) does not need to be synced again
         if model._synced_json_file is not None:

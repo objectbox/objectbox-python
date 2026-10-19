@@ -382,7 +382,7 @@ class Property:
         elif ts == bool:
             return OBXPropertyType_Bool
         else:
-            raise Exception("unknown property type %s" % ts)
+            raise TypeError("unknown property type %s" % ts)
 
     def _set_flags(self):
         if self.is_id():
@@ -458,6 +458,11 @@ class _IntProperty(_NumericProperty):
     """
     def __init__(self, py_type : Type, **kwargs):
         super(_IntProperty, self).__init__(py_type, **kwargs)
+
+    def _condition_value(self, value):
+        if not isinstance(value, int):  # Includes bool (an int)
+            raise TypeError(f"Property {self.name} takes int values in conditions, got {value!r}")
+        return value
         
     def equals(self, value) -> PropertyQueryCondition:
         """ *Equals* (``==``) condition to be passed to :func:`Box.query` """

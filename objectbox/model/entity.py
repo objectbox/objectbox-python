@@ -81,7 +81,7 @@ class _Entity(object):
         object_ = self._user_type()
         for prop_name, prop_val in properties.items():
             if not hasattr(object_, prop_name):
-                raise Exception(f"Entity {self._name} has no property \"{prop_name}\"")
+                raise TypeError(f"Entity {self._name} has no property \"{prop_name}\"")
             setattr(object_, prop_name, prop_val)
         return object_
 
@@ -115,7 +115,7 @@ class _Entity(object):
 
             if prop.is_id():
                 if self._id_property:
-                    raise Exception(f"Duplicate ID property: \"{self._id_property.name}\" and \"{prop.name}\"")
+                    raise ValueError(f"Duplicate ID property: \"{self._id_property.name}\" and \"{prop.name}\"")
                 self._id_property = prop
 
             if prop._fb_format == 'I':  # an offset
@@ -136,16 +136,17 @@ class _Entity(object):
             # print('Property {}.{}: {} (ob:{} fb:{})'.format(self._name, prop.name, prop._py_type, prop._ob_type, prop._fb_type))
 
         if not self._id_property:
-            raise Exception("ID property is not defined")
+            raise ValueError(f"Entity {self._name} has no ID property (e.g. id = Id)")
         elif self._id_property._ob_type != OBXPropertyType_Long:
-            raise Exception("ID property must be an int")
+            raise TypeError(f"The ID property of entity {self._name} must be an int")
 
     def _get_property(self, name: str):
         """ Gets the property having the given name. """
         for prop in self._properties:
             if prop.name == name:
                 return prop
-        raise Exception(f"Property \"{name}\" not found in Entity: \"{self._name}\"")
+        from objectbox.exceptions import IllegalArgumentError
+        raise IllegalArgumentError(f"Property \"{name}\" not found in Entity: \"{self._name}\"")
 
     def _get_property_id(self, prop: Union[int, str, Property]) -> int:
         """ A convenient way to get the property ID regardless having its ID, name or Property. """
@@ -156,7 +157,7 @@ class _Entity(object):
         elif isinstance(prop, Property):
             return prop.id
         else:
-            raise Exception(f"Unsupported Property type: {type(prop)}")
+            raise TypeError(f"Expected a property (or its name or ID), got {type(prop)}")
 
     def _get_value(self, object, prop: Property):
         # in case value is not overwritten on the object, it's the Property object itself (= as defined in the Class)

@@ -149,7 +149,7 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(value, bytes):
             return qb.equals_bytes(self._property_id, value)
         else:
-            raise Exception(f"Unsupported type for 'EQ': {type(value)}")
+            raise TypeError(f"Unsupported type for 'EQ': {type(value)}")
 
     def _apply_not_eq(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -159,7 +159,7 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(value, int):
             return qb.not_equals_int(self._property_id, value)
         else:
-            raise Exception(f"Unsupported type for 'NOT_EQ': {type(value)}")
+            raise TypeError(f"Unsupported type for 'NOT_EQ': {type(value)}")
 
     def _apply_contains(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -167,7 +167,7 @@ class PropertyQueryCondition(QueryCondition):
         if isinstance(value, str):
             return qb.contains_string(self._property_id, value, case_sensitive)
         else:
-            raise Exception(f"Unsupported type for 'CONTAINS': {type(value)}")
+            raise TypeError(f"Unsupported type for 'CONTAINS': {type(value)}")
 
     def _apply_starts_with(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -175,7 +175,7 @@ class PropertyQueryCondition(QueryCondition):
         if isinstance(value, str):
             return qb.starts_with_string(self._property_id, value, case_sensitive)
         else:
-            raise Exception(f"Unsupported type for 'STARTS_WITH': {type(value)}")
+            raise TypeError(f"Unsupported type for 'STARTS_WITH': {type(value)}")
 
     def _apply_ends_with(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -183,7 +183,7 @@ class PropertyQueryCondition(QueryCondition):
             case_sensitive = self._args['case_sensitive']
             return qb.ends_with_string(self._property_id, value, case_sensitive)
         else:
-            raise Exception(f"Unsupported type for 'ENDS_WITH': {type(value)}")
+            raise TypeError(f"Unsupported type for 'ENDS_WITH': {type(value)}")
 
     def _apply_gt(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -197,7 +197,7 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(value, bytes):
             return qb.greater_than_bytes(self._property_id, value)
         else:
-            raise Exception(f"Unsupported type for 'GT': {type(value)}")
+            raise TypeError(f"Unsupported type for 'GT': {type(value)}")
 
     def _apply_gte(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -211,7 +211,7 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(value, bytes):
             return qb.greater_or_equal_bytes(self._property_id, value)
         else:
-            raise Exception(f"Unsupported type for 'GTE': {type(value)}")
+            raise TypeError(f"Unsupported type for 'GTE': {type(value)}")
 
     def _apply_lt(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -225,7 +225,7 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(value, bytes):
             return qb.less_than_bytes(self._property_id, value)
         else:
-            raise Exception("Unsupported type for 'LT': " + str(type(value)))
+            raise TypeError("Unsupported type for 'LT': " + str(type(value)))
 
     def _apply_lte(self, qb: QueryBuilder) -> obx_qb_cond:
         value = self._args['value']
@@ -239,7 +239,7 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(value, bytes):
             return qb.less_or_equal_bytes(self._property_id, value)
         else:
-            raise Exception(f"Unsupported type for 'LTE': {type(value)}")
+            raise TypeError(f"Unsupported type for 'LTE': {type(value)}")
 
     def _apply_between(self, qb: QueryBuilder) -> obx_qb_cond:
         a = self._args['a']
@@ -249,14 +249,15 @@ class PropertyQueryCondition(QueryCondition):
         elif isinstance(a, float) or isinstance(b, float):
             return qb.between_2doubles(self._property_id, a, b)
         else:
-            raise Exception(f"Unsupported type for 'BETWEEN': {type(a)}")
+            raise TypeError(f"Unsupported type for 'BETWEEN': {type(a)}")
 
     def _apply_nearest_neighbor(self, qb: QueryBuilder) -> obx_qb_cond:
         query_vector = self._args['query_vector']
         max_result_count = self._args['max_result_count']
 
         if len(query_vector) == 0:
-            raise Exception("query_vector can't be empty")
+            from objectbox.exceptions import IllegalArgumentError
+            raise IllegalArgumentError("query_vector can't be empty")
 
         is_float_vector = False
         np = sys.modules.get("numpy")  # not imported: query_vector is no numpy array
@@ -265,7 +266,7 @@ class PropertyQueryCondition(QueryCondition):
         if is_float_vector:
             return qb.nearest_neighbors_f32(self._property_id, query_vector, max_result_count)
         else:
-            raise Exception(f"Unsupported type for 'NEAREST_NEIGHBOR': {type(query_vector)}")
+            raise TypeError(f"Unsupported type for 'NEAREST_NEIGHBOR': {type(query_vector)}")
 
     def _contains_key_value(self, qb: QueryBuilder) -> obx_qb_cond:
         key = self._args['key']

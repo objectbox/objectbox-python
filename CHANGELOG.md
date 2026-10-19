@@ -176,6 +176,13 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `IllegalArgumentError` is also a `ValueError`, `IllegalStateError` and `FeatureNotAvailable` are also a
   `RuntimeError`, so they can be caught as the matching built-in exception, too.\
   **Breaking:** this replaces `CoreException` and `NotFoundException` (the latter was exported by the top-level module).
+* Wrong arguments raise a `TypeError` or an `IllegalArgumentError` (a `ValueError`) with a clear message, instead of a
+  plain `Exception`, an `AttributeError`, a `KeyError` or a `ctypes.ArgumentError`, e.g. putting an object of another
+  entity, `remove("1")`, a condition value of the wrong type (`Int64.equals("1")`), an unknown property name or a
+  non-entity passed to `Box` or `Model.entity()`. An error code of the C library unknown to Python is a `DbError` with
+  that code (was a plain `Exception`).\
+  **Breaking:** code catching the previous exception types, e.g. `Store(model=42)` raises a `TypeError` (was a
+  `ValueError`).
 
 ### Store
 
