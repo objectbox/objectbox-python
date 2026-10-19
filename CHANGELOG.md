@@ -89,7 +89,7 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   the property type decides how, e.g. a list sets the vector of a nearest neighbor search or the values of a
   "one of" condition, and `Date` properties also take a `datetime`. `set_parameters(property, a, b)` and
   `set_parameters_alias(alias, a, b)` change the two values of `between()`. New are also parameters for floating point
-  and bytes properties, and `describe_parameters()`.\
+  and bytes properties, and `describe_parameters()`; `describe()` describes the query itself (like in Java and Dart).\
   **Breaking:** the typed methods `set_parameter_string()`, `set_parameter_int()` and `set_parameter_vector_f32()` are
   removed; use `set_parameter()` instead, and `set_parameter_alias()` for their `set_parameter_alias_*()` variants.
 * Fix native memory leaks of queries: a built query's native resources were never freed, and neither were the

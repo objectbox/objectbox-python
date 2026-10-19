@@ -330,6 +330,11 @@ class Query:
         kind, value_a, value_b = _parameter_values(self._alias_property_type(alias), value_a, value_b)
         return self._set_parameter(None, None, alias, kind, value_a, value_b)
 
+    def describe(self) -> str:
+        """ Describes the query (e.g. its entity and the properties of its conditions), e.g. for debugging;
+        the format may change. See also :meth:`describe_parameters`. """
+        return obx_query_describe(self._c_query).decode('utf-8')
+
     def describe_parameters(self) -> str:
         """ Describes the query conditions with their current parameter values, e.g. for logging or debugging. """
         return obx_query_describe_params(self._c_query).decode('utf-8')

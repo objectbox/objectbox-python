@@ -1187,3 +1187,11 @@ def test_scores_named_tuples(test_store):
     assert all(isinstance(result, objectbox.IdWithScore) for result in id_results)
     assert [(r.id, r.score) for r in id_results] == [(1, 0.0), (2, 2.0)]
     assert id_results == [(1, 0.0), (2, 2.0)]  # Equal to plain tuples
+
+
+def test_describe(test_store):
+    query = test_store.box(TestEntity).query(TestEntity.str.equals("x") & TestEntity.int64.greater_than(3)).build()
+    description = query.describe()
+    assert description.startswith("Query for entity TestEntity with 3 conditions")
+    assert "int64" in description and "str" in description
+    assert query.describe_parameters() == '(str == "x"\n AND int64 > 3)'
