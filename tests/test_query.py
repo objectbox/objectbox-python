@@ -1195,3 +1195,29 @@ def test_describe(test_store):
     assert description.startswith("Query for entity TestEntity with 3 conditions")
     assert "int64" in description and "str" in description
     assert query.describe_parameters() == '(str == "x"\n AND int64 > 3)'
+
+
+def test_query_builder_alias_property(test_store):
+    """ QueryBuilder.alias() remembers the property of the last condition, so set_parameter_alias() sets the value by
+    the property's type, e.g. a datetime for a Date (was inferred from the value: datetime was rejected). """
+    from datetime import timedelta
+    box = test_store.box(TestEntityDatetime)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    ids = box.put([TestEntityDatetime(date=(base + timedelta(days=i)).timestamp()) for i in range(3)])
+
+    qb = box.query()
+    qb.greater_than_int(TestEntityDatetime.date, int(base.timestamp() * 1000))
+    qb.alias("after")
+    query = qb.build()
+    assert query.find_ids() == ids[1:]
+    assert query.set_parameter_alias("after", base + timedelta(days=1)).find_ids() == [ids[2]]
+
+    # A float property: an int value is converted by the property type
+    test_box = test_store.box(TestEntity)
+    test_box.put([TestEntity(float64=1.5), TestEntity(float64=3.5)])
+    qb = test_box.query()
+    qb.greater_than_double(TestEntity.float64, 1.0)
+    qb.alias("min")
+    query = qb.build()
+    assert len(query.find()) == 2
+    assert [o.float64 for o in query.set_parameter_alias("min", 2).find()] == [3.5]

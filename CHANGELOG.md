@@ -87,6 +87,9 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `not_one_of(values)`; their values can be changed on a built query via `set_parameter()` (see below)
 * New conditions `is_null()` and `is_not_null()` (e.g. `Task.text.is_null()`), also as `QueryBuilder.is_null()`
   and `not_null()`. Null values (put with `None`) do not match conditions on the default value, e.g. `equals("")`.
+* `QueryBuilder.alias()` remembers the property of the last condition, so `set_parameter_alias()` sets values by the
+  property's type, as for aliases of conditions (`PropertyQueryCondition.alias()`); e.g. a `datetime` for a `Date`
+  (was rejected: the value alone decided the type)
 * `set_parameter(property, value)` and `set_parameter_alias(alias, value)` change the value of a condition;
   the property type decides how, e.g. a list sets the vector of a nearest neighbor search or the values of a
   "one of" condition, and `Date` properties also take a `datetime`. `set_parameters(property, a, b)` and

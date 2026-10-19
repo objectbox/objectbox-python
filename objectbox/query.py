@@ -291,13 +291,9 @@ class Query:
 
     def set_parameter_alias(self, alias: str, value) -> 'Query':
         """ Like :meth:`set_parameter`, for the condition having the given alias
-        (see ``PropertyQueryCondition.alias()``).
+        (see ``PropertyQueryCondition.alias()`` and ``QueryBuilder.alias()``).
 
         Example: ``query.set_parameter_alias("name", "Joe")``
-
-        For an alias set via ``QueryBuilder.alias()``, the property is unknown, so the value decides; e.g. a float
-        sets a floating point value. ``datetime`` values are not supported then: pass milliseconds (``Date``) or
-        nanoseconds (``DateNano``) instead.
         """
         prop_type = self._alias_property_type(alias)
         type_size = None
@@ -369,7 +365,7 @@ class Query:
         raise IllegalArgumentError(f"Property ID {prop_id} not found in entity {entity._name}")
 
     def _alias_property_type(self, alias: str) -> Optional[int]:
-        """ None if the property is unknown, i.e. the alias was set via QueryBuilder.alias(). """
+        """ None if the property is unknown (no property recorded for the alias). """
         entity_and_prop_id = self._alias_properties.get(alias)
         return self._property_type(*entity_and_prop_id) if entity_and_prop_id is not None else None
 
@@ -395,7 +391,7 @@ _parameter_functions = {
 
 def _parameter_value(prop_type: Optional[int], value, type_size: Optional[int] = None) -> Tuple[str, Any]:
     """ Returns the kind of parameter (see _parameter_functions) and the (converted) value.
-    The property type is None if unknown (alias set via QueryBuilder.alias()); then the value decides, and for
+    The property type is None if unknown (no property recorded for the alias); then the value decides, and for
     lists, the type size (0 for strings and vectors). """
     if isinstance(value, (list, tuple)) or is_ndarray(value):
         if prop_type == OBXPropertyType_FloatVector or (prop_type is None and (is_ndarray(value) or (
@@ -465,7 +461,7 @@ def _int_parameter(prop_type: Optional[int], value) -> int:
 
 def _type_name(prop_type: Optional[int]) -> str:
     if prop_type is None:
-        return "unknown (alias set via QueryBuilder.alias())"
+        return "unknown (no property recorded for the alias)"
     try:
         return PropertyType(prop_type).name
     except ValueError:
