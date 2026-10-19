@@ -81,3 +81,22 @@ def test_reuse_entity():
     
     store1.close()
     store2.close()
+
+
+def test_property_args():
+    """ Properties do not take an ID (it was silently ignored; IDs come from the model JSON file), only a UID, which
+    is keyword-only (positional values were IDs before). Unknown arguments raise. """
+    import pytest
+    for property_class in (Id, Bool, String, Int8, Int32, Int64, Float32, Float64, Bytes, Date, DateNano, Flex,
+                           Float32Vector, Int32List, SyncClock, SyncPrecedence):
+        with pytest.raises(TypeError, match="Properties do not take an id"):
+            property_class(id=3)
+        with pytest.raises(TypeError):
+            property_class(3, 1234)  # Was (id, uid)
+        assert property_class(uid=1234).uid == 1234
+    with pytest.raises(TypeError, match="Properties do not take an id"):
+        Relation("Target", id=3)
+    assert Relation("Target", uid=1234).uid == 1234
+    with pytest.raises(TypeError, match="Unexpected property argument.*: index_type"):
+        String(index_type=2)
+    assert Date(float).uid == 0  # The Python type is still positional

@@ -256,6 +256,7 @@ class HnswIndex:
 
 class Property:
     def __init__(self, pytype: Type, uid: int = 0, **kwargs):
+        Property._check_args(kwargs, ('index', 'type'))
         self.iduid = IdUid(0, uid)
         self.name = ""  # Python attribute name; set in Entity.fill_properties()
         self._db_name = ""  # Name in the database and model JSON (camelCase by default); set in Entity.fill_properties()
@@ -272,6 +273,15 @@ class Property:
 
         self._fb_slot = None
         self._fb_v_offset = None
+
+    @staticmethod
+    def _check_args(kwargs: dict, allowed):
+        unknown = set(kwargs) - set(allowed)
+        if 'id' in unknown:
+            raise TypeError("Properties do not take an id: IDs are assigned via the model JSON file "
+                            "(to identify a property, e.g. when renaming it, use uid=)")
+        if unknown:
+            raise TypeError(f"Unexpected property argument(s): {', '.join(sorted(unknown))}")
 
     @staticmethod
     def _index_arg(index):
@@ -449,8 +459,9 @@ class Id(_IntProperty):
     By default, IDs are assigned by ObjectBox only: putting an object with an ID that was not assigned by ObjectBox
     raises (an IllegalArgumentError). Set ``assignable=True`` to put objects with IDs of your own (e.g. from another
     system); new objects with ID 0 still get IDs assigned (higher than any ID put before)."""
-    def __init__(self, id : int = 0, uid : int = 0, py_type: type = int, assignable: bool = False):
-        super(Id, self).__init__(py_type, id=id, uid=uid)
+    def __init__(self, *, uid: int = 0, py_type: type = int, assignable: bool = False, **kwargs):
+        Property._check_args(kwargs, ())
+        super(Id, self).__init__(py_type, uid=uid)
         self.assignable = assignable
         if assignable:
             self._flags |= OBXPropertyFlags_ID_SELF_ASSIGNABLE
@@ -458,14 +469,14 @@ class Id(_IntProperty):
 # Bool property
 class Bool(_IntProperty):
     """Boolean Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Bool, self).__init__(bool, type=PropertyType.bool, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Bool, self).__init__(bool, type=PropertyType.bool, uid=uid, **kwargs)
 
 # String property with starts/ends_with
 class String(Property):
     """String Property"""
-    def __init__(self, id: int = 0, uid : int = 0, **kwargs):
-        super(String, self).__init__(str, type=PropertyType.string, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(String, self).__init__(str, type=PropertyType.string, uid=uid, **kwargs)
         
     def starts_with(self, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         """ *starts with* (string-prefix) condition (opt-in: case-sensitive) to be passed to :func:`Box.query` """
@@ -531,20 +542,20 @@ class String(Property):
 # Signed Integer Numeric Properties
 class Int8(_IntProperty):
     """Integer 8-bit Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Int8, self).__init__(int, type=PropertyType.byte, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int8, self).__init__(int, type=PropertyType.byte, uid=uid, **kwargs)
 class Int16(_IntProperty):
     """Integer 16-bit Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Int16, self).__init__(int, type=PropertyType.short, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int16, self).__init__(int, type=PropertyType.short, uid=uid, **kwargs)
 class Int32(_IntProperty):
     """Integer 32-bit Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Int32, self).__init__(int, type=PropertyType.int, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int32, self).__init__(int, type=PropertyType.int, uid=uid, **kwargs)
 class Int64(_IntProperty):
     """Integer 64-bit Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Int64, self).__init__(int, type=PropertyType.long, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int64, self).__init__(int, type=PropertyType.long, uid=uid, **kwargs)
 
 
 class Relation(_IntProperty):
@@ -560,12 +571,13 @@ class Relation(_IntProperty):
         the entity itself (``parent_id = Relation("Node")``) or to an entity defined later.
     """
 
-    def __init__(self, target, id: int = 0, uid: int = 0):
+    def __init__(self, target, *, uid: int = 0, **kwargs):
+        Property._check_args(kwargs, ())
         from objectbox.model.entity import _Entity
         if not isinstance(target, (_Entity, str)):
             raise TypeError(f"Relation target must be an entity (a class decorated with @Entity()) or an entity name, "
                             f"got {target!r}")
-        super(Relation, self).__init__(int, type=PropertyType.relation, id=id, uid=uid, index=Index())
+        super(Relation, self).__init__(int, type=PropertyType.relation, uid=uid, index=Index())
         self._flags |= OBXPropertyFlags_INDEX_PARTIAL_SKIP_ZERO
         self._target = target
 
@@ -584,8 +596,9 @@ class SyncClock(Int64):
     As a hybrid clock, it combines a wall clock with a logical counter to compensate for some clock skew effects.
     To get a timestamp from a value, see ``Sync.sync_clock_timestamp()``.
     """
-    def __init__(self, id : int = 0, uid : int = 0):
-        super(SyncClock, self).__init__(id=id, uid=uid)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        Property._check_args(kwargs, ())
+        super(SyncClock, self).__init__(uid=uid)
         self._flags |= OBXPropertyFlags_SYNC_CLOCK
 
 
@@ -597,37 +610,38 @@ class SyncPrecedence(Int64):
     There can be only one sync precedence per Sync entity type.
     Typically, it is combined with a ``SyncClock``, with the latter being the tie-breaker for equal precedence values.
     """
-    def __init__(self, id : int = 0, uid : int = 0):
-        super(SyncPrecedence, self).__init__(id=id, uid=uid)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        Property._check_args(kwargs, ())
+        super(SyncPrecedence, self).__init__(uid=uid)
         self._flags |= OBXPropertyFlags_SYNC_PRECEDENCE
         
 # Floating-Point Numeric Properties
 class Float32(_NumericProperty):
     """Floating-point 32-bit Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Float32, self).__init__(float, type=PropertyType.float, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Float32, self).__init__(float, type=PropertyType.float, uid=uid, **kwargs)
 
 class Float64(_NumericProperty):
     """Floating-point 64-bit Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Float64, self).__init__(float, type=PropertyType.double, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Float64, self).__init__(float, type=PropertyType.double, uid=uid, **kwargs)
 
 # Date Properties
 class Date(_IntProperty):
     """Date Property"""
-    def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
-        super(Date, self).__init__(py_type, type=PropertyType.date, id=id, uid=uid, **kwargs)
+    def __init__(self, py_type=datetime, *, uid: int = 0, **kwargs):
+        super(Date, self).__init__(py_type, type=PropertyType.date, uid=uid, **kwargs)
 
 class DateNano(_IntProperty):
     """Date (nano-second resolution) Property"""
-    def __init__(self, py_type = datetime, id : int = 0, uid : int = 0, **kwargs):
-        super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, id=id, uid=uid, **kwargs)
+    def __init__(self, py_type=datetime, *, uid: int = 0, **kwargs):
+        super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, uid=uid, **kwargs)
 
 # Bytes Property
 class Bytes(_NumericProperty):
     """Bytes blob Property"""
-    def __init__(self, id: int = 0, uid : int = 0, **kwargs):
-        super(Bytes, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Bytes, self).__init__(bytes, type=PropertyType.byteVector, uid=uid, **kwargs)
     
     def equals(self, value) -> PropertyQueryCondition:
         """ *byte-string equals* (``==``) condition to be passed to :func:`Box.query` """
@@ -662,8 +676,8 @@ class Bytes(_NumericProperty):
 # Flex Property
 class Flex(Property):
     """Flex dictionary-compatible Property"""
-    def __init__(self, id : int = 0, uid : int = 0, **kwargs):
-        super(Flex, self).__init__(Generic, type=PropertyType.flex, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Flex, self).__init__(Generic, type=PropertyType.flex, uid=uid, **kwargs)
     def contains_key_value(self, key: str, value: str, case_sensitive: bool = True) -> PropertyQueryCondition:
         """ *contains key/valuel* condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
@@ -676,37 +690,37 @@ class _VectorProperty(Property):
 
 class BoolVector(_VectorProperty):
     """Boolean Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(BoolVector, self).__init__(_ndarray(), type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(BoolVector, self).__init__(_ndarray(), type=PropertyType.boolVector, uid=uid, **kwargs)
 class Int8Vector(_VectorProperty):
     """Integer 8-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int8Vector, self).__init__(bytes, type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int8Vector, self).__init__(bytes, type=PropertyType.byteVector, uid=uid, **kwargs)
 
 class Int16Vector(_VectorProperty):
     """Integer 16-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int16Vector, self).__init__(_ndarray(), type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int16Vector, self).__init__(_ndarray(), type=PropertyType.shortVector, uid=uid, **kwargs)
 
 class CharVector(_VectorProperty):
     """Char 16-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(CharVector, self).__init__(_ndarray(), type=PropertyType.charVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(CharVector, self).__init__(_ndarray(), type=PropertyType.charVector, uid=uid, **kwargs)
  
 class Int32Vector(_VectorProperty):
     """Integer 32-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int32Vector, self).__init__(_ndarray(), type=PropertyType.intVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int32Vector, self).__init__(_ndarray(), type=PropertyType.intVector, uid=uid, **kwargs)
 
 class Int64Vector(_VectorProperty):
     """Integer 64-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int64Vector, self).__init__(_ndarray(), type=PropertyType.longVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int64Vector, self).__init__(_ndarray(), type=PropertyType.longVector, uid=uid, **kwargs)
 
 class Float32Vector(_VectorProperty):
     """Floating-point 32-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Float32Vector, self).__init__(_ndarray(), type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Float32Vector, self).__init__(_ndarray(), type=PropertyType.floatVector, uid=uid, **kwargs)
     def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
         self._assert_ids_assigned()
         args = {'query_vector': query_vector, 'element_count': element_count}
@@ -714,8 +728,8 @@ class Float32Vector(_VectorProperty):
 
 class Float64Vector(_VectorProperty):
     """Floating-point 64-bit Vector Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Float64Vector, self).__init__(_ndarray(), type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Float64Vector, self).__init__(_ndarray(), type=PropertyType.doubleVector, uid=uid, **kwargs)
 
 class _ListProperty(Property):
     def __init__(self, **kwargs):
@@ -723,40 +737,40 @@ class _ListProperty(Property):
 
 class BoolList(_ListProperty):
     """Boolean List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(BoolList, self).__init__(type=PropertyType.boolVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(BoolList, self).__init__(type=PropertyType.boolVector, uid=uid, **kwargs)
 
 class Int8List(_ListProperty):
     """Integer 8-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int8List, self).__init__(type=PropertyType.byteVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int8List, self).__init__(type=PropertyType.byteVector, uid=uid, **kwargs)
 
 class Int16List(_ListProperty):
     """Integer 16-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int16List, self).__init__(type=PropertyType.shortVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int16List, self).__init__(type=PropertyType.shortVector, uid=uid, **kwargs)
 
 class Int32List(_ListProperty):
     """Integer 32-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int32List, self).__init__(type=PropertyType.intVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int32List, self).__init__(type=PropertyType.intVector, uid=uid, **kwargs)
 
 class Int64List(_ListProperty):
     """Integer 64-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Int64List, self).__init__(type=PropertyType.longVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Int64List, self).__init__(type=PropertyType.longVector, uid=uid, **kwargs)
 
 class Float32List(_ListProperty):
     """Floating-point 32-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Float32List, self).__init__(type=PropertyType.floatVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Float32List, self).__init__(type=PropertyType.floatVector, uid=uid, **kwargs)
 
 class Float64List(_ListProperty):
     """Floating-point 64-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(Float64List, self).__init__(type=PropertyType.doubleVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(Float64List, self).__init__(type=PropertyType.doubleVector, uid=uid, **kwargs)
 
 class CharList(_ListProperty):
     """Char 16-bit List Property"""
-    def __init__(self, id: int = 0, uid: int = 0, **kwargs):
-        super(CharList, self).__init__(type=PropertyType.charVector, id=id, uid=uid, **kwargs)
+    def __init__(self, *, uid: int = 0, **kwargs):
+        super(CharList, self).__init__(type=PropertyType.charVector, uid=uid, **kwargs)

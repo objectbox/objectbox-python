@@ -108,6 +108,10 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   **Breaking:** the index of String properties with `Index()` changes (e.g. the model JSON file).
 * Fix `index=Index` (the class, as in the `@Entity` documentation): opening the store failed with a `TypeError`;
   it now works like `index=Index()`. Other values than an `Index` or `HnswIndex` raise a `TypeError` right away.
+* Property classes no longer take an `id` argument: it was ignored (IDs are assigned via the model JSON file), so
+  passing one now raises a `TypeError`, as do other unknown arguments (they were ignored, too). `uid` is now
+  keyword-only, e.g. `String(uid=1234)`.\
+  **Breaking:** positional arguments, e.g. `String(0, 1234)` for an ID and a UID, raise a `TypeError`; use `uid=`.
 * To-one relations: the new property type `Relation` stores the ID of an object of the target entity, e.g.
   `customer_id = Relation(Customer)` (or `Relation("Customer")`, e.g. to refer to the entity itself). Values are plain
   ints (0 for none); unlike an `Int64`, ObjectBox knows the target, e.g. removing the target object resets the relation
