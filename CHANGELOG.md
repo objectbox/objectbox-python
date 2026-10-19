@@ -78,6 +78,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `IdWithScore` (`id`, `score`), named like in Java and Dart; they are still tuples, e.g. for `for obj, score in ...`
 * New `Query.find_first()` (the first object, by ID or the query's order; None if none) and `Query.find_unique()` (the
   only object, None if none; raises `NonUniqueResultError` if there are more), like in Java and Dart
+* `HnswIndex(vector_cache_hint_size_kb=...)` takes an int (KB), like in Java and Dart (it was annotated as a float, which
+  failed with a `ctypes.ArgumentError` when the store was opened); other types raise a `TypeError` right away
 * Vector search: the condition is now `nearest_neighbors(query_vector, max_result_count)`, named like in the other
   ObjectBox languages (Java: `nearestNeighbors`, Dart: `nearestNeighborsF32`). `nearest_neighbor()` still works but is
   deprecated (emits a `DeprecationWarning`).

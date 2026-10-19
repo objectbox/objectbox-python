@@ -226,7 +226,7 @@ class HnswIndex:
                  flags: HnswFlags = HnswFlags.NONE,
                  distance_type: VectorDistanceType = VectorDistanceType.EUCLIDEAN,
                  reparation_backlink_probability: Optional[float] = None,
-                 vector_cache_hint_size_kb: Optional[float] = None,
+                 vector_cache_hint_size_kb: Optional[int] = None,
                  uid: int = 0):
         """
         :param dimensions:
@@ -250,7 +250,8 @@ class HnswIndex:
             When repairing the graph after a node was removed, this gives the probability of adding backlinks to the repaired
             neighbors. The default is 1.0 (aka "always") as this should be worth a bit of extra costs as it improves the graph's quality.
         :param vector_cache_hint_size_kb:
-            Vector cache hint size. This is a non-binding hint of the maximum size of the vector cache in KB (default: 2097152 or 2 GB/GiB).   
+            Vector cache hint size: a non-binding hint of the maximum size of the vector cache in KB, an int
+            (default: 2097152 or 2 GB/GiB).
         """
         self.dimensions = dimensions
         self.neighbors_per_node = neighbors_per_node
@@ -258,6 +259,9 @@ class HnswIndex:
         self.flags = flags
         self.distance_type = distance_type
         self.reparation_backlink_probability = reparation_backlink_probability
+        if vector_cache_hint_size_kb is not None and (not isinstance(vector_cache_hint_size_kb, int) or
+                                                      isinstance(vector_cache_hint_size_kb, bool)):
+            raise TypeError(f"vector_cache_hint_size_kb must be an int (KB), got {vector_cache_hint_size_kb!r}")
         self.vector_cache_hint_size_kb = vector_cache_hint_size_kb
 
         self.iduid = IdUid(0, uid)

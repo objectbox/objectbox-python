@@ -204,3 +204,23 @@ def test_combined_nn_search(test_store):
     distance_type = VectorDistanceType.EUCLIDEAN
     _test_combined_nn_search(test_store, distance_type)
     # TODO: Cosine, DotProduct  diverges see below
+
+
+def test_vector_cache_hint_size_kb(tmp_path):
+    """ vector_cache_hint_size_kb is an int (KB), like in Java and Dart; other types raise right away (a float failed
+    with a ctypes.ArgumentError when the store was opened). """
+    @Entity(model="hnsw-cache-hint")
+    class Doc:
+        id = Id
+        vector = Float32Vector(index=HnswIndex(dimensions=2, vector_cache_hint_size_kb=1024))
+
+    model = Model()
+    model.entity(Doc)
+    with Store(model=model, directory=str(tmp_path / "db"), model_json_file=str(tmp_path / "m.json")) as store:
+        box = store.box(Doc)
+        box.put(Doc(vector=[1.0, 1.0]))
+        assert box.query(Doc.vector.nearest_neighbors([1.0, 1.0], 1)).build().count() == 1
+
+    for invalid in (1024.0, "1024", True):
+        with pytest.raises(TypeError, match="vector_cache_hint_size_kb must be an int"):
+            HnswIndex(dimensions=2, vector_cache_hint_size_kb=invalid)
