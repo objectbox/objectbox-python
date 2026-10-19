@@ -495,3 +495,17 @@ def test_remove_many(test_store):
 
     with pytest.raises(TypeError, match=r"use remove_many\(\) for several"):
         box.remove([1, 2])  # Failed with a ctypes.ArgumentError
+
+
+def test_put_many_returns_ids(test_store):
+    box = test_store.box(TestEntity)
+    first = TestEntity(str="first")
+    assert box.put(first) == 1
+    objects = [TestEntity(str="a"), first, TestEntity(str="b")]  # New and existing objects
+    assert box.put(objects) == [2, 1, 3]
+    assert [o.id for o in objects] == [2, 1, 3]
+    assert box.put((TestEntity(str="c"), TestEntity(str="d"))) == [4, 5]  # A tuple, too
+    assert box.put(TestEntity(str="e"), TestEntity(str="f")) == [6, 7]  # Several arguments
+    assert box.put([]) == []
+    assert box.put() == []
+    assert box.count() == 7

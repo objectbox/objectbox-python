@@ -135,6 +135,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   To use your own IDs, declare the ID property as `Id(assignable=True)`; new objects (ID 0) then get an ID higher than
   any ID put before.\
   **Breaking:** code that puts objects with made-up IDs needs `Id(assignable=True)`.
+* Box: putting a list (or a tuple, or several objects as arguments) returns their IDs, like Dart's `putMany()`
+  (returned None before; the IDs are still set on the objects)
 * Box: new method `remove_many(ids_or_objects)`, removing in one transaction and returning the number removed
   (like Dart's `removeMany()`); `remove()` of a list raises a `TypeError` pointing to it (failed in ctypes before)
 * Box: new methods `contains(id)`, `get_many(ids)` and `update(object)`

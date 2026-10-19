@@ -56,16 +56,17 @@ class Box:
         return int(count.value)
 
     def put(self, *objects):
-        """Puts an object (or a list of objects) and returns its ID (or nothing for a list objects).
+        """Puts an object and returns its ID; puts a list (or tuple) of objects, or several objects passed as
+        arguments, in one transaction and returns their IDs (a list, in the same order).
 
         A new object has the ID 0 and gets its ID assigned (set on the object). An object with a non-zero ID is
         updated (or inserted if it does not exist, e.g. was removed); its ID must have been assigned by ObjectBox
         before (else raises IllegalArgumentError), unless the ID property is ``Id(assignable=True)``."""
 
         if len(objects) != 1:
-            self._put_many(objects)
-        elif isinstance(objects[0], list):
-            self._put_many(objects[0])
+            return self._put_many(objects)
+        elif isinstance(objects[0], (list, tuple)):
+            return self._put_many(objects[0])
         else:
             return self._put_one(objects[0])
 
@@ -83,7 +84,9 @@ class Box:
         self._entity._set_object_id(obj, id)
         return id
 
-    def _put_many(self, objects) -> None:
+    def _put_many(self, objects) -> List[int]:
+        if not objects:
+            return []
         # retrieve IDs from the objects (to distinguish new objects and updates)
         new = {}
         ids = {}
@@ -99,6 +102,7 @@ class Box:
         # assign new IDs on the object
         for k in new.keys():
             self._entity._set_object_id(objects[k], ids[k])
+        return list(ids.values())
 
     def _put_many_in_tx(self, objects, new, ids) -> None:
         # Check the given IDs: obx_box_put_many() takes them as reserved; obx_box_id_for_put() raises for an ID not
