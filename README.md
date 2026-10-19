@@ -94,7 +94,7 @@ Ready for more? Check the [example folder](https://github.com/objectbox/objectbo
 
 Getting started
 ---------------
-Latest version: 5.0.0b2 (beta)
+Latest version: 5.0.0
 
 To install ObjectBox, run this:
 
@@ -102,9 +102,6 @@ To install ObjectBox, run this:
 pip install objectbox
 ```
 Now you are ready to use ObjectBox in your Python project.
-
-> While version 5.0 is in beta, add `--pre` to the pip install commands, e.g. `pip install --pre objectbox`;
-> without it, pip installs the latest stable version (4.0.0).
 
 To update to the latest version (from version 5 on), run `pip install --upgrade objectbox`.
 
@@ -114,7 +111,7 @@ To update to the latest version (from version 5 on), run `pip install --upgrade 
 
 ```bash
 pip uninstall objectbox
-pip install objectbox  # While 5.0 is in beta: pip install --pre objectbox
+pip install objectbox
 ```
 
 Since version 5, the Python code is in the package `objectbox-api`, which `objectbox` installs along with the

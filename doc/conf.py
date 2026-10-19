@@ -9,7 +9,7 @@
 project = 'ObjectBox Python API' 
 copyright = '2024, ObjectBox Ltd.'
 author = 'ObjectBox Ltd.'
-release = '5.0.0b2'
+release = '5.0.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

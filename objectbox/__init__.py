@@ -137,7 +137,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module 'objectbox' has no attribute '{name}'")
 
 # Python binding version
-version = Version(5, 0, 0, beta=2)
+version = Version(5, 0, 0)
 """ObjectBox Python package version"""
 
 def version_info():

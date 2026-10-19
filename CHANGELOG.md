@@ -1,8 +1,8 @@
 ObjectBox Python ChangeLog
 ==========================
 
-5.0.0b2
--------
+5.0.0 (2026-10-19)
+------------------
 
 ObjectBox Python 5.0 is a massive update with many highlights:
 
@@ -14,7 +14,6 @@ ObjectBox Python 5.0 is a massive update with many highlights:
 **Upgrading from 4.x with pip: uninstall `objectbox` first** (`pip uninstall objectbox`, then `pip install objectbox`).
 An in-place `pip install --upgrade objectbox` would fail (e.g. "cannot import name 'Store' from 'objectbox' (unknown
 location)"); repair via `pip install --force-reinstall --no-deps objectbox-api`. Fresh installs and uv are not affected.
-As this is a beta version, add `--pre` to install it, e.g. `pip install --pre objectbox`.
 
 ### Performance
 
