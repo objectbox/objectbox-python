@@ -78,6 +78,24 @@ class Model:
         if has_indices and not self.last_index_iduid.is_assigned():
             raise ValueError("Last index ID/UID not assigned")
 
+    def _validate(self):
+        """ Validates what can only be checked with all entities (and their flags) defined. """
+        self._validate_relation_targets()
+        self._validate_unique()
+
+    def _validate_unique(self):
+        for entity in self.entities:
+            unique = [prop for prop in entity._properties if prop.unique is not None]
+            replace = [prop.name for prop in unique if prop.unique.on_conflict == ConflictStrategy.REPLACE]
+            if len(replace) > 1:
+                raise ValueError(f"Entity {entity._name}: ConflictStrategy.REPLACE can only be used for one property, "
+                                 f"but is used for {', '.join(replace)}")
+            if entity._flags & OBXEntityFlags.SYNC_ENABLED:
+                not_replace = [prop.name for prop in unique if prop.unique.on_conflict != ConflictStrategy.REPLACE]
+                if not_replace:
+                    raise ValueError(f"Sync entity {entity._name}: unique properties must use "
+                                     f"Unique(ConflictStrategy.REPLACE), but {', '.join(not_replace)} do(es) not")
+
     def _validate_relation_targets(self):
         names = {entity._name for entity in self.entities}
         for entity in self.entities:
@@ -127,7 +145,7 @@ class Model:
     def _create_c_model(self) -> obx_model:  # Called by StoreOptions
         """ Creates the OBX model by invoking the C API.
         Before calling this method, IDs/UIDs must be assigned either manually or via sync_model(). """
-        self._validate_relation_targets()
+        self._validate()
         self._c_model = obx_model()
         for entity in self.entities:
             self._create_entity(entity)

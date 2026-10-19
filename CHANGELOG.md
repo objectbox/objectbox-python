@@ -106,6 +106,10 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   To store names as written in Python instead, use `@Entity(python_names=True)`.\
   **Breaking:** property names in the database and the model JSON file change (only for names with underscores);
   e.g. queries in the ObjectBox Admin or data in MongoDB (via Sync) use the new names.
+* Unique constraints, like in Java and Dart: e.g. `email = String(unique=Unique())`; putting an object with a value
+  that another object already has raises a `UniqueViolatedError`. With `Unique(ConflictStrategy.REPLACE)`, the other
+  object is removed instead (for one property per entity; Sync entities require it for all unique properties).
+  A unique property is indexed (a type can be given via `index=`).
 * The default index type for String properties is now HASH (was VALUE), like in the other ObjectBox languages; it
   takes less space. Other types still default to VALUE. Existing indexes are changed when the store is opened (the data
   is kept); to keep a value index, use `Index(IndexType.VALUE)` (`IndexType` is now exported by the top-level

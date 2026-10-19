@@ -123,6 +123,29 @@ class Index:
         return IndexType.HASH if ob_type == OBXPropertyType_String else IndexType.VALUE
 
 
+class ConflictStrategy(IntEnum):
+    """What happens when putting an object violates a :class:`Unique` constraint."""
+
+    FAIL = 0
+    """Putting raises a ``UniqueViolatedError`` (the default)."""
+
+    REPLACE = 1
+    """The existing object with the same value is removed, and the put object is stored (with its own ID).
+    Only one property of an entity can use it; required for all unique properties of a Sync entity."""
+
+
+class Unique:
+    """Unique constraint of a property, e.g. ``email = String(unique=Unique())``: putting an object with a value
+    that another object of the entity already has raises a ``UniqueViolatedError`` (by default; see ``on_conflict``).
+
+    A unique property is indexed: it gets an :class:`Index` (of the default type) unless one is given via ``index=``,
+    e.g. to set its type. Like in the other ObjectBox languages, not supported for the ID and for types that do not
+    support an index (e.g. floating point and vector properties)."""
+
+    def __init__(self, on_conflict: ConflictStrategy = ConflictStrategy.FAIL):
+        self.on_conflict = on_conflict
+
+
 class HnswFlags(IntEnum):
     """
     Vector-Search HNSW Index Flags
@@ -256,12 +279,18 @@ class HnswIndex:
 
 class Property:
     def __init__(self, pytype: Type, uid: int = 0, **kwargs):
-        Property._check_args(kwargs, ('index', 'type'))
+        Property._check_args(kwargs, ('index', 'type', 'unique'))
         self.iduid = IdUid(0, uid)
         self.name = ""  # Python attribute name; set in Entity.fill_properties()
         self._db_name = ""  # Name in the database and model JSON (camelCase by default); set in Entity.fill_properties()
         self._entity = None  # The _Entity this property belongs to; set in Entity.fill_properties()
         self.index = Property._index_arg(kwargs.get('index', None))
+        self.unique = Property._unique_arg(kwargs.get('unique', None))
+        if self.unique is not None:
+            if isinstance(self.index, HnswIndex):
+                raise TypeError("A unique property can not have a HnswIndex")
+            if self.index is None:
+                self.index = Index()
 
         self._py_type = pytype
         self._is_ndarray = pytype is getattr(sys.modules.get('numpy'), 'ndarray', None)  # numpy imported if ndarray
@@ -282,6 +311,15 @@ class Property:
                             "(to identify a property, e.g. when renaming it, use uid=)")
         if unknown:
             raise TypeError(f"Unexpected property argument(s): {', '.join(sorted(unknown))}")
+
+    @staticmethod
+    def _unique_arg(unique):
+        if unique is Unique:  # The class, e.g. String(unique=Unique), like property classes used without parentheses
+            return Unique()
+        if unique is not None and not isinstance(unique, Unique):
+            raise TypeError(f"unique must be a Unique (e.g. Unique() or Unique(ConflictStrategy.REPLACE)), "
+                            f"got {unique!r}")
+        return unique
 
     @staticmethod
     def _index_arg(index):
@@ -350,6 +388,11 @@ class Property:
             self._flags |= OBXPropertyFlags_INDEXED
             if isinstance(self.index, Index):  # Generic index
                 self._flags |= self.index._type_for(self._ob_type)
+
+        if self.unique is not None:
+            self._flags |= OBXPropertyFlags_UNIQUE
+            if self.unique.on_conflict == ConflictStrategy.REPLACE:
+                self._flags |= OBXPropertyFlags_UNIQUE_ON_CONFLICT_REPLACE
 
     def is_null(self) -> PropertyQueryCondition:
         """ *Is null* condition to be passed to :func:`Box.query`: matches objects without a value for this property,

@@ -363,7 +363,7 @@ class IdSync:
         """ Syncs the provided model with the model JSON file.
         Returns True if the model JSON was written. """
 
-        self.model._validate_relation_targets()  # before writing the JSON
+        self.model._validate()  # before writing the JSON
 
         if self.model_json is not None:
             self.model.last_entity_iduid = IdUid.from_str(self.model_json["lastEntityId"])
