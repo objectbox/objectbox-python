@@ -71,6 +71,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `backlink(relation, condition)` uses a relation in reverse, e.g. customers with a matching order. Both return the
   builder of the linked entity to link further (any number of relations); `set_parameter()` also changes conditions
   on linked entities.
+* New `Query.find_first()` (the first object, by ID or the query's order; None if none) and `Query.find_unique()` (the
+  only object, None if none; raises `NonUniqueResultError` if there are more), like in Java and Dart
 * Vector search: the condition is now `nearest_neighbors(query_vector, max_result_count)`, named like in the other
   ObjectBox languages (Java: `nearestNeighbors`, Dart: `nearestNeighborsF32`). `nearest_neighbor()` still works but is
   deprecated (emits a `DeprecationWarning`).

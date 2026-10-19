@@ -92,6 +92,27 @@ class Query:
             finally:
                 obx_bytes_array_free(c_bytes_array_p)
 
+    def find_first(self):
+        """ Finds the first object matching the query, or None if there is none.
+        "First" is by ID (ascending), unless an order was set (see ``QueryBuilder.order()``). """
+        return self._find_one(obx_query_find_first)
+
+    def find_unique(self):
+        """ Finds the only object matching the query, or None if there is none.
+        Raises a ``NonUniqueResultError`` if more than one object matches. """
+        return self._find_one(obx_query_find_unique)
+
+    def _find_one(self, c_find):
+        with self._store.read_tx():  # We need a read transaction to ensure the object data stays valid
+            c_data = ctypes.c_void_p()
+            c_size = ctypes.c_size_t()
+            code = c_find(self._c_query, ctypes.byref(c_data), ctypes.byref(c_size))
+            if code == DbErrorCode.OBX_NOT_FOUND:
+                return None
+            check_obx_err(code, c_find, None)
+            data = c_voidp_as_bytes(c_data, c_size.value)
+            return self._box._entity._unmarshal(data)
+
     def find_ids(self) -> List[int]:
         """ Finds a list of object IDs matching query.
         The result is sorted by ID (ascending order), unless an order was set (see ``QueryBuilder.order()``). """

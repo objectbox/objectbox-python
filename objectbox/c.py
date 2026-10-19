@@ -1107,12 +1107,12 @@ obx_query_limit = c_fn_rc('obx_query_limit', [OBX_query_p, ctypes.c_size_t])
 obx_query_find = c_fn('obx_query_find', OBX_bytes_array_p, [OBX_query_p])
 
 # OBX_C_API obx_err obx_query_find_first(OBX_query* query, const void** data, size_t* size);
-obx_query_find_first = c_fn_rc('obx_query_find_first',
-                               [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+obx_query_find_first = c_fn_nocheck('obx_query_find_first', obx_err,  # OBX_NOT_FOUND if there is no result
+                                    [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
 # OBX_C_API obx_err obx_query_find_unique(OBX_query* query, const void** data, size_t* size);
-obx_query_find_unique = c_fn_rc('obx_query_find_unique',
-                                [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
+obx_query_find_unique = c_fn_nocheck('obx_query_find_unique', obx_err,  # OBX_NOT_FOUND if there is no result
+                                     [OBX_query_p, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)])
 
 # OBX_C_API OBX_bytes_score_array* obx_query_find_with_scores(OBX_query* query);
 obx_query_find_with_scores = c_fn('obx_query_find_with_scores', OBX_bytes_score_array_p, [OBX_query_p])

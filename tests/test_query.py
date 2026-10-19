@@ -2,6 +2,7 @@ import objectbox
 from objectbox import *
 from objectbox.c import *
 from objectbox.query import *
+from objectbox.exceptions import NonUniqueResultError
 import pytest
 from datetime import datetime, timezone
 from tests.common import *
@@ -1100,3 +1101,25 @@ def test_nearest_neighbors(test_store):
         condition = prop.nearest_neighbor([2.1, 2.1], 3)
     query = box.query(condition).build()
     assert [o.name for o, score in query.find_with_scores()] == ["Object 2", "Object 3", "Object 1"]
+
+
+def test_find_first_unique(test_store):
+    box = test_store.box(TestEntity)
+    box.put([TestEntity(str="b", int64=2), TestEntity(str="a", int64=1), TestEntity(str="a", int64=3)])
+
+    assert box.query().build().find_first().str == "b"  # By ID
+    assert box.query().order(TestEntity.int64).build().find_first().int64 == 1
+    assert box.query().order_desc(TestEntity.int64).build().find_first().int64 == 3
+    assert box.query(TestEntity.str.equals("a")).build().find_first().int64 == 1
+    assert box.query(TestEntity.str.equals("x")).build().find_first() is None
+
+    assert box.query(TestEntity.str.equals("b")).build().find_unique().int64 == 2
+    assert box.query(TestEntity.str.equals("x")).build().find_unique() is None
+    query = box.query(TestEntity.str.equals("a")).build()
+    with pytest.raises(NonUniqueResultError):
+        query.find_unique()
+    assert query.set_parameter(TestEntity.str, "b").find_unique().int64 == 2  # The query can still be used
+
+    # Within a transaction (uses it)
+    with test_store.read_tx():
+        assert box.query(TestEntity.int64.equals(3)).build().find_first().str == "a"
