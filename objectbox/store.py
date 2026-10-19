@@ -145,6 +145,7 @@ class Store:
         self._model: Optional[Model] = None  # The model passed (resolved), if any; e.g. to map entity IDs to entities
         self._close_listeners: List[Callable[[], None]] = []  # Called before closing, e.g. to close a SyncClient
         self._native_resources = weakref.WeakSet()  # Open queries and query builders; closed before the store
+        self._boxes: Dict[_Entity, 'objectbox.Box'] = {}  # One Box per entity (like Java and Dart); see box()
         if not c_store:
             options = StoreOptions()
             try:
@@ -318,13 +319,18 @@ class Store:
 
     def box(self, entity: _Entity) -> 'objectbox.Box':
         """
-        Open a box for an entity.
-        
+        Returns the box for an entity: the same Box object on every call (it is created on the first one),
+        so calling ``store.box(MyEntity)`` per operation is as cheap as keeping the box.
+
         :param entity:
         :type entity: _Entity
             Entity type of the model
         """
-        return objectbox.Box(self, entity)
+        box = self._boxes.get(entity) if isinstance(entity, _Entity) else None
+        if box is None or self._c_store_or_none is None:  # Not cached yet, or closed (Box() raises then)
+            box = objectbox.Box(self, entity)
+            self._boxes[entity] = box
+        return box
 
     def read_tx(self):
         """Returns a read-only transaction."""
@@ -356,6 +362,7 @@ class Store:
         finally:
             for resource in list(self._native_resources):
                 resource.close()
+            self._boxes.clear()
             c_store_to_close = self._c_store_or_none
             if c_store_to_close:
                 self._c_store_or_none = None

@@ -201,6 +201,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 * A store that is no longer referenced is now closed right away (was: only when Python's cyclic GC ran);
   e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
   Still, prefer closing stores explicitly via `close()`.
+* `store.box(entity)` returns the same `Box` per entity (like Java and Dart) instead of creating one per call (~1 µs);
+  e.g. `store.box(Task).get(id)` per operation is ~20% faster, `store.box(Task).count()` ~35%
 * Stores can be used in a `with` statement, which closes the store at the end (`with Store(...) as store:`);
   new `Store.is_closed()`
 * Using a closed store raises an `IllegalStateError` ("Store is closed"), also via its boxes and queries; before,

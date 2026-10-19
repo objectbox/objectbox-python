@@ -200,3 +200,24 @@ def test_error_hierarchy():
         if code != DbErrorCode.OBX_SUCCESS:
             error = create_db_error(code)
             assert type(error) is not DbError and error.code == code
+
+
+def test_store_box_cached(test_store):
+    """ store.box() returns the same Box per entity (like Java and Dart): no Box creation per call. """
+    from tests.model import TestEntityDatetime
+    box = test_store.box(TestEntity)
+    assert test_store.box(TestEntity) is box
+    assert test_store.box(TestEntityDatetime) is not box
+    assert test_store.box(TestEntityDatetime) is test_store.box(TestEntityDatetime)
+    id = box.put(TestEntity(str="foo"))
+    assert test_store.box(TestEntity).get(id).str == "foo"
+    with pytest.raises(TypeError, match="Expected an entity"):
+        test_store.box(object())
+
+    test_store.close()
+    with pytest.raises(IllegalStateError, match="Store is closed$"):
+        test_store.box(TestEntity)  # Not the cached box
+    with pytest.raises(IllegalStateError, match="Store is closed$"):
+        box.count()
+    assert test_store._boxes == {}  # Released on close
+
