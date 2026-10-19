@@ -213,7 +213,7 @@ class Query:
          All methods that support offset will return/process objects starting at this offset.
          Example use case: use together with limit to get a slice of the whole result, e.g. for "result paging".
          Call with offset=0 to reset to the default behavior, i.e. starting from the first element. """
-        obx_query_offset(self._c_query, offset)
+        obx_query_offset(self._c_query, Query._check_count("offset", offset))
         return self
 
     def limit(self, limit: int) -> 'Query':
@@ -221,8 +221,16 @@ class Query:
          All methods that support limit will return/process only the given number of objects.
          Example use case: use together with offset to get a slice of the whole result, e.g. for "result paging".
          Call with limit=0 to reset to the default behavior - zero limit means no limit applied. """
-        obx_query_limit(self._c_query, limit)
+        obx_query_limit(self._c_query, Query._check_count("limit", limit))
         return self
+
+    @staticmethod
+    def _check_count(name: str, value) -> int:
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise TypeError(f"{name} must be an int, got {value!r}")
+        if value < 0:  # Would wrap around in C (size_t), e.g. an offset beyond all results
+            raise IllegalArgumentError(f"{name} must not be negative, got {value}")
+        return value
 
     @overload
     def set_parameter(self, prop: Union[int, str, 'Property'],

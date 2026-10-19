@@ -93,7 +93,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `with box.query(...).build() as query:`. Using a closed query (or builder) raises an `IllegalStateError`.\
   **Breaking:** a query builder can not be used after `build()`, e.g. to build a second query.
 * Fix `offset()` and `limit()` to return the query (as documented), e.g. for `query.offset(10).limit(5).find()`;
-  they returned a C result code (int), so chaining failed
+  they returned a C result code (int), so chaining failed. A negative value now raises an `IllegalArgumentError`
+  (it wrapped around in C, e.g. `offset(-1)` silently found nothing), a value other than an int a `TypeError`.
 * The top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`
 
 ### Box and objects

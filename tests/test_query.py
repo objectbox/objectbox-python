@@ -2,7 +2,7 @@ import objectbox
 from objectbox import *
 from objectbox.c import *
 from objectbox.query import *
-from objectbox.exceptions import NonUniqueResultError
+from objectbox.exceptions import IllegalArgumentError, NonUniqueResultError
 import pytest
 from datetime import datetime, timezone
 from tests.common import *
@@ -328,6 +328,15 @@ def test_offset_limit(test_store):
     query.offset(0)
     query.limit(0)
     assert len(query.find()) == 4
+
+    # Invalid values raise (a negative offset wrapped around in C: no results)
+    for method in (query.offset, query.limit):
+        with pytest.raises(IllegalArgumentError, match="must not be negative, got -1"):
+            method(-1)
+        for invalid in (1.5, "2", None, True):
+            with pytest.raises(TypeError, match="must be an int"):
+                method(invalid)
+    assert len(query.find()) == 4  # Unchanged
 
     # Chaining: both return the query
     assert query.offset(1) is query
