@@ -132,6 +132,11 @@ def test_json(env):
 
     assert doc['lastEntityId'] == e0_id
     assert doc['lastIndexId'] == json_p2['indexId']
+    assert doc['lastRelationId'] == "0:0"  # Unassigned, like Java
+    assert doc['modelVersion'] == 5  # Required e.g. by objectbox-generator
+    assert doc['version'] == 1
+    for key in ("retiredEntityUids", "retiredIndexUids", "retiredPropertyUids", "retiredRelationUids"):
+        assert doc[key] == []
 
 
 def test_camel_case():
@@ -299,8 +304,47 @@ def test_json_empty_last_ids(env):
     assert MyEntity._get_property('text_indexed').iduid.id == 3
     index_iduid = MyEntity._get_property('text_indexed').index.iduid
     assert index_iduid.id == 1
-    assert env.json()['lastIndexId'] == str(index_iduid)
+    doc = env.json()
+    assert doc['lastIndexId'] == str(index_iduid)
+    assert doc['lastRelationId'] == ""  # Unassigned: kept like the file had it (objectbox-generator rejects "0:0")
+    assert doc['entities'][0]['relations'] == []
     env.create_store().box(MyEntity).put(MyEntity(text="a", text_indexed="b"))
+
+
+def test_json_empty_unassigned_written(env):
+    """ An unassigned "last" ID managed by Python is written as "" if the loaded JSON uses "" (Go, C++). """
+    with open(env.model_path, "w") as f:
+        json.dump({
+            "entities": [{
+                "id": "1:6645479796472661392",
+                "lastPropertyId": "1:9211738071025439652",
+                "name": "MyEntity",
+                "properties": [{"id": "1:9211738071025439652", "name": "id", "type": 6, "flags": 1}],
+                "relations": []
+            }],
+            "lastEntityId": "1:6645479796472661392",
+            "lastIndexId": "",
+            "lastRelationId": "",
+            "modelVersion": 5,
+            "modelVersionParserMinimum": 5,
+            "retiredEntityUids": [],
+            "retiredIndexUids": [],
+            "retiredPropertyUids": [],
+            "retiredRelationUids": [],
+            "version": 1
+        }, f)
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        text = String()
+
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)
+    doc = env.json()
+    assert doc['lastIndexId'] == ""
+    assert doc['lastRelationId'] == ""
 
 
 def test_basics(env):
@@ -824,3 +868,398 @@ def test_sync_dynamic_entities(env):
     cosine_box = store.box(MyCosineVectorEntity)
     assert cosine_box.get(1).name == "CosineObj1"
     assert cosine_box.get(2).name == "CosineObj2"
+
+
+def _uid(iduid_str: str) -> int:
+    return IdUid.from_str(iduid_str).uid
+
+
+def test_retire_entity(env):
+    """ Removing an entity retires its UID and those of its properties and indexes; "last" IDs are kept. """
+
+    @Entity()
+    class EntityA:
+        id = Id()
+        name = String()
+
+    @Entity()
+    class EntityB:
+        id = Id()
+        name = String(index=Index())
+
+    model = Model()
+    model.entity(EntityA)
+    model.entity(EntityB)
+    env.sync(model)
+    doc_before = env.json()
+    assert doc_before["retiredEntityUids"] == []
+    assert doc_before["retiredPropertyUids"] == []
+    assert doc_before["retiredIndexUids"] == []
+    assert doc_before["retiredRelationUids"] == []
+    b_uid = EntityB._uid
+    b_prop_uids = [prop.uid for prop in EntityB._properties]
+    b_index_uid = EntityB._get_property("name").index.uid
+    env.create_store().box(EntityA).put(EntityA(name="a"))
+
+    model = Model()
+    reset_ids(EntityA)
+    model.entity(EntityA)
+    assert env.sync(model)
+    doc = env.json()
+    assert doc["retiredEntityUids"] == [b_uid]
+    assert doc["retiredPropertyUids"] == b_prop_uids
+    assert doc["retiredIndexUids"] == [b_index_uid]
+    assert doc["retiredRelationUids"] == []
+    assert doc["lastEntityId"] == doc_before["lastEntityId"]  # EntityB's, now a retired UID
+    assert doc["lastIndexId"] == doc_before["lastIndexId"]
+    assert env.create_store().box(EntityA).count() == 1
+
+    # No changes: not written again, nothing retired twice
+    model = Model()
+    reset_ids(EntityA)
+    model.entity(EntityA)
+    assert not env.sync(model)
+    assert env.json() == doc
+
+    # A new entity gets a new ID (EntityB's is not used again)
+    @Entity()
+    class EntityC:
+        id = Id()
+
+    model = Model()
+    reset_ids(EntityA)
+    model.entity(EntityA)
+    model.entity(EntityC)
+    assert env.sync(model)
+    assert EntityC._id == _uid_id(doc_before["lastEntityId"]) + 1
+    assert EntityC._uid not in doc["retiredEntityUids"]
+    assert env.json()["retiredEntityUids"] == [b_uid]
+
+
+def _uid_id(iduid_str: str) -> int:
+    return IdUid.from_str(iduid_str).id
+
+
+def test_retire_property(env):
+    """ Removing a property retires its UID and its index's; other properties and the data are kept. """
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+        code = String(index=Index())
+        value = Int64()
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    code = MyEntity._get_property("code")
+    code_uid, code_index_uid = code.uid, code.index.uid
+    value_uid = MyEntity._get_property("value").uid
+    env.create_store().box(MyEntity).put(MyEntity(name="a", code="c", value=1))
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+        value = Int64()
+
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)
+    doc = env.json()
+    assert doc["retiredPropertyUids"] == [code_uid]
+    assert doc["retiredIndexUids"] == [code_index_uid]
+    assert doc["retiredEntityUids"] == []
+    assert MyEntity._get_property("value").uid == value_uid
+    objects = env.create_store().box(MyEntity).get_all()
+    assert [(o.name, o.value) for o in objects] == [("a", 1)]
+
+    # Re-adding a property with the same name creates a new one (new UID), not the removed one
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+        code = String(index=Index())
+        value = Int64()
+
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)
+    code = MyEntity._get_property("code")
+    assert code.uid != code_uid
+    assert code.index.uid != code_index_uid
+    assert env.json()["retiredPropertyUids"] == [code_uid]
+    assert env.create_store().box(MyEntity).get_all()[0].code == ""
+
+
+def test_retire_index_uid_changed(env):
+    """ A property whose index gets a different (user supplied) UID retires the previous index UID. """
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String(index=Index())
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    old_index_uid = MyEntity._get_property("name").index.uid
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String(index=Index(uid=1234567890123))
+
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)
+    doc = env.json()
+    assert doc["retiredIndexUids"] == [old_index_uid]
+    assert doc["retiredPropertyUids"] == []
+    assert doc["entities"][0]["properties"][1]["indexId"].endswith(":1234567890123")
+
+
+def test_retire_not_on_rename(env):
+    """ Renames (by UID, and the camelCase fallback for names stored before 5.0) retire nothing. """
+
+    @Entity(python_names=True)
+    class MyEntity:
+        id = Id()
+        date_created = Int64()
+        title = String(index=Index())
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    entity_uid = MyEntity._uid
+    title_uid = MyEntity._get_property("title").uid
+
+    @Entity(uid=entity_uid)
+    class MyRenamedEntity:
+        id = Id()
+        date_created = Int64()  # camelCase now: dateCreated
+        headline = String(uid=title_uid, index=Index())
+
+    model = Model()
+    model.entity(MyRenamedEntity)
+    assert env.sync(model)
+    doc = env.json()
+    for key in ("retiredEntityUids", "retiredPropertyUids", "retiredIndexUids", "retiredRelationUids"):
+        assert doc[key] == [], key
+    assert [p["name"] for p in doc["entities"][0]["properties"]] == ["id", "dateCreated", "headline"]
+
+
+def test_retired_uid_not_reused(env):
+    """ A user supplied UID of a removed property is rejected, for a property and for an entity. """
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+        value = Int64()
+
+    model = Model()
+    model.entity(MyEntity)
+    env.sync(model)
+    value_uid = MyEntity._get_property("value").uid
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+
+    model = Model()
+    model.entity(MyEntity)
+    assert env.sync(model)
+    assert env.json()["retiredPropertyUids"] == [value_uid]
+
+    @Entity()
+    class MyEntity:
+        id = Id()
+        name = String()
+        value = Int64(uid=value_uid)
+
+    model = Model()
+    model.entity(MyEntity)
+    with pytest.raises(ValueError, match=f"User supplied UID {value_uid} was used by a removed entity, property or "
+                                         f"index"):
+        env.sync(model)
+
+    @Entity(uid=value_uid)
+    class OtherEntity:
+        id = Id()
+
+    model = Model()
+    model.entity(OtherEntity)
+    with pytest.raises(ValueError, match=f"User supplied UID {value_uid} was used by a removed"):
+        env.sync(model)
+
+
+# A model JSON file as written by another ObjectBox language (e.g. Java or Dart): with a standalone relation
+# (e.g. a ToMany), retired UIDs and fields Python does not manage
+_OTHER_LANGUAGE_JSON = {
+    "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+    "entities": [
+        {
+            "id": "1:1001",
+            "lastPropertyId": "3:1013",
+            "name": "Student",
+            "properties": [
+                {"id": "1:1011", "name": "id", "type": 6, "flags": 1},
+                {"id": "2:1012", "name": "name", "type": 9},
+                {"id": "3:1013", "name": "teacherId", "type": 11, "flags": 520, "indexId": "1:1014",
+                 "relationTarget": "Teacher"}
+            ],
+            "relations": [{"id": "1:1015", "name": "courses", "targetId": "3:1031"}]
+        },
+        {
+            "id": "2:1002",
+            "lastPropertyId": "2:1022",
+            "name": "Teacher",
+            "properties": [
+                {"id": "1:1021", "name": "id", "type": 6, "flags": 1},
+                {"id": "2:1022", "name": "name", "type": 9}
+            ],
+            "relations": []
+        },
+        {
+            "id": "3:1031",
+            "lastPropertyId": "2:1033",
+            "name": "Course",
+            "properties": [
+                {"id": "1:1032", "name": "id", "type": 6, "flags": 1},
+                {"id": "2:1033", "name": "title", "type": 9}
+            ],
+            "relations": [{"id": "2:1034", "name": "students", "targetId": "1:1001"}]
+        }
+    ],
+    "lastEntityId": "4:1041",
+    "lastIndexId": "2:1042",
+    "lastRelationId": "2:1034",
+    "lastSequenceId": "0:0",
+    "modelVersion": 5,
+    "modelVersionParserMinimum": 5,
+    "retiredEntityUids": [1041],
+    "retiredIndexUids": [1042],
+    "retiredPropertyUids": [1043, 1044],
+    "retiredRelationUids": [1045],
+    "version": 1
+}
+
+
+def _other_language_entities(with_course: bool = True, extra_student_prop: bool = False):
+    @Entity()
+    class Teacher:
+        id = Id()
+        name = String()
+
+    if extra_student_prop:
+        @Entity()
+        class Student:
+            id = Id()
+            name = String()
+            teacher_id = Relation(Teacher)
+            age = Int32()
+    else:
+        @Entity()
+        class Student:
+            id = Id()
+            name = String()
+            teacher_id = Relation(Teacher)
+
+    @Entity()
+    class Course:
+        id = Id()
+        title = String()
+
+    return [Student, Teacher] + ([Course] if with_course else [])
+
+
+def _write_other_language_json(env):
+    with open(env.model_path, "w") as f:
+        json.dump(_OTHER_LANGUAGE_JSON, f, indent=2)
+
+
+def test_json_other_language_unchanged(env):
+    """ A matching model leaves the JSON file of another ObjectBox language as it is (not written). """
+    _write_other_language_json(env)
+    with open(env.model_path) as f:
+        before = f.read()
+    model = Model()
+    for entity in _other_language_entities():
+        model.entity(entity)
+    assert not env.sync(model)
+    with open(env.model_path) as f:
+        assert f.read() == before
+
+
+def test_json_other_language_kept(env):
+    """ When Python writes a JSON file of another ObjectBox language, it keeps what Python does not manage:
+    standalone relations, retired UIDs and the other top-level fields. """
+    _write_other_language_json(env)
+    model = Model()
+    for entity in _other_language_entities(extra_student_prop=True):
+        model.entity(entity)
+    assert env.sync(model)  # New property Student.age
+    doc = env.json()
+
+    other = _OTHER_LANGUAGE_JSON
+    for key in ("lastEntityId", "lastIndexId", "lastRelationId", "lastSequenceId", "modelVersion", "version",
+                "retiredEntityUids", "retiredIndexUids", "retiredPropertyUids", "retiredRelationUids"):
+        assert doc[key] == other[key], key
+    for entity_json, other_entity_json in zip(doc["entities"], other["entities"]):
+        assert entity_json["id"] == other_entity_json["id"]
+        assert entity_json["relations"] == other_entity_json["relations"]
+    student_props = doc["entities"][0]["properties"]
+    assert student_props[:3] == other["entities"][0]["properties"]  # Incl. relationTarget
+    assert student_props[3]["name"] == "age"
+    assert student_props[3]["id"].startswith("4:")
+    assert doc["entities"][0]["lastPropertyId"] == student_props[3]["id"]
+
+
+def test_json_other_language_generated_uids(env, monkeypatch):
+    """ Generated UIDs skip retired UIDs and those of standalone relations. """
+    _write_other_language_json(env)
+    candidates = iter([1040, 1014, 1044, 4999])  # random.getrandbits(63) + 1: retired, relation, retired, free
+    monkeypatch.setattr("objectbox.model.idsync.random.getrandbits", lambda bits: next(candidates))
+    model = Model()
+    for entity in _other_language_entities(extra_student_prop=True):
+        model.entity(entity)
+    assert env.sync(model)
+    assert env.json()["entities"][0]["properties"][3]["id"] == "4:5000"
+
+
+def test_json_other_language_entity_removed(env):
+    """ Removing an entity with a standalone relation retires the relation, too; the relations of other entities
+    (here one to the removed entity) are kept as they are. """
+    _write_other_language_json(env)
+    model = Model()
+    for entity in _other_language_entities(with_course=False):
+        model.entity(entity)
+    assert env.sync(model)
+    doc = env.json()
+    assert doc["retiredEntityUids"] == [1041, 1031]
+    assert doc["retiredPropertyUids"] == [1043, 1044, 1032, 1033]
+    assert doc["retiredIndexUids"] == [1042]
+    assert doc["retiredRelationUids"] == [1045, 1034]
+    assert [e["name"] for e in doc["entities"]] == ["Student", "Teacher"]
+    assert doc["entities"][0]["relations"] == _OTHER_LANGUAGE_JSON["entities"][0]["relations"]
+
+
+def test_json_other_language_uids_reserved(env):
+    """ UIDs of standalone relations and retired UIDs can not be supplied by the user for something else. """
+    _write_other_language_json(env)
+    for uid, message in ((1015, "is already assigned elsewhere"), (1045, "was used by a removed"),
+                         (1041, "was used by a removed")):
+        entities = _other_language_entities()
+
+        @Entity(uid=uid)
+        class Extra:
+            id = Id()
+
+        model = Model()
+        for entity in entities + [Extra]:
+            model.entity(entity)
+        with pytest.raises(ValueError, match=f"User supplied UID {uid} {message}"):
+            env.sync(model)

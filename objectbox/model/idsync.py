@@ -8,6 +8,16 @@ from objectbox.model.properties import Property, Index, HnswIndex, Relation
 from objectbox.model.iduid import IdUid
 
 MODEL_PARSER_VERSION = 5
+MODEL_VERSION = 5  # Of the model JSON format; like the other ObjectBox languages (e.g. objectbox-generator checks it)
+
+# Lists of the UIDs of removed entities, properties, indexes and relations, like in the model JSON of the other
+# ObjectBox languages: they must not be used again, and e.g. the objectbox-generator (Go, C++) checks "last" IDs
+# against them.
+_RETIRED_KEYS = ("retiredEntityUids", "retiredIndexUids", "retiredPropertyUids", "retiredRelationUids")
+
+# Top-level fields of the model JSON that Python does not manage, e.g. written by another ObjectBox language for a
+# shared file; kept as they are when the file is written
+_KEPT_KEYS = ("lastRelationId", "lastSequenceId", "modelVersion", "version")
 
 
 class IdSync:
@@ -26,6 +36,13 @@ class IdSync:
         self.model_json = None
 
         self._assigned_uids: Set[int] = set()
+        self._retired_uids: Set[int] = set()
+        self._retired: Dict[str, List[int]] = {key: [] for key in _RETIRED_KEYS}  # In order, as written to the JSON
+        self._matched_uids: Set[int] = set()  # Of JSON entities, properties and indexes matched with the model
+        self._entity_json_by_uid: Dict[int, Dict[str, Any]] = {}  # Matched JSON entity by its UID
+        # How an unassigned "last" ID is written: "0:0" (like Java), or "" if the loaded JSON does so (like the
+        # objectbox-generator for Go and C++, which rejects "0:0")
+        self._unassigned_str = "0:0"
 
         self._load_model_json()
 
@@ -40,10 +57,20 @@ class IdSync:
         with open(self.model_filepath, "rt") as model_file:
             self.model_json = json.load(model_file)
         logger.debug(f"Syncing model with model file: {self.model_filepath}")
+        if any(self.model_json.get(key) == "" for key in ("lastEntityId", "lastIndexId", "lastRelationId")):
+            self._unassigned_str = ""
 
         self._load_assigned_uids()
 
     def _load_assigned_uids(self):
+        for key in _RETIRED_KEYS:
+            for uid in self.model_json.get(key) or []:
+                uid = int(uid)
+                if uid not in self._retired_uids:
+                    self._retired[key].append(uid)
+                    self._retired_uids.add(uid)
+        self._assigned_uids |= self._retired_uids
+
         for entity_json in self.model_json["entities"]:
             entity_uid = IdUid.from_str(entity_json["id"]).uid
             if entity_uid in self._assigned_uids:
@@ -62,6 +89,13 @@ class IdSync:
                         raise ValueError(f"An index's UID {index_uid} has already been used elsewhere")
                     self._assigned_uids.add(index_uid)
 
+            # Standalone relations (e.g. ToMany in Java, Dart) are not supported in Python, but kept in the JSON
+            for relation_json in entity_json.get("relations") or []:
+                self._assigned_uids.add(IdUid.from_str(relation_json["id"]).uid)
+
+    def _iduid_str(self, iduid: IdUid) -> str:
+        return str(iduid) if iduid.is_assigned() else self._unassigned_str
+
     def _save_model_json(self):
         """ Replaces model JSON with the serialized model whose ID/UIDs are assigned. """
 
@@ -73,16 +107,17 @@ class IdSync:
             "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
             "modelVersionParserMinimum": MODEL_PARSER_VERSION,
             "entities": [],
-            "lastEntityId": str(self.model.last_entity_iduid),
-            "lastIndexId": str(self.model.last_index_iduid),
-            "lastRelationId": str(self.model.last_relation_iduid)
+            "lastEntityId": self._iduid_str(self.model.last_entity_iduid),
+            "lastIndexId": self._iduid_str(self.model.last_index_iduid),
+            "lastRelationId": self._iduid_str(self.model.last_relation_iduid),
+            "modelVersion": MODEL_VERSION,
+            "version": 1
         }
-        # TODO modelVersion
-        # TODO retiredEntityUids
-        # TODO retiredIndexUids
-        # TODO retiredPropertyUids
-        # TODO retiredRelationUids
-        # TODO version
+        if self.model_json is not None:
+            for key in _KEPT_KEYS:
+                if key in self.model_json:
+                    model_json[key] = self.model_json[key]
+        model_json.update(self._retired)
 
         for entity in self.model.entities:
             entity_json = {
@@ -106,6 +141,9 @@ class IdSync:
                 if isinstance(prop, Relation):
                     prop_json["relationTarget"] = prop._target_name
                 entity_json["properties"].append(prop_json)
+            loaded_entity_json = self._entity_json_by_uid.get(entity._uid)
+            if loaded_entity_json is not None and "relations" in loaded_entity_json:
+                entity_json["relations"] = loaded_entity_json["relations"]  # Kept, see _load_assigned_uids()
             model_json["entities"].append(entity_json)
 
         import json
@@ -162,6 +200,9 @@ class IdSync:
         """ Validates that a user supplied UID is not assigned for any other entity/property/index.
         Raises a ValueError if the UID is already assigned elsewhere.
         """
+        if uid in self._retired_uids:
+            raise ValueError(f"User supplied UID {uid} was used by a removed entity, property or index; "
+                             f"UIDs must not be used again (see the retired UIDs in the model JSON file)")
         if uid in self._assigned_uids:
             raise ValueError(f"User supplied UID {uid} is already assigned elsewhere")
 
@@ -206,6 +247,7 @@ class IdSync:
 
         if (iduid_json is not None) and (not index.has_uid() or index.iduid.uid == iduid_json.uid):  # Load
             index.iduid = IdUid.from_str(prop_json["indexId"])
+            self._matched_uids.add(index.iduid.uid)
         else:  # Assign new ID to new index
             index.iduid = IdUid(self.model.last_index_iduid.id + 1, index.uid)
             self.model.last_index_iduid = index.iduid
@@ -241,6 +283,7 @@ class IdSync:
             # Property was matched with a JSON property (either by UID or by name), make sure they're equal
             self._validate_matching_prop(entity, prop, prop_json)
             prop.iduid = IdUid.from_str(prop_json["id"])
+            self._matched_uids.add(prop.iduid.uid)
         else:  # Assign new ID to new property
             if not prop.has_uid():
                 prop.iduid.uid = self._generate_uid()
@@ -273,6 +316,8 @@ class IdSync:
 
         if entity_json is not None:  # Load existing IDs from JSON
             entity._iduid = IdUid.from_str(entity_json["id"])
+            self._matched_uids.add(entity._uid)
+            self._entity_json_by_uid[entity._uid] = entity_json
             entity._last_property_iduid = IdUid.from_str(entity_json["lastPropertyId"])
         else:  # Assign new ID to new entity
             if not entity._has_uid():
@@ -287,6 +332,37 @@ class IdSync:
             write_json |= self._sync_property(entity, prop, entity_json)
 
         return write_json
+
+    def _retire(self, key: str, uid: int) -> bool:
+        if uid == 0 or uid in self._retired_uids:
+            return False
+        self._retired[key].append(uid)
+        self._retired_uids.add(uid)
+        return True
+
+    def _retire_unmatched(self) -> bool:
+        """ Retires the UIDs of the JSON entities, properties and indexes not matched with the model (i.e. removed),
+        including all of a removed entity (also its relations), like the other ObjectBox languages.
+        Returns True if any UIDs were retired. """
+        if self.model_json is None:
+            return False
+        retired = False
+        for entity_json in self.model_json["entities"]:
+            entity_uid = IdUid.from_str(entity_json["id"]).uid
+            entity_removed = entity_uid not in self._matched_uids
+            if entity_removed:
+                retired |= self._retire("retiredEntityUids", entity_uid)
+                for relation_json in entity_json.get("relations") or []:
+                    retired |= self._retire("retiredRelationUids", IdUid.from_str(relation_json["id"]).uid)
+            for prop_json in entity_json["properties"]:
+                prop_uid = IdUid.from_str(prop_json["id"]).uid
+                if entity_removed or prop_uid not in self._matched_uids:
+                    retired |= self._retire("retiredPropertyUids", prop_uid)
+                if "indexId" in prop_json:
+                    index_uid = IdUid.from_str(prop_json["indexId"]).uid
+                    if entity_removed or index_uid not in self._matched_uids:
+                        retired |= self._retire("retiredIndexUids", index_uid)
+        return retired
 
     def sync(self) -> bool:
         """ Syncs the provided model with the model JSON file.
@@ -307,6 +383,8 @@ class IdSync:
 
         for entity in self.model.entities:
             write_json |= self._sync_entity(entity)
+
+        write_json |= self._retire_unmatched()
 
         if write_json:
             logger.info(f"Model changed, writing model.json: {self.model_filepath}")
