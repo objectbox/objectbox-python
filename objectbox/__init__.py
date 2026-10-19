@@ -20,7 +20,13 @@ from objectbox.model.entity import Entity, SyncEntity
 from objectbox.model.properties import Id, String, Index, Bool, Int8, Int16, Int32, Int64, Float32, Float64, Bytes, BoolVector, Int8Vector, Int16Vector, Int32Vector, Int64Vector, Float32Vector, Float64Vector, CharVector, BoolList, Int8List, Int16List, Int32List, Int64List, Float32List, Float64List, CharList, Date, DateNano, Flex, Relation, IndexType, Unique, ConflictStrategy, HnswIndex, VectorDistanceType, HnswFlags, SyncClock, SyncPrecedence
 from objectbox.model.model import Model
 from objectbox.c import version_core, DebugFlags
-from objectbox.exceptions import DbError
+# The exceptions most likely handled by applications (all are in objectbox.exceptions; its TimeoutError is not
+# exported here, as it would shadow the built-in TimeoutError on "from objectbox import *")
+from objectbox.exceptions import (DbError, IllegalArgumentError, IllegalStateError, UniqueViolatedError,
+                                  ConstraintViolatedError, NonUniqueResultError, IdNotFoundError,
+                                  FeatureNotAvailableError, SchemaError, DbFullError, MaxDataSizeExceededError,
+                                  MaxReadersExceededError, StoreMustShutdownError, FileCorruptError,
+                                  FilePagesCorruptError, NumericOverflowError)
 from objectbox.version import Version
 from objectbox.condition import PropertyQueryCondition
 from objectbox.query import Query, ObjectWithScore, IdWithScore
@@ -73,6 +79,21 @@ __all__ = [
     'Store',
     'ObjectBox',
     'DbError',
+    'IllegalArgumentError',
+    'IllegalStateError',
+    'UniqueViolatedError',
+    'ConstraintViolatedError',
+    'NonUniqueResultError',
+    'IdNotFoundError',
+    'FeatureNotAvailableError',
+    'SchemaError',
+    'DbFullError',
+    'MaxDataSizeExceededError',
+    'MaxReadersExceededError',
+    'StoreMustShutdownError',
+    'FileCorruptError',
+    'FilePagesCorruptError',
+    'NumericOverflowError',
     'version',
     'version_info',
     'DebugFlags',

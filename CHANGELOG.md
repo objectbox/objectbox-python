@@ -189,6 +189,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `FilePagesCorruptError` a `FileCorruptError`. (5.0 betas named `FeatureNotAvailableError` `FeatureNotAvailable`;
   that name still works.)\
   **Breaking:** this replaces `CoreException` and `NotFoundException` (the latter was exported by the top-level module).
+* The top-level module exports the exceptions applications handle most, e.g.
+  `from objectbox import UniqueViolatedError, IllegalStateError` (like Dart); all are in `objectbox.exceptions`
 * Wrong arguments raise a `TypeError` or an `IllegalArgumentError` (a `ValueError`) with a clear message, instead of a
   plain `Exception`, an `AttributeError`, a `KeyError` or a `ctypes.ArgumentError`, e.g. putting an object of another
   entity, `remove("1")`, a condition value of the wrong type (`Int64.equals("1")`), an unknown property name or a

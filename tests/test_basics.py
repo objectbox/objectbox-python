@@ -221,3 +221,19 @@ def test_store_box_cached(test_store):
         box.count()
     assert test_store._boxes == {}  # Released on close
 
+
+
+def test_exceptions_exported():
+    """ The exceptions applications handle most are exported by the top-level module (like Dart). """
+    import builtins
+    import objectbox.exceptions
+    for name in ("DbError", "IllegalArgumentError", "IllegalStateError", "UniqueViolatedError", "ConstraintViolatedError",
+                 "NonUniqueResultError", "IdNotFoundError", "FeatureNotAvailableError", "SchemaError", "DbFullError",
+                 "MaxDataSizeExceededError", "MaxReadersExceededError", "StoreMustShutdownError", "FileCorruptError",
+                 "FilePagesCorruptError", "NumericOverflowError"):
+        assert name in objectbox.__all__
+        assert getattr(objectbox, name) is getattr(objectbox.exceptions, name)
+    namespace = {}
+    exec("from objectbox import *", namespace)
+    assert "TimeoutError" not in namespace  # Would shadow the built-in
+    assert namespace["UniqueViolatedError"] is objectbox.exceptions.UniqueViolatedError
