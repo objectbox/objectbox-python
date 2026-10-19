@@ -161,7 +161,9 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 ### Sync your data
 
 * New module `objectbox.sync` with a Sync client (`Sync.client()`, `SyncClient`) to synchronize data
-  with an ObjectBox Sync server (which stores your data centrally with optional sync to MongoDB)
+  with an ObjectBox Sync server (which stores your data centrally with optional sync to MongoDB).
+  The top-level module exports its API, too (e.g. `from objectbox import Sync, SyncCredentials`), importing
+  `objectbox.sync` on first use only
 * `@SyncEntity()` enables Sync for an entity (optionally with shared global IDs);
   `SyncClock` and `SyncPrecedence` properties for Sync conflict resolution.
 * Client options include Sync filter variables, flags (`SyncFlags`) and certificate paths.

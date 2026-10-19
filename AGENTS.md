@@ -36,7 +36,7 @@ Python binding for the ObjectBox C API (objectbox-c) via `ctypes`; objects are s
 - **Sync** (`sync.py`) — `SyncClient` (created only via `Sync.client()`; its constructor raises) wraps the C sync client (`obx_sync_*`; ctypes callbacks passed to C, also replaced ones, are kept referenced until the client is closed). The store keeps its open client alive (`Store.sync_client()`, like Java and Dart) and closes it (close listener) before the store is closed. `@SyncEntity()` sets the entity's Sync flags.
 - **Deprecated API**: `ObjectBox` and `Builder` are thin wrappers around `Store` kept for backward compatibility (`tests/test_deprecated.py`).
 - numpy and flatbuffers (which imports numpy) are imported lazily, only where needed (vector/flex properties, the reference FlatBuffers paths); no module-level imports of either (`tests/test_lazy_imports.py`). Use `is_ndarray()` (`c.py`) for type checks and `prop._fb_format` (struct format) instead of `prop._fb_type` outside the reference paths.
-- Public API is the flat export list in `objectbox/__init__.py`; the binding version (`version = Version(...)`) is also defined there and used by `setup.py` and `setup-meta.py` (via `build_info.py`).
+- Public API is the flat export list in `objectbox/__init__.py` (the Sync names via a module `__getattr__`, importing `objectbox.sync` on first use: it takes a few ms); the binding version (`version = Version(...)`) is also defined there and used by `setup.py` and `setup-meta.py` (via `build_info.py`).
 
 ## Packaging
 

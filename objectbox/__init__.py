@@ -85,8 +85,35 @@ __all__ = [
     'SyncEntity',
     'SyncClock',
     'SyncPrecedence',
-    'OrderFlags'
+    'OrderFlags',
+    # Sync (loaded on first use; see __getattr__)
+    'Sync',
+    'SyncClient',
+    'SyncCredentials',
+    'SyncState',
+    'SyncRequestUpdatesMode',
+    'SyncFlags',
+    'SyncStats',
+    'SyncCode',
+    'SyncChange',
+    'SyncListener',
+    'SyncLoginListener',
+    'SyncConnectionListener',
+    'SyncCompletedListener',
+    'SyncTimeListener',
+    'SyncChangeListener',
 ]
+
+_sync_names = frozenset(__all__[__all__.index('Sync'):])
+
+
+def __getattr__(name: str):
+    # Sync names are imported on first use: importing objectbox.sync takes a few milliseconds, also for apps without
+    # Sync (a module __getattr__, PEP 562; also used by "from objectbox import *")
+    if name in _sync_names:
+        import objectbox.sync
+        return getattr(objectbox.sync, name)
+    raise AttributeError(f"module 'objectbox' has no attribute '{name}'")
 
 # Python binding version
 version = Version(5, 0, 0, beta=2)

@@ -104,3 +104,25 @@ def test_fb_formats_match_flatbuffers_flags():
         assert prop._fb_format == fb_format
         assert prop._fb_type is flags  # resolved lazily
         assert "_fb_type" in prop.__dict__  # then cached
+
+
+_SYNC_SCRIPT = """
+import sys
+import objectbox
+loaded = ["objectbox.sync" in sys.modules]
+from objectbox import Sync, SyncCredentials
+loaded.append("objectbox.sync" in sys.modules)
+import objectbox.sync
+assert Sync is objectbox.sync.Sync and SyncCredentials is objectbox.sync.SyncCredentials
+assert set(objectbox.sync.__all__) <= set(objectbox.__all__)
+print(loaded)
+"""
+
+
+def test_sync_exported_lazily():
+    """ objectbox exports the Sync API (like objectbox.sync), importing objectbox.sync on first use only. """
+    output = subprocess.check_output([sys.executable, "-c", _SYNC_SCRIPT], cwd=_ROOT, text=True)
+    assert eval(output) == [False, True]
+    import objectbox
+    with pytest.raises(AttributeError, match="module 'objectbox' has no attribute 'Nope'"):
+        objectbox.Nope
