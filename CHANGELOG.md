@@ -106,6 +106,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   is kept); to keep a value index, use `Index(IndexType.VALUE)` (`IndexType` is now exported by the top-level
   module).\
   **Breaking:** the index of String properties with `Index()` changes (e.g. the model JSON file).
+* Fix `index=Index` (the class, as in the `@Entity` documentation): opening the store failed with a `TypeError`;
+  it now works like `index=Index()`. Other values than an `Index` or `HnswIndex` raise a `TypeError` right away.
 * To-one relations: the new property type `Relation` stores the ID of an object of the target entity, e.g.
   `customer_id = Relation(Customer)` (or `Relation("Customer")`, e.g. to refer to the entity itself). Values are plain
   ints (0 for none); unlike an `Int64`, ObjectBox knows the target, e.g. removing the target object resets the relation

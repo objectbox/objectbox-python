@@ -81,3 +81,54 @@ def test_relation_index_unchanged():
 
     relation = Relation(Target)
     assert relation._flags == OBXPropertyFlags_INDEXED | OBXPropertyFlags_INDEX_PARTIAL_SKIP_ZERO
+
+
+def test_index_class_as_arg(tmp_path):
+    """ The Index class itself works like Index() (used to crash when the store was opened). """
+
+    @Entity(model="index")
+    class Item:
+        id = Id
+        name = String(index=Index)
+
+    store = _open(tmp_path, Item)
+    box = store.box(Item)
+    box.put(Item(name="foo"))
+    assert box.query(Item.name.equals("foo")).build().count() == 1
+    store.close()
+    assert _json_flags(tmp_path)["name"] == OBXPropertyFlags_INDEXED | OBXPropertyFlags_INDEX_HASH
+
+
+@pytest.mark.parametrize("index", [True, "hash", IndexType.HASH, HnswIndex])
+def test_index_invalid_arg(index):
+    with pytest.raises(TypeError, match="index must be an Index"):
+        String(index=index)
+
+
+def test_docstring_examples(tmp_path):
+    """ The examples of the @Entity and Box.query() docstrings work. """
+    import re
+    import textwrap
+    import objectbox
+
+    # @Entity: defines MyEntity (with an indexed name); add an age for the query example
+    doc = "\n".join(line.rstrip() for line in objectbox.Entity.__doc__.splitlines())
+    example = doc.split("Example::")[1].split("\n\n")[1]
+    example = textwrap.dedent(example).replace("@Entity()", '@Entity(model="docstring")')
+    example = example.replace("date_created = Date", "date_created = Date\n    age = Int32")
+    namespace = dict(vars(objectbox))
+    exec(example, namespace)
+    MyEntity = namespace["MyEntity"]
+    store = _open(tmp_path, MyEntity)
+    box = store.box(MyEntity)
+    box.put([MyEntity(name="Johnny", age=30), MyEntity(name="Johnny", age=20), MyEntity(name="Jim", age=40)])
+
+    # Box.query()
+    statements = re.findall(r"``(query = box\.query\(.*\)\.build\(\))``", objectbox.Box.query.__doc__)
+    assert len(statements) == 2
+    namespace.update(box=box)
+    exec(statements[0], namespace)
+    assert [o.age for o in namespace["query"].find()] == [30, 20]
+    exec(statements[1], namespace)
+    assert [o.age for o in namespace["query"].find()] == [30]
+    store.close()

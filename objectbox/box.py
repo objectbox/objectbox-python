@@ -249,7 +249,7 @@ class Box:
 
             It's also possible to pass multiple conditions:
 
-            ``query = box.query(MyEntity.name.equals("Johnny") & MyEntity.age.greater(21)).build()``
+            ``query = box.query(MyEntity.name.equals("Johnny") & MyEntity.age.greater_than(21)).build()``
 
             Note: ``&`` is the logical AND operator, and ``|`` is the logical OR operator.
         """

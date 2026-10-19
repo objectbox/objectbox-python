@@ -404,7 +404,7 @@ def Entity(uid: int = 0, model: str = "default", python_names: bool = False) -> 
         @Entity()
         class MyEntity:
             id = Id
-            name = String(index=Index)
+            name = String(index=Index())
             date_created = Date
 
     Property names are stored in camelCase in the database and the model JSON file (e.g. ``dateCreated`` for the

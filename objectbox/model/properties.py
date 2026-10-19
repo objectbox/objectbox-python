@@ -260,7 +260,7 @@ class Property:
         self.name = ""  # Python attribute name; set in Entity.fill_properties()
         self._db_name = ""  # Name in the database and model JSON (camelCase by default); set in Entity.fill_properties()
         self._entity = None  # The _Entity this property belongs to; set in Entity.fill_properties()
-        self.index = kwargs.get('index', None)
+        self.index = Property._index_arg(kwargs.get('index', None))
 
         self._py_type = pytype
         self._is_ndarray = pytype is getattr(sys.modules.get('numpy'), 'ndarray', None)  # numpy imported if ndarray
@@ -272,6 +272,15 @@ class Property:
 
         self._fb_slot = None
         self._fb_v_offset = None
+
+    @staticmethod
+    def _index_arg(index):
+        if index is Index:  # The class, e.g. String(index=Index), like property classes used without parentheses
+            return Index()
+        if index is not None and not isinstance(index, (Index, HnswIndex)):
+            raise TypeError(f"index must be an Index (e.g. Index() or Index(IndexType.VALUE)) or a HnswIndex, "
+                            f"got {index!r}")
+        return index
 
     def __getattr__(self, name):
         # Only called if the attribute is not set: _fb_type is resolved on first use, then set on the instance.
