@@ -372,6 +372,8 @@ def _generate_unmarshal(entity):
                 read = "%s / 1000.0" % read
             elif ob_type == OBXPropertyType_DateNano and py_type == datetime:
                 read = "_fromtimestamp(%s / 1000000000.0, _utc)" % read
+            elif ob_type == OBXPropertyType_DateNano and py_type == float:
+                read = "%s / 1000000000.0" % read
             add("        v = " + read)
         add("    else:")
         add("        v = _absent%d()  # default (empty) value if not present in the object" % k)

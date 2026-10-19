@@ -509,3 +509,27 @@ def test_put_many_returns_ids(test_store):
     assert box.put([]) == []
     assert box.put() == []
     assert box.count() == 7
+
+
+def test_date_float_seconds(tmp_path):
+    """ With py_type=float, Date and DateNano read back seconds (DateNano read nanoseconds, as an int, before). """
+
+    @objectbox.Entity(model="date-float")
+    class Event:
+        id = objectbox.Id
+        date = objectbox.Date(float)
+        date_nano = objectbox.DateNano(float)
+        date_nano_int = objectbox.DateNano(int)
+
+    model = objectbox.Model()
+    model.entity(Event)
+    store = objectbox.Store(model=model, directory=str(tmp_path / "db"), model_json_file=str(tmp_path / "m.json"))
+    box = store.box(Event)
+    seconds = 1767268800.123456  # 2026-01-01 12:00:00.123456 UTC
+    read = box.get(box.put(Event(date=seconds, date_nano=seconds, date_nano_int=seconds)))
+    assert type(read.date) == float and read.date == pytest.approx(seconds, abs=0.001)
+    assert type(read.date_nano) == float and read.date_nano == pytest.approx(seconds, abs=1e-6)
+    assert type(read.date_nano_int) == int and read.date_nano_int == pytest.approx(seconds * 1e9, abs=1000)
+    read = box.get(box.put(Event()))  # Not set: 0
+    assert (read.date, read.date_nano, read.date_nano_int) == (0.0, 0.0, 0)
+    store.close()

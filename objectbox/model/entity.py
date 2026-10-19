@@ -357,7 +357,7 @@ class _Entity(object):
                     val = datetime.fromtimestamp(val / 1000.0, tz=timezone.utc)
                 elif prop._py_type == float:
                     val = val / 1000.0
-            elif ob_type == OBXPropertyType_DateNano and prop._py_type == datetime:
+            elif ob_type == OBXPropertyType_DateNano:
                 val = table.Get(prop._fb_type, o + table.Pos)  # int
                 if prop._py_type == datetime:
                     val = datetime.fromtimestamp(val / 1000000000.0, tz=timezone.utc)

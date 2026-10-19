@@ -153,6 +153,9 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 * Fix `Int8List` properties: putting and reading objects failed. Values are lists of signed 8-bit integers (-128 to 127).
 * Fix reading list properties (e.g. `Int32List`) that are not present in a stored object, e.g. added to the entity
   after the object was put: this failed instead of returning an empty list.
+* Fix reading `DateNano(py_type=float)` properties: they read back nanoseconds (as an int) instead of seconds (float),
+  unlike `Date(py_type=float)` and how float values are put.\
+  **Breaking:** code reading such properties gets seconds now.
 * Fix reading `Date`/`DateNano` properties with `datetime` values, vector properties with numpy arrays (e.g. `Float32Vector`)
   and `Flex` properties that are not present in a stored object (e.g. added to the entity after the object was put):
   this failed with a `TypeError`. They read as the default now, like unset properties: the epoch (UTC), an empty array
