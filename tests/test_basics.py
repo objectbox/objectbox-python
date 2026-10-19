@@ -178,3 +178,25 @@ def test_error_types(test_store):
     error = create_db_error(12345)
     assert type(error) is DbError and error.code == 12345 and str(error).startswith("12345 - ")
     assert type(create_db_error(10002)) is IllegalArgumentError
+
+
+def test_error_hierarchy():
+    """ Like Java and Dart: unique violations are constraint violations, corrupt pages a corrupt file. """
+    import builtins
+    from objectbox.c import DbErrorCode
+    from objectbox.exceptions import (create_db_error, ConstraintViolatedError, UniqueViolatedError, FileCorruptError,
+                                      FilePagesCorruptError, FeatureNotAvailableError, TimeoutError)
+    assert issubclass(UniqueViolatedError, ConstraintViolatedError)
+    assert issubclass(FilePagesCorruptError, FileCorruptError)
+    assert FeatureNotAvailable is FeatureNotAvailableError  # The old name still works
+    assert issubclass(FeatureNotAvailableError, RuntimeError)
+    assert issubclass(TimeoutError, builtins.TimeoutError) and issubclass(TimeoutError, DbError)
+
+    # Every error code is created as its most specific class (also subclasses of subclasses)
+    assert type(create_db_error(DbErrorCode.OBX_ERROR_UNIQUE_VIOLATED)) is UniqueViolatedError
+    assert type(create_db_error(DbErrorCode.OBX_ERROR_CONSTRAINT_VIOLATED)) is ConstraintViolatedError
+    assert type(create_db_error(DbErrorCode.OBX_ERROR_FILE_PAGES_CORRUPT)) is FilePagesCorruptError
+    for code in DbErrorCode:
+        if code != DbErrorCode.OBX_SUCCESS:
+            error = create_db_error(code)
+            assert type(error) is not DbError and error.code == code

@@ -1,3 +1,4 @@
+import builtins
 from typing import Dict, Optional, Type
 
 from objectbox.c import py_str, C, DbErrorCode
@@ -38,7 +39,8 @@ class NoSuccessError(DbError):
     code = DbErrorCode.OBX_NO_SUCCESS
 
 
-class TimeoutError(DbError):
+class TimeoutError(DbError, builtins.TimeoutError):
+    """A timeout (also the built-in TimeoutError, which this class shadows in this module)."""
     code = DbErrorCode.OBX_TIMEOUT
 
 
@@ -60,9 +62,13 @@ class NumericOverflowError(DbError):
     code = DbErrorCode.OBX_ERROR_NUMERIC_OVERFLOW
 
 
-class FeatureNotAvailable(DbError, RuntimeError):
+class FeatureNotAvailableError(DbError, RuntimeError):
     """The feature is not available in the loaded ObjectBox library (also a RuntimeError)."""
     code = DbErrorCode.OBX_ERROR_FEATURE_NOT_AVAILABLE
+
+
+FeatureNotAvailable = FeatureNotAvailableError
+"""Deprecated name of :class:`FeatureNotAvailableError` (the same class)."""
 
 
 class ShuttingDownError(DbError):
@@ -113,7 +119,13 @@ class GeneralStorageError(DbError):
     code = DbErrorCode.OBX_ERROR_STORAGE_GENERAL
 
 
-class UniqueViolatedError(DbError):
+class ConstraintViolatedError(DbError):
+    """A constraint was violated; see the subclass UniqueViolatedError."""
+    code = DbErrorCode.OBX_ERROR_CONSTRAINT_VIOLATED
+
+
+class UniqueViolatedError(ConstraintViolatedError):
+    """A unique constraint was violated (also a ConstraintViolatedError, like in Java)."""
     code = DbErrorCode.OBX_ERROR_UNIQUE_VIOLATED
 
 
@@ -135,10 +147,6 @@ class IdNotFoundError(DbError):
 
 class TimeSeriesError(DbError):
     code = DbErrorCode.OBX_ERROR_TIME_SERIES
-
-
-class ConstraintViolatedError(DbError):
-    code = DbErrorCode.OBX_ERROR_CONSTRAINT_VIOLATED
 
 
 class StdIllegalArgumentError(DbError):
@@ -177,7 +185,8 @@ class FileCorruptError(DbError):
     code = DbErrorCode.OBX_ERROR_FILE_CORRUPT
 
 
-class FilePagesCorruptError(DbError):
+class FilePagesCorruptError(FileCorruptError):
+    """Corrupt pages of the database file (also a FileCorruptError, like in Java and Dart)."""
     code = DbErrorCode.OBX_ERROR_FILE_PAGES_CORRUPT
 
 
@@ -208,9 +217,10 @@ class TreeOtherError(DbError):
 obx_db_error_map: Dict[int, Type] = {}
 
 
-def _init_db_errror_map():
-    for subclass in DbError.__subclasses__():
+def _init_db_errror_map(base=DbError):
+    for subclass in base.__subclasses__():  # Recursively: some errors derive from others, e.g. UniqueViolatedError
         obx_db_error_map[subclass.code] = subclass
+        _init_db_errror_map(subclass)
 
 
 _init_db_errror_map()

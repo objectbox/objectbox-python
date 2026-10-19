@@ -173,8 +173,11 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 
 * All exceptions raised by the database now derive from `DbError`, with a specific subclass per error,
   e.g. `IdNotFoundError`, `UniqueViolatedError` or `DbFullError` (see module `objectbox.exceptions`).
-  `IllegalArgumentError` is also a `ValueError`, `IllegalStateError` and `FeatureNotAvailable` are also a
-  `RuntimeError`, so they can be caught as the matching built-in exception, too.\
+  `IllegalArgumentError` is also a `ValueError`, `IllegalStateError` and `FeatureNotAvailableError` are also a
+  `RuntimeError`, `TimeoutError` is also the built-in `TimeoutError`, so they can be caught as the matching built-in
+  exception, too. Like in Java and Dart, `UniqueViolatedError` is a `ConstraintViolatedError` and
+  `FilePagesCorruptError` a `FileCorruptError`. (5.0 betas named `FeatureNotAvailableError` `FeatureNotAvailable`;
+  that name still works.)\
   **Breaking:** this replaces `CoreException` and `NotFoundException` (the latter was exported by the top-level module).
 * Wrong arguments raise a `TypeError` or an `IllegalArgumentError` (a `ValueError`) with a clear message, instead of a
   plain `Exception`, an `AttributeError`, a `KeyError` or a `ctypes.ArgumentError`, e.g. putting an object of another

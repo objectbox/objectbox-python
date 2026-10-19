@@ -7,7 +7,7 @@ import objectbox.c as c
 from objectbox import Store
 from objectbox.model.entity import _Entity
 from objectbox.c import OBX_sync_change_array
-from objectbox.exceptions import FeatureNotAvailable, IllegalArgumentError, IllegalStateError
+from objectbox.exceptions import FeatureNotAvailableError, IllegalArgumentError, IllegalStateError
 
 __all__ = [
     'Sync',
@@ -519,7 +519,7 @@ class SyncClient:
             raise IllegalArgumentError("Provide at least one server URL")
 
         if not Sync.is_available():
-            raise FeatureNotAvailable(
+            raise FeatureNotAvailableError(
                 'Sync is not available in the loaded ObjectBox runtime library. '
                 'Install ObjectBox with the Sync variant of the library via "pip install objectbox-sync" '
                 '(instead of objectbox); '
@@ -1095,7 +1095,7 @@ class Sync:
         Raises:
             IllegalStateError: If a sync client is already active (not closed) for the given store, or the store is
                 closed.
-            FeatureNotAvailable: If the loaded ObjectBox library does not support Sync.
+            FeatureNotAvailableError: If the loaded ObjectBox library does not support Sync.
         """
         urls = [url] if isinstance(url, str) else list(url)
         return SyncClient._create(store, urls, credentials, filter_variables, flags, certificate_paths)
