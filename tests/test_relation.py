@@ -272,3 +272,5 @@ def test_link_invalid(linked):
     with pytest.raises(IllegalStateError, match=r"order\(\) is not supported on the builder of a linked entity"):
         linked_qb.order(Customer.name)
     assert _texts(qb.build()) == ["o2", "o3"]
+    with pytest.raises(IllegalStateError, match=r"The query builder is closed: build\(\) closes it"):
+        linked_qb.link(Customer.company_id)  # Closed with the query's builder

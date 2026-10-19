@@ -45,17 +45,25 @@ class QueryBuilder:
     def __init__(self, store: Store, box: 'Box'):
         self._box = box
         self._entity = box._entity
-        self._c_builder = obx_query_builder(store._c_store, box._entity._id)
+        self._c_builder_or_none = obx_query_builder(store._c_store, box._entity._id)  # None once closed
         # Entity and property ID of the conditions' aliases; for Query.set_parameter_alias()
         self._alias_properties: Dict[str, Tuple['_Entity', int]] = {}
         self._root: Optional[QueryBuilder] = None  # For a builder of a linked entity (see link()): the query's builder
+        store._add_native_resource(self)
+
+    @property
+    def _c_builder(self):
+        root = self._root or self
+        if root._c_builder_or_none is None:
+            raise IllegalStateError("The query builder is closed: build() closes it (or the store was closed)")
+        return self._c_builder_or_none
 
     def _linked(self, c_builder, entity: '_Entity', condition: Optional[QueryCondition]) -> 'QueryBuilder':
         """ Creates the builder for a linked entity, owned by the C builder of the query. """
         linked = QueryBuilder.__new__(QueryBuilder)
         linked._box = self._box
         linked._entity = entity
-        linked._c_builder = c_builder
+        linked._c_builder_or_none = c_builder  # Owned by the root's C builder
         linked._alias_properties = self._alias_properties
         linked._root = self._root or self
         if condition is not None:
@@ -134,9 +142,22 @@ class QueryBuilder:
                     return entity
         raise IllegalArgumentError(f"Entity {name} is not in the store's model")
 
-    def close(self) -> int:
+    def close(self):
+        """ Closes the builder, freeing its native resources; ``build()`` does this, so only needed for a builder
+        that is not built. Closing again does nothing. """
         self._assert_root("close")
-        return obx_qb_close(self._c_builder)
+        c_builder = self._c_builder_or_none
+        if c_builder is not None:
+            self._c_builder_or_none = None
+            self._box._store._remove_native_resource(self)
+            obx_qb_close(c_builder)
+
+    def __del__(self):
+        if getattr(self, "_root", True) is None:  # A root builder (a linked one is owned by it)
+            try:
+                self.close()
+            except Exception:  # E.g. during interpreter shutdown
+                pass
 
     def error_code(self) -> int:
         return obx_qb_error_code(self._c_builder)
@@ -395,8 +416,12 @@ class QueryBuilder:
         return self.order(prop, OrderFlags.DESCENDING | flags)
 
     def build(self) -> Query:
+        """ Builds the query; this closes the builder (it can not be used afterwards). """
         self._assert_root("build")
-        c_query = obx_query(self._c_builder)
+        try:
+            c_query = obx_query(self._c_builder)
+        finally:
+            self.close()
         return Query(c_query, self._box, self._alias_properties)
 
     def alias(self, alias: str):

@@ -82,6 +82,11 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   and bytes properties, and `describe_parameters()`.\
   **Breaking:** the typed methods `set_parameter_string()`, `set_parameter_int()` and `set_parameter_vector_f32()` are
   removed; use `set_parameter()` instead, and `set_parameter_alias()` for their `set_parameter_alias_*()` variants.
+* Fix native memory leaks of queries: a built query's native resources were never freed, and neither were the
+  builder's unless `close()` was called. Now `build()` closes the builder (like in Java and Dart), and a query is
+  closed when it is garbage collected or its store is closed; `Query.close()` closes it right away, also via
+  `with box.query(...).build() as query:`. Using a closed query (or builder) raises an `IllegalStateError`.\
+  **Breaking:** a query builder can not be used after `build()`, e.g. to build a second query.
 * Fix `offset()` and `limit()` to return the query (as documented), e.g. for `query.offset(10).limit(5).find()`;
   they returned a C result code (int), so chaining failed
 * The top-level module now also exports `Query`, `QueryBuilder`, `PropertyQueryCondition` and `HnswFlags`

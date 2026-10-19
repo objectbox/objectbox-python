@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from objectbox.c import *
-from objectbox.exceptions import IllegalArgumentError
+from objectbox.exceptions import IllegalArgumentError, IllegalStateError
 from objectbox.model.properties import Property, PropertyType
 from objectbox.utils import date_value_to_int
 
@@ -33,11 +33,44 @@ class Query:
     """
     def __init__(self, c_query, box: 'Box', alias_properties: Optional[Dict[str, Tuple['_Entity', int]]] = None):
         """ This is an internal constructor. Use ``Box.query()`` instead. """
-        self._c_query = c_query
+        self._c_query_or_none = c_query  # None once closed
         self._box = box
         self._entity = self._box._entity
         self._store = box._store
         self._alias_properties = alias_properties or {}  # Alias -> (entity, property ID) of the condition
+        self._store._add_native_resource(self)
+
+    @property
+    def _c_query(self):
+        c_query = self._c_query_or_none
+        if c_query is None:
+            raise IllegalStateError("The query is closed (or its store)")
+        return c_query
+
+    def close(self):
+        """ Closes the query, freeing its native resources; it can not be used afterwards. Closing again does
+        nothing. Queries not closed explicitly are closed when they are garbage collected or the store is closed.
+        A query can also be used in a ``with`` statement, which closes it at the end. """
+        c_query = self._c_query_or_none
+        if c_query is not None:
+            self._c_query_or_none = None
+            self._store._remove_native_resource(self)
+            obx_query_close(c_query)
+
+    def is_closed(self) -> bool:
+        return self._c_query_or_none is None
+
+    def __enter__(self) -> 'Query':
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:  # E.g. during interpreter shutdown
+            pass
 
     def find(self) -> list:
         """ Finds a list of objects matching query. """

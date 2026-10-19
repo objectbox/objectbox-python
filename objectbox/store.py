@@ -15,6 +15,7 @@ import inspect
 import logging
 import os
 import sys
+import weakref
 from types import ModuleType
 
 import objectbox.c as c
@@ -143,6 +144,7 @@ class Store:
         self._sync_client = None  # The open SyncClient (set by it); the store keeps it alive, like Java and Dart
         self._model: Optional[Model] = None  # The model passed (resolved), if any; e.g. to map entity IDs to entities
         self._close_listeners: List[Callable[[], None]] = []  # Called before closing, e.g. to close a SyncClient
+        self._native_resources = weakref.WeakSet()  # Open queries and query builders; closed before the store
         if not c_store:
             options = StoreOptions()
             try:
@@ -333,6 +335,8 @@ class Store:
             for listener in listeners:
                 listener()
         finally:
+            for resource in list(self._native_resources):
+                resource.close()
             c_store_to_close = self._c_store
             if c_store_to_close:
                 self._c_store = None
@@ -354,6 +358,13 @@ class Store:
     def _add_close_listener(self, listener: Callable[[], None]):
         """Internal: adds a listener that is called when the store is about to be closed (before the C store is closed)."""
         self._close_listeners.append(listener)
+
+    def _add_native_resource(self, resource):
+        """Internal: a query or query builder (having close()) to close before the store is closed."""
+        self._native_resources.add(resource)
+
+    def _remove_native_resource(self, resource):
+        self._native_resources.discard(resource)
 
     def _remove_close_listener(self, listener: Callable[[], None]):
         """Internal: removes a listener added via _add_close_listener(), if present."""

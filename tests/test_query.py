@@ -992,3 +992,95 @@ def test_set_parameter_types(test_store):
     assert query.set_parameter_alias("qb_float", 2.0).find_ids() == [id2, id3]
     with pytest.raises(TypeError):
         query.set_parameter_alias("qb_float", jan)  # Unknown whether milliseconds or nanoseconds
+
+
+def test_query_close(test_store):
+    box = test_store.box(TestEntity)
+    box.put(TestEntity(str="foo"))
+    query = box.query(TestEntity.str.equals("foo")).build()
+    assert not query.is_closed()
+    assert query.count() == 1
+    query.close()
+    assert query.is_closed()
+    query.close()  # Closing again does nothing
+    for use in (query.find, query.find_ids, query.count, query.remove, query.describe_parameters,
+                lambda: query.offset(1), lambda: query.set_parameter(TestEntity.str, "bar")):
+        with pytest.raises(IllegalStateError, match="The query is closed"):
+            use()
+    assert box.count() == 1
+
+    with box.query(TestEntity.str.equals("foo")).build() as query:
+        assert query.count() == 1
+    assert query.is_closed()
+
+    # Closed also if the with block raises
+    with pytest.raises(ValueError):
+        with box.query().build() as query:
+            raise ValueError()
+    assert query.is_closed()
+
+
+def test_query_builder_closed_by_build(test_store):
+    box = test_store.box(TestEntity)
+    box.put(TestEntity(str="foo"))
+    qb = box.query(TestEntity.str.equals("foo"))
+    query = qb.build()
+    message = r"The query builder is closed: build\(\) closes it"
+    with pytest.raises(IllegalStateError, match=message):
+        qb.build()
+    with pytest.raises(IllegalStateError, match=message):
+        qb.order(TestEntity.str)
+    with pytest.raises(IllegalStateError, match=message):
+        qb.alias("x")
+    qb.close()  # Does nothing
+    assert query.count() == 1
+
+    # Closing a builder that is not built
+    qb = box.query(TestEntity.str.equals("foo"))
+    qb.close()
+    with pytest.raises(IllegalStateError, match=message):
+        qb.build()
+    with pytest.raises(IllegalStateError, match=message):
+        qb.equals_string(TestEntity.str, "foo", True)
+
+
+def test_query_native_resources_closed(test_store, monkeypatch):
+    """ Queries and query builders free their native resources: build() closes the builder, a query is closed when
+    garbage collected (or closed explicitly). """
+    import gc
+    import objectbox.query
+    import objectbox.query_builder
+    closed = {"query": 0, "builder": 0}
+    query_close, qb_close = objectbox.query.obx_query_close, objectbox.query_builder.obx_qb_close
+
+    def count_query_close(c_query):
+        closed["query"] += 1
+        return query_close(c_query)
+
+    def count_qb_close(c_builder):
+        closed["builder"] += 1
+        return qb_close(c_builder)
+
+    monkeypatch.setattr(objectbox.query, "obx_query_close", count_query_close)
+    monkeypatch.setattr(objectbox.query_builder, "obx_qb_close", count_qb_close)
+    box = test_store.box(TestEntity)
+    box.put(TestEntity(str="foo"))
+    for i in range(100):
+        assert box.query(TestEntity.str.equals("foo")).build().count() == 1
+        box.query(TestEntity.str.equals("foo"))  # Never built
+    gc.collect()
+    assert closed == {"query": 100, "builder": 200}
+    assert len(test_store._native_resources) == 0
+
+
+def test_query_store_closed(test_store):
+    box = test_store.box(TestEntity)
+    box.put(TestEntity(str="foo"))
+    query = box.query(TestEntity.str.equals("foo")).build()
+    qb = box.query(TestEntity.str.equals("foo"))
+    test_store.close()
+    assert query.is_closed()  # Closed before the store
+    with pytest.raises(IllegalStateError, match="The query is closed"):
+        query.count()
+    with pytest.raises(IllegalStateError, match="The query builder is closed"):
+        qb.build()
