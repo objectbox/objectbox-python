@@ -219,17 +219,34 @@ class Box:
                 obx_bytes_array_free(c_bytes_array_p)
 
     def remove(self, id_or_object) -> bool:
-        """Remove object by id or object."""
-        if isinstance(id_or_object, self._entity._user_type):
-            id = self._entity._get_object_id(id_or_object)
-        else:
-            id = id_or_object
+        """Removes the object with the given ID (or the given object); returns False if it did not exist.
+        See :meth:`remove_many` for several objects."""
+        if isinstance(id_or_object, (list, tuple)):
+            raise TypeError("remove() takes one ID or object; use remove_many() for several")
+        id = self._id_of(id_or_object)
         code : obx_err = obx_box_remove(self._c_box, id)
         if code == 404:
             return False
         elif code != 0:
             raise DbError.from_code(code)
         return True
+
+    def remove_many(self, ids_or_objects) -> int:
+        """Removes the objects with the given IDs (or the given objects) in one transaction; IDs that do not exist
+        are skipped. Returns the number of removed objects."""
+        ids = [self._id_of(item) for item in ids_or_objects]
+        if not ids:
+            return 0
+        c_ids = (obx_id * len(ids))(*ids)
+        c_id_array = OBX_id_array(ctypes.cast(c_ids, ctypes.POINTER(obx_id)), len(ids))
+        count = ctypes.c_uint64()
+        obx_box_remove_many(self._c_box, ctypes.byref(c_id_array), ctypes.byref(count))
+        return int(count.value)
+
+    def _id_of(self, id_or_object) -> int:
+        if isinstance(id_or_object, self._entity._user_type):
+            return self._entity._get_object_id(id_or_object)
+        return id_or_object
 
     def remove_all(self) -> int:
         """Removes all objects and returns number of removed."""

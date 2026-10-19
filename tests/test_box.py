@@ -478,3 +478,20 @@ def _json_id_flags(tmp_path) -> int:
     with open(str(tmp_path / "model.json")) as file:
         doc = json.load(file)
     return [p["flags"] for p in doc["entities"][0]["properties"] if p["name"] == "id"][0]
+
+
+def test_remove_many(test_store):
+    box = test_store.box(TestEntity)
+    objects = [TestEntity(str="o%d" % i) for i in range(5)]
+    box.put(objects)
+    ids = [o.id for o in objects]
+
+    assert box.remove_many([ids[0], ids[1], 9999]) == 2  # Missing IDs are skipped
+    assert box.remove_many((objects[2], ids[3])) == 2  # Objects and IDs, any sequence
+    assert box.remove_many(iter([ids[4]])) == 1
+    assert box.remove_many([]) == 0
+    assert box.count() == 0
+    assert box.remove_many(ids) == 0
+
+    with pytest.raises(TypeError, match=r"use remove_many\(\) for several"):
+        box.remove([1, 2])  # Failed with a ctypes.ArgumentError
