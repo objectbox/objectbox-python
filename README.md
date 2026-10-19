@@ -16,6 +16,7 @@ On top, as an offline-first solution, ObjectBox makes sure your app reliably wor
 _Table of Contents_
 
 - [Feature Highlights](#feature-highlights)
+- [Coding with AI agents](#coding-with-ai-agents)
 - [Code Example (CRUD - Create, Read, Update, Delete)](#code-example-crud-create-read-update-delete)
 - [Getting Started](#getting-started)
 - [Help wanted](#help-wanted)
@@ -38,6 +39,28 @@ Feature Highlights
 * MacOS x86-64 and arm64 (Intel 64-bit and Apple Silicon)
 * Windows x86-64 (64-bit)
 * Windows ARM64
+
+Coding with AI agents
+---------------------
+
+Using an AI coding agent (Claude Code, Codex, Cursor, ...)?
+Install the [ObjectBox agent skill](https://github.com/objectbox/objectbox-skills):
+it teaches the agent the ObjectBox how-tos and common pitfalls.
+
+```shell
+npx skills add objectbox/objectbox-skills
+```
+
+In Claude Code, also via the plugin marketplace:
+`/plugin marketplace add objectbox/objectbox-skills`, then `/plugin install objectbox@objectbox-skills`.
+
+Agents load the skill when a task involves ObjectBox. To make sure yours always uses it, say so in your project's agent
+instructions (e.g. `AGENTS.md` or `CLAUDE.md`):
+
+```markdown
+This project uses ObjectBox (Python). For any code that touches the database, its entities or objectbox-model.json,
+use the objectbox skill and follow its Python reference.
+```
 
 Code Example: CRUD (Create, Read, Update, Delete)
 -------------------------------------------------
