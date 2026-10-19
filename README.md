@@ -27,7 +27,8 @@ Feature Highlights
 ------------------
 
 🏁 **On-device vector database** - for AI apps that work any place.\
-🏁 **High performance** - superfast response rates enabling real-time applications.\
+🏁 **High performance** - superfast response rates enabling real-time applications.
+   [Faster than any ORM](https://github.com/objectbox/python-orm-benchmarks/).\
 🪂 **ACID compliant** - Atomic, Consistent, Isolated, Durable.\
 🌱 **Scalable** - grows with your app, handling millions of objects with ease.\
 💚 **Sustainable** - frugal on CPU, Memory and battery / power use, reducing CO2 emissions.\
