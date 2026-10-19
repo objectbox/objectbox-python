@@ -303,6 +303,10 @@ class Property:
         self._fb_slot = None
         self._fb_v_offset = None
 
+    def _condition_value(self, value):
+        """ Converts a value for a query condition (overridden, e.g. for dates). """
+        return value
+
     @staticmethod
     def _check_args(kwargs: dict, allowed):
         unknown = set(kwargs) - set(allowed)
@@ -421,31 +425,31 @@ class _NumericProperty(Property):
     def greater_than(self, value) -> PropertyQueryCondition:
         """ *Greater-than* (``>``) condition to be passed to :func:`objectbox.Box.query` """
         self._assert_ids_assigned()
-        args = {'value': value}
+        args = {'value': self._condition_value(value)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GT, args)
 
     def greater_or_equal(self, value) -> PropertyQueryCondition:
         """ *Greater-or-equal* (``>=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
-        args = {'value': value}
+        args = {'value': self._condition_value(value)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.GTE, args)
 
     def less_than(self, value) -> PropertyQueryCondition:
         """ *Less-than* (``<``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
-        args = {'value': value}
+        args = {'value': self._condition_value(value)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LT, args)
 
     def less_or_equal(self, value) -> PropertyQueryCondition:
         """ *Less-or-equal* (``<=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
-        args = {'value': value}
+        args = {'value': self._condition_value(value)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.LTE, args)
 
     def between(self, a, b) -> PropertyQueryCondition:
         """ *Between* a and b (``a <= x <= b``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
-        args = {'a': a, 'b': b}
+        args = {'a': self._condition_value(a), 'b': self._condition_value(b)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.BETWEEN, args)
 
 class _IntProperty(_NumericProperty):
@@ -458,13 +462,13 @@ class _IntProperty(_NumericProperty):
     def equals(self, value) -> PropertyQueryCondition:
         """ *Equals* (``==``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
-        args = {'value': value}
+        args = {'value': self._condition_value(value)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.EQ, args)
 
     def not_equals(self, value) -> PropertyQueryCondition:
         """ *Not equals* (``!=``) condition to be passed to :func:`Box.query` """
         self._assert_ids_assigned()
-        args = {'value': value}
+        args = {'value': self._condition_value(value)}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_EQ, args)
 
     def one_of(self, values: List[int]) -> PropertyQueryCondition:
@@ -474,7 +478,7 @@ class _IntProperty(_NumericProperty):
         raises a ``TypeError`` for other properties (e.g. Int8, Int16, Bool). """
         self._assert_ids_assigned()
         self._assert_one_of_supported()
-        args = {'values': values}
+        args = {'values': [self._condition_value(value) for value in values]}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.ONE_OF, args)
 
     def not_one_of(self, values: List[int]) -> PropertyQueryCondition:
@@ -484,7 +488,7 @@ class _IntProperty(_NumericProperty):
         raises a ``TypeError`` for other properties (e.g. Int8, Int16, Bool). """
         self._assert_ids_assigned()
         self._assert_one_of_supported()
-        args = {'values': values}
+        args = {'values': [self._condition_value(value) for value in values]}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NOT_ONE_OF, args)
 
     def _assert_one_of_supported(self):
@@ -671,14 +675,27 @@ class Float64(_NumericProperty):
 
 # Date Properties
 class Date(_IntProperty):
-    """Date Property"""
+    """Date property: stored as milliseconds since the Unix epoch. Values (also in query conditions) can be a
+    ``datetime``, a ``float`` (seconds) or an ``int`` (milliseconds); ``py_type`` is the type read back."""
+    _multiplier = 1000  # From seconds
+
     def __init__(self, py_type=datetime, *, uid: int = 0, **kwargs):
         super(Date, self).__init__(py_type, type=PropertyType.date, uid=uid, **kwargs)
 
+    def _condition_value(self, value):
+        from objectbox.utils import date_value_to_int
+        return date_value_to_int(value, self._multiplier)
+
 class DateNano(_IntProperty):
-    """Date (nano-second resolution) Property"""
+    """Date property with nanosecond resolution: stored as nanoseconds since the Unix epoch. Values (also in query
+    conditions) can be a ``datetime``, a ``float`` (seconds) or an ``int`` (nanoseconds); ``py_type`` is the type
+    read back."""
+    _multiplier = 1000000000  # From seconds
+
     def __init__(self, py_type=datetime, *, uid: int = 0, **kwargs):
         super(DateNano, self).__init__(py_type, type=PropertyType.dateNano, uid=uid, **kwargs)
+
+    _condition_value = Date._condition_value
 
 # Bytes Property
 class Bytes(_NumericProperty):

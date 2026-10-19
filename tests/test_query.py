@@ -1132,3 +1132,38 @@ def test_find_first_unique(test_store):
     # Within a transaction (uses it)
     with test_store.read_tx():
         assert box.query(TestEntity.int64.equals(3)).build().find_first().str == "a"
+
+
+def test_date_conditions_datetime(test_store):
+    """ Date and DateNano conditions take a datetime or float seconds, like put() (only ints failed with a plain
+    Exception before); ints are milliseconds or nanoseconds. """
+    from datetime import timedelta
+    box = test_store.box(TestEntityDatetime)
+    base = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+    ids = box.put([TestEntityDatetime(date=(base + timedelta(days=i)).timestamp(), date_nano=base + timedelta(days=i))
+                   for i in range(3)])
+
+    def find(condition):
+        return box.query(condition).build().find_ids()
+
+    for prop in (TestEntityDatetime.date, TestEntityDatetime.date_nano):
+        assert find(prop.equals(base)) == [ids[0]]
+        assert find(prop.not_equals(base)) == ids[1:]
+        assert find(prop.greater_than(base)) == ids[1:]
+        assert find(prop.greater_or_equal(base + timedelta(days=1))) == ids[1:]
+        assert find(prop.less_than(base + timedelta(hours=1))) == [ids[0]]
+        assert find(prop.less_or_equal(base + timedelta(days=1))) == ids[:2]
+        assert find(prop.between(base + timedelta(hours=1), base + timedelta(days=2))) == ids[1:]
+        assert find(prop.one_of([base, base + timedelta(days=2)])) == [ids[0], ids[2]]
+        assert find(prop.not_one_of([base])) == ids[1:]
+        assert find(prop.equals(base.timestamp())) == [ids[0]]  # float: seconds
+    ms = int(base.timestamp()) * 1000
+    assert find(TestEntityDatetime.date.equals(ms)) == [ids[0]]  # int: milliseconds
+    assert find(TestEntityDatetime.date_nano.equals(ms * 1000000)) == [ids[0]]  # int: nanoseconds
+
+    # The query parameter takes the same values
+    query = box.query(TestEntityDatetime.date.equals(base)).build()
+    assert query.set_parameter(TestEntityDatetime.date, base + timedelta(days=2)).find_ids() == [ids[2]]
+
+    with pytest.raises(TypeError):
+        TestEntityDatetime.date.equals("2026-01-01")
