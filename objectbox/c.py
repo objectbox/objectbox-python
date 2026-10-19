@@ -150,33 +150,40 @@ class LogLevel(IntEnum):
 
 
 class DebugFlags(IntEnum):
-    """Debug flags"""
+    """Debug flags (store option ``debug_flags``); combine multiple using ``|``.
+    Values are the ones of the C API (``OBXDebugFlags``)."""
 
-    NONE = 0,
+    NONE = 0
 
-    LOG_TRANSACTIONS_READ = 1,
+    LOG_TRANSACTIONS_READ = 1
     """ Log read transactions """
 
-    LOG_TRANSACTIONS_WRITE = 2,
+    LOG_TRANSACTIONS_WRITE = 2
     """ Log write transactions """
 
-    LOG_QUERIES = 3,
+    LOG_QUERIES = 4
     """ Log queries """
 
-    LOG_QUERY_PARAMETERS = 8,
+    LOG_QUERY_PARAMETERS = 8
     """ Log query parameters """
 
-    LOG_ASYNC_QUEUE = 16,
+    LOG_ASYNC_QUEUE = 16
     """ Log async queue """
 
-    LOG_CACHE_HITS = 32,
+    LOG_CACHE_HITS = 32
     """ Log cache hits """
 
-    LOG_CACHE_ALL = 64,
-    """ Log cache hits """
+    LOG_CACHE_ALL = 64
+    """ Log cache hits and misses """
 
     LOG_TREE = 128
     """ Log tree operations """
+
+    LOG_EXCEPTION_STACK_TRACE = 256
+    """ Try to log stack traces for some error conditions (experimental, Linux only) """
+
+    RUN_THREADING_SELF_TEST = 512
+    """ Run a quick self-test to verify basic threading (checks the platform and the library setup) """
 
 
 class OBX_model(ctypes.Structure):

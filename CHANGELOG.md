@@ -149,6 +149,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 
 ### Store
 
+* Fix `DebugFlags.LOG_QUERIES`: its value was 3 (logging read and write transactions) instead of 4 (logging queries).
+  New flags `LOG_EXCEPTION_STACK_TRACE` and `RUN_THREADING_SELF_TEST`.
 * Log callback (`log_callback` option): the log level values passed to the callback changed (see `LogLevel`, now also
   `Trace`); code comparing against `LogLevel` members is not affected.
 * A store that is no longer referenced is now closed right away (was: only when Python's cyclic GC ran);

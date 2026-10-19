@@ -116,3 +116,28 @@ def test_log_callback():
     assert log_entries[1][1].startswith("Opening store:")
     store.close()
     
+
+
+def test_debug_flags_values():
+    """ DebugFlags has the values of the C API (LOG_QUERIES was 3, i.e. read and write transactions). """
+    import objectbox.c
+    c_flags = {name[len("OBXDebugFlags_"):]: value for name, value in vars(objectbox.c).items()
+               if name.startswith("OBXDebugFlags_")}
+    assert len(c_flags) == 10
+    assert {flag.name: flag.value for flag in DebugFlags if flag != DebugFlags.NONE} == c_flags
+    assert DebugFlags.LOG_QUERIES == 4
+
+
+def test_debug_flags_header():
+    """ The OBXDebugFlags_ constants match the C header (if downloaded, e.g. by `make depend`). """
+    import os
+    import re
+    import objectbox.c
+    header = os.path.join(os.path.dirname(objectbox.c.__file__), "lib", "objectbox.h")
+    if not os.path.exists(header):
+        pytest.skip("No C header")
+    with open(header) as file:
+        header_flags = dict((name, int(value)) for name, value in
+                            re.findall(r"^\s*(OBXDebugFlags_\w+) = (\d+),", file.read(), re.MULTILINE))
+    assert header_flags == {name: value for name, value in vars(objectbox.c).items()
+                            if name.startswith("OBXDebugFlags_")}
