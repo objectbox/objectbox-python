@@ -334,8 +334,20 @@ class Store:
         """Returns a write transaction."""
         return objectbox.transaction.write(self)
 
+    def __enter__(self) -> 'Store':
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def is_closed(self) -> bool:
+        """Returns True if the store is closed (via ``close()``)."""
+        return self._c_store_or_none is None
+
     def close(self):
-        """Close database."""
+        """Closes the store (also its open queries and Sync client). Closing again does nothing.
+        A store can also be used in a ``with`` statement, which closes it at the end, e.g.
+        ``with Store(directory="db") as store:``."""
         listeners = self._close_listeners
         self._close_listeners = []
         try:

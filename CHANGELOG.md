@@ -176,6 +176,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 * A store that is no longer referenced is now closed right away (was: only when Python's cyclic GC ran);
   e.g. on Windows, reopening the same directory could fail with "another store is still open using the same path".
   Still, prefer closing stores explicitly via `close()`.
+* Stores can be used in a `with` statement, which closes the store at the end (`with Store(...) as store:`);
+  new `Store.is_closed()`
 * Using a closed store raises an `IllegalStateError` ("Store is closed"), also via its boxes and queries; before,
   errors were misleading (e.g. `IllegalArgumentError` 'Argument "store" must not be null') and a box obtained before
   closing used the freed native store (the C library reported "Irrecoverable memory error").

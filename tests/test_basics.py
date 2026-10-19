@@ -77,6 +77,23 @@ def test_store_used_after_close(capfd):
     assert "Irrecoverable" not in capfd.readouterr().err  # The C library detected no use of a dead store
 
 
+def test_store_with_and_is_closed():
+    with create_test_store() as store:
+        assert not store.is_closed()
+        store.box(TestEntity).put(TestEntity(str="foo"))
+    assert store.is_closed()
+
+    with pytest.raises(KeyError):
+        with create_test_store(clear_db=False) as store:  # Reopens: the store was closed
+            assert store.box(TestEntity).count() == 1
+            raise KeyError()
+    assert store.is_closed()  # Also closed on exceptions
+
+    store = create_test_store(clear_db=False)
+    store.close()
+    assert store.is_closed()
+
+
 def test_store_closed_when_dropped():
     """A store that is no longer referenced must be closed right away, without relying on the cyclic GC."""
     gc_was_enabled = gc.isenabled()
