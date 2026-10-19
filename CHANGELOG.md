@@ -151,6 +151,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   manage, e.g. for a file shared with another ObjectBox language: relations of other languages (e.g. ToMany) and fields
   like `lastRelationId`; the file now also has `modelVersion`. This fixes files that the ObjectBox Generator (C++, Go)
   rejected, e.g. after removing an entity or property in Python.
+* Model: the index of an existing property can now be added, removed or changed (e.g. its type), and so can other
+  property flags; this failed with "mismatches property found in JSON file" before. The data is kept.
 
 ### Other
 

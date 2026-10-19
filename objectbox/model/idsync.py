@@ -212,17 +212,10 @@ class IdSync:
             # Don't check name equality as the property could be matched by UID (rename)
             # if validate_name and prop.name != prop_json["name"]:
             #    raise ValueError(f"name {prop.name} != name {prop_json['name']} (in JSON)")
+            # Flags (e.g. the index type or an assignable ID) and the index may change: the database is updated
+            # when the store is opened, and the JSON file is rewritten.
             if prop._ob_type != prop_json["type"]:
                 raise ValueError(f"OBX type {prop._ob_type} != OBX type {prop_json['type']} (in JSON)")
-
-            json_flags = prop_json.get("flags", 0)
-            if prop._flags != json_flags:
-                raise ValueError(f"flags {prop._flags} != flags {json_flags} (in JSON)")
-
-            if prop.index is None and "indexId" in prop_json:
-                raise ValueError("property hasn't index, but index found in JSON")
-            elif prop.index is not None and "indexId" not in prop_json:
-                raise ValueError("property has index, but index not found in JSON")
         except ValueError as error:
             raise ValueError(f"Property {entity._name}.{prop.name} mismatches property found in JSON file: {error}")
 
@@ -282,6 +275,8 @@ class IdSync:
         if prop_json is not None:  # Load existing IDs from JSON
             # Property was matched with a JSON property (either by UID or by name), make sure they're equal
             self._validate_matching_prop(entity, prop, prop_json)
+            write_json |= prop._flags != prop_json.get("flags", 0)
+            write_json |= (prop.index is not None) != ("indexId" in prop_json)
             prop.iduid = IdUid.from_str(prop_json["id"])
             self._matched_uids.add(prop.iduid.uid)
         else:  # Assign new ID to new property

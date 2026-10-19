@@ -4,11 +4,12 @@ import os
 from numpy.testing import assert_approx_equal
 from objectbox import *
 from objectbox.model import *
-from objectbox.model.properties import Property, PropertyType
+from objectbox.model.properties import Property, PropertyType, IndexType
 from objectbox.model.entity import _Entity
 from objectbox.model.idsync import sync_model
 from objectbox.model.iduid import IdUid
 from objectbox.exceptions import DbError
+from objectbox.c import OBXPropertyFlags_INDEXED, OBXPropertyFlags_INDEX_HASH
 from os import path
 
 from tests.common import remove_json_model_file
@@ -1018,6 +1019,57 @@ def test_retire_index_uid_changed(env):
     assert doc["retiredIndexUids"] == [old_index_uid]
     assert doc["retiredPropertyUids"] == []
     assert doc["entities"][0]["properties"][1]["indexId"].endswith(":1234567890123")
+
+
+def test_index_changes(env):
+    """ Adding, changing and removing the index of an existing property keeps the property and its data; the JSON
+    file gets the new flags and index ID, a removed index UID is retired. """
+
+    def open_with(index):
+        @Entity()
+        class MyEntity:
+            id = Id()
+            name = String(index=index) if index else String()
+
+        model = Model()
+        model.entity(MyEntity)
+        written = env.sync(model)
+        store = env.create_store()
+        box = store.box(MyEntity)
+        if box.is_empty():
+            box.put([MyEntity(name="n%d" % i) for i in range(100)])
+        assert [o.name for o in box.query(MyEntity.name.equals("n42")).build().find()] == ["n42"]
+        assert box.count() == 100
+        prop_json = env.json()["entities"][0]["properties"][1]
+        assert prop_json["id"] == "2:" + str(MyEntity._get_property("name").uid)  # Same property
+        return written, prop_json
+
+    written, prop_json = open_with(None)
+    assert "indexId" not in prop_json and "flags" not in prop_json
+
+    written, prop_json = open_with(Index())  # Added
+    assert written
+    assert prop_json["flags"] == OBXPropertyFlags_INDEXED
+    index_id = prop_json["indexId"]
+    assert index_id.startswith("1:")
+
+    written, prop_json = open_with(Index(IndexType.HASH))  # Changed type: same index ID
+    assert written
+    assert prop_json["flags"] == OBXPropertyFlags_INDEXED | OBXPropertyFlags_INDEX_HASH
+    assert prop_json["indexId"] == index_id
+
+    written, prop_json = open_with(Index(IndexType.HASH))  # Unchanged
+    assert not written
+
+    written, prop_json = open_with(None)  # Removed
+    assert written
+    assert "indexId" not in prop_json and "flags" not in prop_json
+    assert env.json()["retiredIndexUids"] == [_uid(index_id)]
+
+    written, prop_json = open_with(Index())  # Added again: a new index ID
+    assert written
+    assert prop_json["indexId"].startswith("2:") and _uid(prop_json["indexId"]) != _uid(index_id)
+    env.close()
 
 
 def test_retire_not_on_rename(env):
