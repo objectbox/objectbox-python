@@ -71,6 +71,9 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
   `backlink(relation, condition)` uses a relation in reverse, e.g. customers with a matching order. Both return the
   builder of the linked entity to link further (any number of relations); `set_parameter()` also changes conditions
   on linked entities.
+* Vector search: the condition is now `nearest_neighbors(query_vector, max_result_count)`, named like in the other
+  ObjectBox languages (Java: `nearestNeighbors`, Dart: `nearestNeighborsF32`). `nearest_neighbor()` still works but is
+  deprecated (emits a `DeprecationWarning`).
 * New "one of" conditions `String.one_of(values)` and, for integer properties, `one_of(values)` and
   `not_one_of(values)`; their values can be changed on a built query via `set_parameter()` (see below)
 * New conditions `is_null()` and `is_not_null()` (e.g. `Task.text.is_null()`), also as `QueryBuilder.is_null()`

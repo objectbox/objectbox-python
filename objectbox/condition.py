@@ -253,7 +253,7 @@ class PropertyQueryCondition(QueryCondition):
 
     def _apply_nearest_neighbor(self, qb: QueryBuilder) -> obx_qb_cond:
         query_vector = self._args['query_vector']
-        element_count = self._args['element_count']
+        max_result_count = self._args['max_result_count']
 
         if len(query_vector) == 0:
             raise Exception("query_vector can't be empty")
@@ -263,7 +263,7 @@ class PropertyQueryCondition(QueryCondition):
         is_float_vector |= np is not None and isinstance(query_vector, np.ndarray) and query_vector.dtype == np.float32
         is_float_vector |= isinstance(query_vector, list) and type(query_vector[0]) == float
         if is_float_vector:
-            return qb.nearest_neighbors_f32(self._property_id, query_vector, element_count)
+            return qb.nearest_neighbors_f32(self._property_id, query_vector, max_result_count)
         else:
             raise Exception(f"Unsupported type for 'NEAREST_NEIGHBOR': {type(query_vector)}")
 

@@ -48,7 +48,7 @@ response = ollama.embeddings(
 )
 
 query = box.query(
-    DocumentEmbedding.embedding.nearest_neighbor(response["embedding"], 1)
+    DocumentEmbedding.embedding.nearest_neighbors(response["embedding"], 1)
 ).build()
 
 results = query.find_with_scores()

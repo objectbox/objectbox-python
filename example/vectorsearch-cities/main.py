@@ -71,7 +71,7 @@ class VectorSearchCitiesCmd(Cmd):
                 location = cities[0].location
                 # +1 for the city
                 qb = self._box.query(
-                    City.location.nearest_neighbor(location, num + 1) & City.name.not_equals(city)
+                    City.location.nearest_neighbors(location, num + 1) & City.name.not_equals(city)
                 )
                 neighbors = qb.build().find_with_scores()
                 list_cities_with_scores(neighbors)
@@ -89,7 +89,7 @@ class VectorSearchCitiesCmd(Cmd):
             num = int(args[0])
             geocoord = [float(args[1]), float(args[2])]
             qb = self._box.query(
-                City.location.nearest_neighbor(geocoord, num)
+                City.location.nearest_neighbors(geocoord, num)
             )
             neighbors = qb.build().find_with_scores()
             list_cities_with_scores(neighbors)

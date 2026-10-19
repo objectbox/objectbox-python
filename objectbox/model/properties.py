@@ -721,10 +721,30 @@ class Float32Vector(_VectorProperty):
     """Floating-point 32-bit Vector Property"""
     def __init__(self, *, uid: int = 0, **kwargs):
         super(Float32Vector, self).__init__(_ndarray(), type=PropertyType.floatVector, uid=uid, **kwargs)
-    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
+    def nearest_neighbors(self, query_vector, max_result_count: int) -> PropertyQueryCondition:
+        """ *Nearest neighbors* condition to be passed to :func:`objectbox.Box.query`: performs an approximate nearest
+        neighbor (ANN) search to find objects near to the given query vector. This requires the property to have an
+        :class:`HnswIndex`. Get the results ordered by distance via ``find_with_scores()`` or
+        ``find_ids_with_scores()``.
+
+        :param query_vector:
+            The vector to find the nearest neighbors of (a list of floats or a numpy float32 array); its dimensions
+            should be at least the dimensions of the property.
+        :param max_result_count:
+            The maximum number of objects to return by this condition. Hint: it can also be used as the "ef" HNSW
+            parameter to increase the search quality in combination with a query limit, e.g. 100 with
+            ``query.limit(10)`` may give 10 results of better quality than 10 (quality/performance tradeoff).
+        """
         self._assert_ids_assigned()
-        args = {'query_vector': query_vector, 'element_count': element_count}
+        args = {'query_vector': query_vector, 'max_result_count': max_result_count}
         return PropertyQueryCondition(self.id, PropertyQueryConditionOp.NEAREST_NEIGHBOR, args)
+
+    def nearest_neighbor(self, query_vector, element_count: int) -> PropertyQueryCondition:
+        """ Deprecated: use :meth:`nearest_neighbors` (same arguments; named like in the other ObjectBox
+        languages). """
+        import warnings
+        warnings.warn("nearest_neighbor() is deprecated, use nearest_neighbors()", DeprecationWarning, stacklevel=2)
+        return self.nearest_neighbors(query_vector, element_count)
 
 class Float64Vector(_VectorProperty):
     """Floating-point 64-bit Vector Property"""

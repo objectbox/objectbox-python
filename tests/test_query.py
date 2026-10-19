@@ -161,7 +161,7 @@ def test_basics(test_store):
     assert query.remove() == 1
 
     # NN query 
-    query = box_vector_entity.query(VectorEntity.vector_euclidean.nearest_neighbor([2.1, 2.1], 2)).build()
+    query = box_vector_entity.query(VectorEntity.vector_euclidean.nearest_neighbors([2.1, 2.1], 2)).build()
     assert query.count() == 2
     assert query.find_ids() == [2, 3]
 
@@ -535,7 +535,7 @@ def test_set_parameter_alias(test_store):
     # Test set parameter alias on vector
     vector_prop = VectorEntity.vector_euclidean
 
-    query = box_vector.query(vector_prop.nearest_neighbor([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
+    query = box_vector.query(vector_prop.nearest_neighbors([3.4, 3.4], 3).alias("nearest_neighbour_filter")).build()
     assert query.count() == 3
     assert query.find_ids() == sorted([3, 4, 2])
 
@@ -905,7 +905,7 @@ def test_set_parameter_generic(test_store):
     vector_box = test_store.box(VectorEntity)
     for i in range(1, 6):
         vector_box.put(VectorEntity(name=f"Object {i}", vector_euclidean=[i, i]))
-    query = vector_box.query(VectorEntity.vector_euclidean.nearest_neighbor([3.4, 3.4], 3).alias("nn")).build()
+    query = vector_box.query(VectorEntity.vector_euclidean.nearest_neighbors([3.4, 3.4], 3).alias("nn")).build()
     assert sorted(query.find_ids()) == [2, 3, 4]
     assert sorted(query.set_parameter(VectorEntity.vector_euclidean, [4.9, 4.9]).find_ids()) == [3, 4, 5]
     assert sorted(query.set_parameter("vector_euclidean", 2).find_ids()) == [4, 5]
@@ -1084,3 +1084,19 @@ def test_query_store_closed(test_store):
         query.count()
     with pytest.raises(IllegalStateError, match="Store is closed"):
         qb.build()
+
+
+def test_nearest_neighbors(test_store):
+    """ nearest_neighbors(query_vector, max_result_count), named like in the other ObjectBox languages;
+    nearest_neighbor() is deprecated. """
+    box = test_store.box(VectorEntity)
+    for i in range(1, 6):
+        box.put(VectorEntity(name="Object %d" % i, vector_euclidean=[i, i]))
+    prop = VectorEntity.vector_euclidean
+    query = box.query(prop.nearest_neighbors(query_vector=[2.1, 2.1], max_result_count=2)).build()
+    assert [o.name for o, score in query.find_with_scores()] == ["Object 2", "Object 3"]
+
+    with pytest.warns(DeprecationWarning, match=r"nearest_neighbor\(\) is deprecated, use nearest_neighbors\(\)"):
+        condition = prop.nearest_neighbor([2.1, 2.1], 3)
+    query = box.query(condition).build()
+    assert [o.name for o, score in query.find_with_scores()] == ["Object 2", "Object 3", "Object 1"]
