@@ -25,6 +25,20 @@ if TYPE_CHECKING:
     import numpy as np
 
 
+class ObjectWithScore(NamedTuple):
+    """ An object with its query score, e.g. the distance of a nearest neighbor search (see
+    :meth:`Query.find_with_scores`). A tuple: unpack it via ``for obj, score in query.find_with_scores():``. """
+    object: Any
+    score: float
+
+
+class IdWithScore(NamedTuple):
+    """ An object ID with its query score, e.g. the distance of a nearest neighbor search (see
+    :meth:`Query.find_ids_with_scores`). A tuple: unpack it via ``for id, score in query.find_ids_with_scores():``. """
+    id: int
+    score: float
+
+
 class Query:
     """
     Query is a reusable object that allows you to find objects in the database.
@@ -126,9 +140,10 @@ class Query:
         finally:
             obx_id_array_free(c_id_array_p)
 
-    def find_with_scores(self):
+    def find_with_scores(self) -> List[ObjectWithScore]:
         """ Finds objects matching the query associated to their query score (e.g. distance in NN search).
-        The result is sorted by score in ascending order. """
+        The result is sorted by score in ascending order; each is an :class:`ObjectWithScore` (``object``, ``score``),
+        a tuple. """
         with self._store.read_tx():  # We need a read transaction to ensure the object data stays valid
             c_bytes_score_array_p = obx_query_find_with_scores(self._c_query)
             try:
@@ -141,14 +156,15 @@ class Query:
                     score = c_bytes_score.score
 
                     object_ = self._box._entity._unmarshal(data)
-                    result.append((object_, score))
+                    result.append(ObjectWithScore(object_, score))
                 return result
             finally:
                 obx_bytes_score_array_free(c_bytes_score_array_p)
 
-    def find_ids_with_scores(self) -> List[Tuple[int, float]]:
+    def find_ids_with_scores(self) -> List[IdWithScore]:
         """ Finds object IDs matching the query associated to their query score (e.g. distance in NN search).
-        The resulting list is sorted by score in ascending order. """
+        The resulting list is sorted by score in ascending order; each is an :class:`IdWithScore` (``id``,
+        ``score``), a tuple. """
         c_id_score_array_p = obx_query_find_ids_with_scores(self._c_query)
         try:
             # OBX_id_score_array
@@ -156,7 +172,7 @@ class Query:
             result = []
             for i in range(c_id_score_array.count):
                 c_id_score: OBX_id_score = c_id_score_array.ids_scores[i]
-                result.append((c_id_score.id, c_id_score.score))
+                result.append(IdWithScore(c_id_score.id, c_id_score.score))
             return result
         finally:
             obx_id_score_array_free(c_id_score_array_p)

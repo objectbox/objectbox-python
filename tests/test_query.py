@@ -1167,3 +1167,23 @@ def test_date_conditions_datetime(test_store):
 
     with pytest.raises(TypeError):
         TestEntityDatetime.date.equals("2026-01-01")
+
+
+def test_scores_named_tuples(test_store):
+    """ Scored results are named tuples with the attribute names of Dart (ObjectWithScore.object/.score,
+    IdWithScore.id/.score); unpacking and comparing like plain tuples still works. """
+    box = test_store.box(VectorEntity)
+    for i in range(1, 4):
+        box.put(VectorEntity(name="Object %d" % i, vector_euclidean=[i, i]))
+    query = box.query(VectorEntity.vector_euclidean.nearest_neighbors([1.0, 1.0], 2)).build()
+
+    results = query.find_with_scores()
+    assert all(isinstance(result, objectbox.ObjectWithScore) for result in results)
+    assert [(r.object.name, r.score) for r in results] == [("Object 1", 0.0), ("Object 2", 2.0)]
+    obj, score = results[1]
+    assert obj.name == "Object 2" and score == 2.0
+
+    id_results = query.find_ids_with_scores()
+    assert all(isinstance(result, objectbox.IdWithScore) for result in id_results)
+    assert [(r.id, r.score) for r in id_results] == [(1, 0.0), (2, 2.0)]
+    assert id_results == [(1, 0.0), (2, 2.0)]  # Equal to plain tuples

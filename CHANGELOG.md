@@ -74,6 +74,8 @@ As this is a beta version, add `--pre` to install it, e.g. `pip install --pre ob
 * Conditions on `Date` and `DateNano` properties take a `datetime` or `float` seconds, like putting objects, e.g.
   `Task.due.less_than(datetime.now(timezone.utc))`; ints are still milliseconds (`Date`) or nanoseconds (`DateNano`).
   This failed with an `Exception` ("Unsupported type") before.
+* `find_with_scores()` and `find_ids_with_scores()` return named tuples, `ObjectWithScore` (`object`, `score`) and
+  `IdWithScore` (`id`, `score`), named like in Java and Dart; they are still tuples, e.g. for `for obj, score in ...`
 * New `Query.find_first()` (the first object, by ID or the query's order; None if none) and `Query.find_unique()` (the
   only object, None if none; raises `NonUniqueResultError` if there are more), like in Java and Dart
 * Vector search: the condition is now `nearest_neighbors(query_vector, max_result_count)`, named like in the other
