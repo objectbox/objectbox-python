@@ -13,6 +13,7 @@ The following examples are available from this directory:
 
 - `tasks`: CRUD Example (see below for details)
 - `vectorsearch-cities`: VectorSearch Example (see below for details)
+- `open-existing-db`: Opening an Existing Database Example (see below for details)
 - `ollama`: LLM + VectorSearch Embeddings Script Example (See [ollama/README.md](./ollama/README.md) for details)
 
 
@@ -93,4 +94,35 @@ ID   Name                        Latitude  Longitude  Score
  64  Guatemala City                 14.63     -90.51  1150.79
 164  San Salvador                   13.69     -89.22  1261.12
  67  Havana                         23.11     -82.37  1317.73
+```
+
+## Example: Opening an Existing Database
+
+This example shows that `Store(directory="...")` **opens an existing database transparently** — no special API is required. If the directory already contains an ObjectBox database (`data.mdb`), it is opened; otherwise a new one is created.
+
+This is useful when:
+- You want to read a database written by a previous run of your program
+- You receive a database file created by another ObjectBox SDK (e.g. Android/Java, Swift, Dart) and want to read it with Python using the same entity model
+
+```
+cd open-existing-db
+
+# Step 1: write sample data (creates the database)
+$ python main.py write
+Wrote 3 notes to 'notes-db'.
+Run 'python main.py read' to open the same database and list them.
+
+# Step 2: open the SAME database and read it back
+$ python main.py read
+Found 3 note(s) in 'notes-db':
+
+ ID  Priority  Title                           Body
+----------------------------------------------------------------------
+  1         1  Buy groceries                   Milk, eggs, bread
+  2         2  Read ObjectBox docs             https://docs.objectbox.io
+  3         3  Open-source contribution        Submit a pull request today!
+
+# Reset: delete the database so you can start fresh
+$ python main.py reset
+Removed 'notes-db'. Run 'python main.py write' to start fresh.
 ```
